@@ -1739,7 +1739,14 @@ export default function MimicEditor() {
             onClick={handleCanvasClick}
             onMouseMove={handleSvgMouseMove}
             onWheel={handleWheel}
-            onContextMenu={(e) => e.preventDefault()}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              if (drawingBus !== null) {
+                setDrawingBus(null);
+                setBusPreviewEnd(null);
+                setTool('select');
+              }
+            }}
           >
             <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
               {/* Canvas background */}
