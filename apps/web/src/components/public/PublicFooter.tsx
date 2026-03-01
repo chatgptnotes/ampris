@@ -10,13 +10,14 @@ const footerLinks = {
   ],
   Resources: [
     { label: 'Documentation', path: '/docs' },
-    { label: 'Installation Guide', path: '/docs' },
-    { label: 'API Reference', path: '/docs' },
+    { label: 'Installation Guide', path: 'https://github.com/chatgptnotes/GridVision/blob/main/docs/installation-guide.md' },
+    { label: 'API Reference', path: 'https://github.com/chatgptnotes/GridVision/blob/main/docs/api-reference.md' },
+    { label: 'Protocol Guide', path: 'https://github.com/chatgptnotes/GridVision/blob/main/docs/protocol-guide.md' },
   ],
   Company: [
     { label: 'About', path: '/contact' },
     { label: 'Contact', path: '/contact' },
-    { label: 'GitHub', path: 'https://github.com/gridvision' },
+    { label: 'GitHub', path: 'https://github.com/chatgptnotes/GridVision' },
   ],
 };
 

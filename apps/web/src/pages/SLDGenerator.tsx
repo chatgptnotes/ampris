@@ -204,9 +204,9 @@ export default function SLDGenerator() {
               Built for MSEDCL Smart Distribution Substations
             </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-gray-300 transition-colors">Documentation</a>
-              <a href="#" className="hover:text-gray-300 transition-colors">Support</a>
-              <a href="#" className="hover:text-gray-300 transition-colors">Contact</a>
+              <a href="/docs" className="hover:text-gray-300 transition-colors">Documentation</a>
+              <a href="/downloads" className="hover:text-gray-300 transition-colors">Downloads</a>
+              <a href="/contact" className="hover:text-gray-300 transition-colors">Contact</a>
             </div>
           </div>
         </footer>

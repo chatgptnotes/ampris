@@ -83,7 +83,7 @@ export default function DocumentationPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">1. Clone the repository</h3>
                   <CodeBlock
-                    code="git clone https://github.com/gridvision/gridvision-scada.git\ncd gridvision-scada"
+                    code="git clone https://github.com/chatgptnotes/GridVision.git\ncd GridVision"
                     language="bash"
                   />
                 </div>
