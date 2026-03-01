@@ -572,19 +572,21 @@ export default function MimicEditor() {
     });
   }, [projectId, activePageId]);
 
-  // Load tags
+  // Load tags (scoped to project)
   const loadTags = useCallback(() => {
-    api.get('/tags').then(({ data }) => setTags(data)).catch(() => {});
-  }, []);
+    if (!projectId) return;
+    api.get('/tags', { params: { projectId } }).then(({ data }) => setTags(data)).catch(() => {});
+  }, [projectId]);
 
   useEffect(() => { loadTags(); }, [loadTags]);
 
-  // Create tag
+  // Create tag (scoped to project)
   const createTag = useCallback(async (tagData: {
     name: string; type: string; dataType: string; unit?: string;
     minValue?: number | null; maxValue?: number | null;
     simPattern?: string; simFrequency?: number; simAmplitude?: number; simOffset?: number;
   }) => {
+    if (!projectId) return false;
     try {
       await api.post('/tags', {
         name: tagData.name,
@@ -593,6 +595,7 @@ export default function MimicEditor() {
         unit: tagData.unit || undefined,
         minValue: tagData.minValue ?? undefined,
         maxValue: tagData.maxValue ?? undefined,
+        projectId,
         ...(tagData.type === 'SIMULATED' ? {
           simPattern: tagData.simPattern || 'rand',
           simFrequency: tagData.simFrequency || 1,
@@ -605,7 +608,7 @@ export default function MimicEditor() {
     } catch {
       return false;
     }
-  }, [loadTags]);
+  }, [loadTags, projectId]);
 
   // Delete tag
   const deleteTag = useCallback(async (id: string) => {

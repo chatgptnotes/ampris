@@ -18,6 +18,7 @@ const createTagSchema = z.object({
   simOffset: z.number().optional().nullable(),
   formula: z.string().optional().nullable(),
   group: z.string().max(100).optional().nullable(),
+  projectId: z.string().uuid(),
 });
 
 const updateTagSchema = createTagSchema.partial();
@@ -58,6 +59,7 @@ export async function createTag(req: Request, res: Response): Promise<void> {
         simOffset: data.simOffset,
         formula: data.formula,
         group: data.group,
+        projectId: data.projectId,
       },
     });
 
@@ -73,7 +75,7 @@ export async function createTag(req: Request, res: Response): Promise<void> {
     res.status(201).json(tag);
   } catch (err: any) {
     if (err.code === 'P2002') {
-      res.status(409).json({ error: 'Tag name already exists' });
+      res.status(409).json({ error: 'Tag name already exists in this project' });
       return;
     }
     if (err.name === 'ZodError') {
@@ -88,8 +90,9 @@ export async function createTag(req: Request, res: Response): Promise<void> {
 // GET /api/tags
 export async function getTags(req: Request, res: Response): Promise<void> {
   try {
-    const { type, group, search } = req.query;
+    const { type, group, search, projectId } = req.query;
     const where: any = {};
+    if (projectId) where.projectId = String(projectId);
     if (type) where.type = String(type);
     if (group) where.group = String(group);
     if (search) {
@@ -289,9 +292,12 @@ export async function getTagHistory(req: Request, res: Response): Promise<void> 
 // ─── Scripts CRUD ─────────────────────────────
 
 // GET /api/tags/scripts
-export async function getScripts(_req: Request, res: Response): Promise<void> {
+export async function getScripts(req: Request, res: Response): Promise<void> {
   try {
-    const scripts = await prisma.tagScript.findMany({ orderBy: { createdAt: 'desc' } });
+    const { projectId } = req.query;
+    const where: any = {};
+    if (projectId) where.projectId = String(projectId);
+    const scripts = await prisma.tagScript.findMany({ where, orderBy: { createdAt: 'desc' } });
     res.json(scripts);
   } catch (err) {
     console.error('Get scripts error:', err);
@@ -306,6 +312,7 @@ export async function createScript(req: Request, res: Response): Promise<void> {
       name: z.string().min(1).max(200),
       code: z.string().min(1),
       category: z.string().max(50).optional(),
+      projectId: z.string().uuid(),
     }).parse(req.body);
     const script = await prisma.tagScript.create({ data });
     res.status(201).json(script);
@@ -357,9 +364,12 @@ export async function deleteScript(req: Request, res: Response): Promise<void> {
 // ─── Scenarios CRUD ─────────────────────────────
 
 // GET /api/tags/scenarios
-export async function getScenarios(_req: Request, res: Response): Promise<void> {
+export async function getScenarios(req: Request, res: Response): Promise<void> {
   try {
-    const scenarios = await prisma.testScenario.findMany({ orderBy: { createdAt: 'desc' } });
+    const { projectId } = req.query;
+    const where: any = {};
+    if (projectId) where.projectId = String(projectId);
+    const scenarios = await prisma.testScenario.findMany({ where, orderBy: { createdAt: 'desc' } });
     res.json(scenarios);
   } catch (err) {
     console.error('Get scenarios error:', err);
@@ -377,9 +387,10 @@ export async function createScenario(req: Request, res: Response): Promise<void>
         tagName: z.string(),
         value: z.union([z.string(), z.number(), z.boolean()]),
       })),
+      projectId: z.string().uuid(),
     }).parse(req.body);
     const scenario = await prisma.testScenario.create({
-      data: { name: data.name, steps: data.steps },
+      data: { name: data.name, steps: data.steps, projectId: data.projectId },
     });
     res.status(201).json(scenario);
   } catch (err: any) {

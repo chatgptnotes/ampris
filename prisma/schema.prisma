@@ -205,6 +205,9 @@ model Project {
   owner       User     @relation(fields: [ownerId], references: [id])
   mimicPages  MimicPage[]
   members     ProjectMember[]
+  tags        Tag[]
+  tagScripts  TagScript[]
+  testScenarios TestScenario[]
 
   @@map("projects")
 }
@@ -247,7 +250,7 @@ model ProjectMember {
 
 model Tag {
   id            String   @id @default(uuid()) @db.Uuid
-  name          String   @unique @db.VarChar(200)
+  name          String   @db.VarChar(200)
   description   String?  @db.Text
   type          String   @db.VarChar(20) // INTERNAL, SIMULATED, CALCULATED, EXTERNAL
   dataType      String   @map("data_type") @db.VarChar(20) // BOOLEAN, INTEGER, FLOAT, STRING
@@ -263,9 +266,13 @@ model Tag {
   formula       String?  @db.Text // for calculated tags
   group         String?  @db.VarChar(100) // folder/group name
   metadata      Json?    @db.JsonB
+  projectId     String   @map("project_id") @db.Uuid
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
   @@map("tags")
 }
 
@@ -274,7 +281,10 @@ model TagScript {
   name      String   @db.VarChar(200)
   code      String   @db.Text
   category  String?  @db.VarChar(50)
+  projectId String   @map("project_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("tag_scripts")
 }
@@ -283,7 +293,10 @@ model TestScenario {
   id        String   @id @default(uuid()) @db.Uuid
   name      String   @db.VarChar(200)
   steps     Json     @default("[]") @db.JsonB // array of {delay, tagName, value}
+  projectId String   @map("project_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("test_scenarios")
 }

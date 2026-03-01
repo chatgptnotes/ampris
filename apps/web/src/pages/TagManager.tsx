@@ -21,8 +21,14 @@ interface TagData {
   simOffset?: number | null;
   formula?: string | null;
   group?: string | null;
+  projectId?: string;
   liveValue?: any;
   liveTimestamp?: string;
+}
+
+interface ProjectInfo {
+  id: string;
+  name: string;
 }
 
 const TAG_TYPES = ['INTERNAL', 'SIMULATED', 'CALCULATED', 'EXTERNAL'] as const;
@@ -66,15 +72,23 @@ export default function TagManager() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('');
   const [filterGroup, setFilterGroup] = useState<string>('');
+  const [filterProjectId, setFilterProjectId] = useState<string>('');
+  const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTag, setEditingTag] = useState<TagData | null>(null);
   const [form, setForm] = useState(emptyTag);
   const [saving, setSaving] = useState(false);
   const refreshTimer = useRef<NodeJS.Timeout>();
 
+  // Load projects for filter dropdown
+  useEffect(() => {
+    api.get('/projects').then(({ data }) => setProjects(data)).catch(() => {});
+  }, []);
+
   const loadTags = useCallback(async () => {
     try {
       const params: any = {};
+      if (filterProjectId) params.projectId = filterProjectId;
       if (filterType) params.type = filterType;
       if (filterGroup) params.group = filterGroup;
       if (search) params.search = search;
@@ -85,7 +99,7 @@ export default function TagManager() {
     } finally {
       setLoading(false);
     }
-  }, [filterType, filterGroup, search]);
+  }, [filterProjectId, filterType, filterGroup, search]);
 
   useEffect(() => {
     loadTags();
@@ -117,7 +131,7 @@ export default function TagManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         ...form,
         minValue: form.minValue === null ? null : Number(form.minValue),
         maxValue: form.maxValue === null ? null : Number(form.maxValue),
@@ -128,6 +142,12 @@ export default function TagManager() {
       if (editingTag) {
         await api.put(`/tags/${editingTag.id}`, payload);
       } else {
+        if (!filterProjectId) {
+          alert('Please select a project first');
+          setSaving(false);
+          return;
+        }
+        payload.projectId = filterProjectId;
         await api.post('/tags', payload);
       }
       setShowModal(false);
@@ -163,6 +183,7 @@ export default function TagManager() {
   const importTags = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!filterProjectId) { alert('Please select a project first'); e.target.value = ''; return; }
     try {
       const text = await file.text();
       const imported = JSON.parse(text);
@@ -170,7 +191,7 @@ export default function TagManager() {
       let count = 0;
       for (const tag of imported) {
         try {
-          await api.post('/tags', tag);
+          await api.post('/tags', { ...tag, projectId: filterProjectId });
           count++;
         } catch { /* skip duplicates */ }
       }
@@ -222,6 +243,14 @@ export default function TagManager() {
         </div>
         <div className="flex items-center gap-1.5">
           <Filter className="w-4 h-4 text-gray-400" />
+          <select
+            value={filterProjectId}
+            onChange={(e) => setFilterProjectId(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-700 bg-white"
+          >
+            <option value="">All Projects</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}

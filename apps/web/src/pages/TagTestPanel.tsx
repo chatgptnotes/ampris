@@ -16,6 +16,12 @@ interface TagData {
   maxValue?: number | null;
   liveValue?: any;
   group?: string | null;
+  projectId?: string;
+}
+
+interface ProjectInfo {
+  id: string;
+  name: string;
 }
 
 interface TagHistory {
@@ -227,6 +233,10 @@ export default function TagTestPanel() {
   const [loading, setLoading] = useState(true);
   const refreshTimer = useRef<NodeJS.Timeout>();
 
+  // Project filter
+  const [projects, setProjects] = useState<ProjectInfo[]>([]);
+  const [filterProjectId, setFilterProjectId] = useState<string>('');
+
   // Script state
   const [scripts, setScripts] = useState<ScriptData[]>([]);
   const [scriptCode, setScriptCode] = useState('');
@@ -250,16 +260,23 @@ export default function TagTestPanel() {
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [bulkValue, setBulkValue] = useState('');
 
+  // Load projects
+  useEffect(() => {
+    api.get('/projects').then(({ data }) => setProjects(data)).catch(() => {});
+  }, []);
+
   const loadTags = useCallback(async () => {
     try {
-      const { data } = await api.get('/tags');
+      const params: any = {};
+      if (filterProjectId) params.projectId = filterProjectId;
+      const { data } = await api.get('/tags', { params });
       setTags(data);
     } catch (err) {
       console.error('Failed to load tags:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterProjectId]);
 
   const loadHistories = useCallback(async () => {
     try {
@@ -286,9 +303,11 @@ export default function TagTestPanel() {
   }, [loadTags, loadHistories]);
 
   useEffect(() => {
-    api.get('/tags/scripts').then(({ data }) => setScripts(data)).catch(() => {});
-    api.get('/tags/scenarios').then(({ data }) => setScenarios(data)).catch(() => {});
-  }, []);
+    const params: any = {};
+    if (filterProjectId) params.projectId = filterProjectId;
+    api.get('/tags/scripts', { params }).then(({ data }) => setScripts(data)).catch(() => {});
+    api.get('/tags/scenarios', { params }).then(({ data }) => setScenarios(data)).catch(() => {});
+  }, [filterProjectId]);
 
   const setTagValue = useCallback(async (tagName: string, value: any) => {
     try {
@@ -335,8 +354,9 @@ export default function TagTestPanel() {
 
   const saveScript = async () => {
     if (!scriptName.trim() || !scriptCode.trim()) return;
+    if (!filterProjectId) { alert('Please select a project first'); return; }
     try {
-      const { data } = await api.post('/tags/scripts', { name: scriptName, code: scriptCode });
+      const { data } = await api.post('/tags/scripts', { name: scriptName, code: scriptCode, projectId: filterProjectId });
       setScripts((prev) => [data, ...prev]);
       setScriptName('');
     } catch (err) {
@@ -404,10 +424,12 @@ export default function TagTestPanel() {
 
   const saveNewScenario = async () => {
     if (!newScenarioName.trim() || newScenarioSteps.length === 0) return;
+    if (!filterProjectId) { alert('Please select a project first'); return; }
     try {
       const { data } = await api.post('/tags/scenarios', {
         name: newScenarioName,
         steps: newScenarioSteps.filter((s) => s.tagName),
+        projectId: filterProjectId,
       });
       setScenarios((prev) => [data, ...prev]);
       setShowNewScenario(false);
@@ -434,8 +456,20 @@ export default function TagTestPanel() {
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <h1 className="text-xl font-bold text-gray-800">Tag Test Panel</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Manipulate tag values, run scripts, and execute test scenarios</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">Tag Test Panel</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Manipulate tag values, run scripts, and execute test scenarios</p>
+          </div>
+          <select
+            value={filterProjectId}
+            onChange={(e) => setFilterProjectId(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white"
+          >
+            <option value="">All Projects</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Tab bar */}
