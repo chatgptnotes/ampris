@@ -477,9 +477,15 @@ export default function MimicViewer() {
                   height: el.height,
                   ...(conditionalColor ? { color: conditionalColor } : {}),
                   ...(el.type === 'Transformer' ? {
-                    hvLabel: el.properties.hvRating || undefined,
-                    lvLabel: el.properties.lvRating || undefined,
-                    mvaLabel: el.properties.mvaRating || undefined,
+                    hvLabel: el.properties.hvTag
+                      ? `${values[el.properties.hvTag] ?? '...'} kV`
+                      : el.properties.hvRating || undefined,
+                    lvLabel: el.properties.lvTag
+                      ? `${values[el.properties.lvTag] ?? '...'} kV`
+                      : el.properties.lvRating || undefined,
+                    mvaLabel: el.properties.mvaTag
+                      ? `${values[el.properties.mvaTag] ?? '...'} MVA`
+                      : el.properties.mvaRating || undefined,
                   } : {}),
                 })}
               </div>

@@ -1235,9 +1235,9 @@ export default function MimicEditor() {
                 width: el.width,
                 height: el.height,
                 ...(el.type === 'Transformer' ? {
-                  hvLabel: el.properties.hvRating || undefined,
-                  lvLabel: el.properties.lvRating || undefined,
-                  mvaLabel: el.properties.mvaRating || undefined,
+                  hvLabel: el.properties.hvTag ? `🔗 ${el.properties.hvTag}` : el.properties.hvRating || undefined,
+                  lvLabel: el.properties.lvTag ? `🔗 ${el.properties.lvTag}` : el.properties.lvRating || undefined,
+                  mvaLabel: el.properties.mvaTag ? `🔗 ${el.properties.mvaTag}` : el.properties.mvaRating || undefined,
                 } : {}),
               })}
             </div>
@@ -1977,35 +1977,116 @@ export default function MimicEditor() {
               {/* Transformer properties */}
               {selectedEl.type === 'Transformer' && (
                 <>
+                  {/* HV Rating — tag-bindable */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">HV Rating</label>
-                    <input
-                      type="text"
-                      value={selectedEl.properties.hvRating || ''}
-                      onChange={(e) => updateElementProps(selectedEl.id, { hvRating: e.target.value })}
-                      placeholder="e.g. 33kV, 132kV"
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
-                    />
+                    <div className="flex gap-1">
+                      <select
+                        value={selectedEl.properties.hvTag || ''}
+                        onChange={(e) => {
+                          const tagName = e.target.value;
+                          updateElementProps(selectedEl.id, {
+                            hvTag: tagName || undefined,
+                            hvRating: tagName ? `{{${tagName}}}` : selectedEl.properties.hvRating,
+                          });
+                        }}
+                        className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      >
+                        <option value="">Static value</option>
+                        {tags.filter(t => t.dataType === 'FLOAT' || t.dataType === 'INTEGER').map(t => (
+                          <option key={t.id} value={t.name}>{t.name} ({t.unit || t.dataType})</option>
+                        ))}
+                      </select>
+                    </div>
+                    {!selectedEl.properties.hvTag && (
+                      <input
+                        type="text"
+                        value={selectedEl.properties.hvRating || ''}
+                        onChange={(e) => updateElementProps(selectedEl.id, { hvRating: e.target.value })}
+                        placeholder="e.g. 33kV, 132kV"
+                        className="w-full mt-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      />
+                    )}
+                    {selectedEl.properties.hvTag && (
+                      <div className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center justify-between">
+                        <span>🔗 Bound to: {selectedEl.properties.hvTag}</span>
+                        <button onClick={() => updateElementProps(selectedEl.id, { hvTag: undefined, hvRating: '' })} className="text-red-400 hover:text-red-600 ml-1">✕</button>
+                      </div>
+                    )}
                   </div>
+                  {/* LV Rating — tag-bindable */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">LV Rating</label>
-                    <input
-                      type="text"
-                      value={selectedEl.properties.lvRating || ''}
-                      onChange={(e) => updateElementProps(selectedEl.id, { lvRating: e.target.value })}
-                      placeholder="e.g. 11kV, 0.433kV"
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
-                    />
+                    <div className="flex gap-1">
+                      <select
+                        value={selectedEl.properties.lvTag || ''}
+                        onChange={(e) => {
+                          const tagName = e.target.value;
+                          updateElementProps(selectedEl.id, {
+                            lvTag: tagName || undefined,
+                            lvRating: tagName ? `{{${tagName}}}` : selectedEl.properties.lvRating,
+                          });
+                        }}
+                        className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      >
+                        <option value="">Static value</option>
+                        {tags.filter(t => t.dataType === 'FLOAT' || t.dataType === 'INTEGER').map(t => (
+                          <option key={t.id} value={t.name}>{t.name} ({t.unit || t.dataType})</option>
+                        ))}
+                      </select>
+                    </div>
+                    {!selectedEl.properties.lvTag && (
+                      <input
+                        type="text"
+                        value={selectedEl.properties.lvRating || ''}
+                        onChange={(e) => updateElementProps(selectedEl.id, { lvRating: e.target.value })}
+                        placeholder="e.g. 11kV, 0.433kV"
+                        className="w-full mt-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      />
+                    )}
+                    {selectedEl.properties.lvTag && (
+                      <div className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center justify-between">
+                        <span>🔗 Bound to: {selectedEl.properties.lvTag}</span>
+                        <button onClick={() => updateElementProps(selectedEl.id, { lvTag: undefined, lvRating: '' })} className="text-red-400 hover:text-red-600 ml-1">✕</button>
+                      </div>
+                    )}
                   </div>
+                  {/* MVA Rating — tag-bindable */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">MVA Rating</label>
-                    <input
-                      type="text"
-                      value={selectedEl.properties.mvaRating || ''}
-                      onChange={(e) => updateElementProps(selectedEl.id, { mvaRating: e.target.value })}
-                      placeholder="e.g. 10MVA, 5MVA"
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
-                    />
+                    <div className="flex gap-1">
+                      <select
+                        value={selectedEl.properties.mvaTag || ''}
+                        onChange={(e) => {
+                          const tagName = e.target.value;
+                          updateElementProps(selectedEl.id, {
+                            mvaTag: tagName || undefined,
+                            mvaRating: tagName ? `{{${tagName}}}` : selectedEl.properties.mvaRating,
+                          });
+                        }}
+                        className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      >
+                        <option value="">Static value</option>
+                        {tags.filter(t => t.dataType === 'FLOAT' || t.dataType === 'INTEGER').map(t => (
+                          <option key={t.id} value={t.name}>{t.name} ({t.unit || t.dataType})</option>
+                        ))}
+                      </select>
+                    </div>
+                    {!selectedEl.properties.mvaTag && (
+                      <input
+                        type="text"
+                        value={selectedEl.properties.mvaRating || ''}
+                        onChange={(e) => updateElementProps(selectedEl.id, { mvaRating: e.target.value })}
+                        placeholder="e.g. 10MVA, 5MVA"
+                        className="w-full mt-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      />
+                    )}
+                    {selectedEl.properties.mvaTag && (
+                      <div className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center justify-between">
+                        <span>🔗 Bound to: {selectedEl.properties.mvaTag}</span>
+                        <button onClick={() => updateElementProps(selectedEl.id, { mvaTag: undefined, mvaRating: '' })} className="text-red-400 hover:text-red-600 ml-1">✕</button>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
