@@ -62,6 +62,11 @@ export function useWebSocket(): void {
       batchUpdateValues(data);
     });
 
+    // Tag value changes (from tag engine)
+    socket.on('tag:valueChanged', (data: { tag: string; value: any; timestamp: string }) => {
+      updateValue({ tag: data.tag, value: data.value, quality: 0, timestamp: new Date(data.timestamp) });
+    });
+
     // Alarms
     socket.on('alarm:raised', (data: unknown) => {
       addAlarm(data as Parameters<typeof addAlarm>[0]);

@@ -21,6 +21,8 @@ import ProjectHub from '@/pages/ProjectHub';
 import MimicEditor from '@/pages/MimicEditor';
 import MimicViewer from '@/pages/MimicViewer';
 import ProjectMembers from '@/pages/ProjectMembers';
+import TagManager from '@/pages/TagManager';
+import TagTestPanel from '@/pages/TagTestPanel';
 import HomePage from '@/pages/public/HomePage';
 import FeaturesPage from '@/pages/public/FeaturesPage';
 import DemoPage from '@/pages/public/DemoPage';
@@ -77,6 +79,8 @@ export const router = createBrowserRouter([
           { path: 'setup', element: <SetupWizard /> },
           { path: 'connections', element: <ConnectionManager /> },
           { path: 'components', element: <ComponentLibrary /> },
+          { path: 'tags', element: <TagManager /> },
+          { path: 'tag-test', element: <TagTestPanel /> },
         ],
       },
     ],

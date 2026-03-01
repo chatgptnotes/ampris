@@ -15,6 +15,8 @@ import {
   BookOpen,
   FolderOpen,
   X,
+  Tag,
+  TestTube2,
 } from 'lucide-react';
 import { useAlarmStore } from '@/stores/alarmStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -40,6 +42,8 @@ const navItems: NavItem[] = [
   { path: '/app/audit', icon: Shield, label: 'Audit', permission: 'view:audit' },
   { path: '/app/connections', icon: Cable, label: 'Connections' },
   { path: '/app/components', icon: BookOpen, label: 'Components' },
+  { path: '/app/tags', icon: Tag, label: 'Tags' },
+  { path: '/app/tag-test', icon: TestTube2, label: 'Testing' },
   { path: '/app/setup', icon: Wrench, label: 'Setup', permission: 'manage:settings' },
   { path: '/app/settings', icon: Settings, label: 'Settings' },
 ];

@@ -243,6 +243,51 @@ model ProjectMember {
   @@map("project_members")
 }
 
+// ─── Tags & Testing ───────────────────────────────
+
+model Tag {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @unique @db.VarChar(200)
+  description   String?  @db.Text
+  type          String   @db.VarChar(20) // INTERNAL, SIMULATED, CALCULATED, EXTERNAL
+  dataType      String   @map("data_type") @db.VarChar(20) // BOOLEAN, INTEGER, FLOAT, STRING
+  unit          String?  @db.VarChar(30)
+  minValue      Float?   @map("min_value")
+  maxValue      Float?   @map("max_value")
+  initialValue  String?  @map("initial_value") @db.VarChar(200)
+  currentValue  String?  @map("current_value") @db.VarChar(200)
+  simPattern    String?  @map("sim_pattern") @db.VarChar(20) // sine, random, ramp, square
+  simFrequency  Float?   @map("sim_frequency")
+  simAmplitude  Float?   @map("sim_amplitude")
+  simOffset     Float?   @map("sim_offset")
+  formula       String?  @db.Text // for calculated tags
+  group         String?  @db.VarChar(100) // folder/group name
+  metadata      Json?    @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("tags")
+}
+
+model TagScript {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(200)
+  code      String   @db.Text
+  category  String?  @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("tag_scripts")
+}
+
+model TestScenario {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(200)
+  steps     Json     @default("[]") @db.JsonB // array of {delay, tagName, value}
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("test_scenarios")
+}
+
 // ─── Control & Audit ───────────────────────────────
 
 model ControlCommand {

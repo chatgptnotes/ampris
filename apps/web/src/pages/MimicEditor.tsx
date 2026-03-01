@@ -384,6 +384,15 @@ const SYMBOL_CATEGORIES = [
     ],
   },
   {
+    name: 'Controls',
+    symbols: [
+      { type: 'ctrl-push-button', label: 'Push Button', w: 100, h: 40 },
+      { type: 'ctrl-toggle-button', label: 'Toggle Button', w: 100, h: 40 },
+      { type: 'ctrl-value-setter', label: 'Value Setter', w: 120, h: 40 },
+      { type: 'ctrl-slider', label: 'Slider Control', w: 160, h: 40 },
+    ],
+  },
+  {
     name: 'Navigation',
     symbols: [
       { type: 'page-link', label: 'Page Link', w: 120, h: 40 },
@@ -558,6 +567,7 @@ export default function MimicEditor() {
     const x = snap((e.clientX - svgRect.left - pan.x) / zoom);
     const y = snap((e.clientY - svgRect.top - pan.y) / zoom);
     const isNav = ['page-link', 'back-button', 'home-button'].includes(parsed.type);
+    const isCtrl = parsed.type.startsWith('ctrl-');
     const newEl: MimicElement = {
       id: genId(),
       type: parsed.type,
@@ -570,6 +580,14 @@ export default function MimicEditor() {
       properties: {
         label: parsed.label || parsed.type,
         ...(isNav ? { buttonText: parsed.label, buttonColor: '#3B82F6', targetPageId: '' } : {}),
+        ...(isCtrl ? {
+          targetTag: '',
+          controlAction: parsed.type === 'ctrl-toggle-button' ? 'toggle' : 'setValue',
+          controlValue: '',
+          buttonText: parsed.label,
+          buttonColor: parsed.type === 'ctrl-push-button' ? '#EF4444' : parsed.type === 'ctrl-toggle-button' ? '#10B981' : '#3B82F6',
+          controlScript: '',
+        } : {}),
       },
     };
     const newEls = [...elements, newEl];
@@ -862,6 +880,44 @@ export default function MimicEditor() {
             <text x={el.width / 2} y={el.height / 2 + 5} textAnchor="middle" fontSize={12} fill="#1E40AF" fontFamily="monospace">
               {el.properties.tagBinding || '---'}
             </text>
+          </g>
+        ) : el.type.startsWith('ctrl-') ? (
+          <g>
+            <rect
+              width={el.width}
+              height={el.height}
+              fill={el.properties.buttonColor || '#3B82F6'}
+              stroke={el.type === 'ctrl-slider' ? '#6B7280' : '#1E3A5F'}
+              strokeWidth={1.5}
+              rx={6}
+            />
+            {el.type === 'ctrl-slider' ? (
+              <>
+                <line x1={10} y1={el.height / 2} x2={el.width - 10} y2={el.height / 2} stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" />
+                <circle cx={el.width / 2} cy={el.height / 2} r={8} fill="#FFFFFF" stroke="#3B82F6" strokeWidth={2} />
+                <text x={el.width / 2} y={el.height - 4} textAnchor="middle" fontSize={8} fill="#FFFFFF" fontFamily="sans-serif">{el.properties.targetTag || 'Slider'}</text>
+              </>
+            ) : el.type === 'ctrl-value-setter' ? (
+              <>
+                <rect x={4} y={6} width={el.width - 40} height={el.height - 12} fill="#FFFFFF" stroke="#CBD5E1" strokeWidth={1} rx={3} />
+                <text x={(el.width - 36) / 2 + 4} y={el.height / 2 + 4} textAnchor="middle" fontSize={10} fill="#6B7280" fontFamily="monospace">0.00</text>
+                <rect x={el.width - 32} y={6} width={28} height={el.height - 12} fill="#1E40AF" rx={3} />
+                <text x={el.width - 18} y={el.height / 2 + 4} textAnchor="middle" fontSize={9} fill="#FFFFFF" fontWeight="600">SET</text>
+              </>
+            ) : (
+              <text
+                x={el.width / 2}
+                y={el.height / 2 + 1}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={11}
+                fill="#FFFFFF"
+                fontFamily="sans-serif"
+                fontWeight="600"
+              >
+                {el.properties.buttonText || el.properties.label || el.type}
+              </text>
+            )}
           </g>
         ) : ['page-link', 'back-button', 'home-button'].includes(el.type) ? (
           <g>
@@ -1286,6 +1342,76 @@ export default function MimicEditor() {
                   className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
                 />
               </div>
+
+              {/* Control element properties */}
+              {selectedEl.type.startsWith('ctrl-') && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Target Tag</label>
+                    <input
+                      type="text"
+                      value={selectedEl.properties.targetTag || ''}
+                      onChange={(e) => updateElementProps(selectedEl.id, { targetTag: e.target.value })}
+                      placeholder="e.g. CB1.status"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Action</label>
+                    <select
+                      value={selectedEl.properties.controlAction || 'setValue'}
+                      onChange={(e) => updateElementProps(selectedEl.id, { controlAction: e.target.value })}
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                    >
+                      <option value="setValue">Set Value</option>
+                      <option value="toggle">Toggle</option>
+                      <option value="increment">Increment</option>
+                      <option value="script">Script</option>
+                    </select>
+                  </div>
+                  {selectedEl.properties.controlAction !== 'script' && selectedEl.properties.controlAction !== 'toggle' && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Value to Set</label>
+                      <input
+                        type="text"
+                        value={selectedEl.properties.controlValue || ''}
+                        onChange={(e) => updateElementProps(selectedEl.id, { controlValue: e.target.value })}
+                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      />
+                    </div>
+                  )}
+                  {selectedEl.properties.controlAction === 'script' && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Script</label>
+                      <textarea
+                        value={selectedEl.properties.controlScript || ''}
+                        onChange={(e) => updateElementProps(selectedEl.id, { controlScript: e.target.value })}
+                        rows={3}
+                        placeholder='setTag("CB1.status", !getTag("CB1.status"))'
+                        className="w-full px-2 py-1 text-xs font-mono border border-gray-200 rounded text-gray-700 bg-white"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Button Text</label>
+                    <input
+                      type="text"
+                      value={selectedEl.properties.buttonText || ''}
+                      onChange={(e) => updateElementProps(selectedEl.id, { buttonText: e.target.value })}
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Button Color</label>
+                    <input
+                      type="color"
+                      value={selectedEl.properties.buttonColor || '#3B82F6'}
+                      onChange={(e) => updateElementProps(selectedEl.id, { buttonColor: e.target.value })}
+                      className="w-full h-8 rounded border border-gray-200 cursor-pointer"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Navigation properties */}
               {['page-link', 'back-button', 'home-button'].includes(selectedEl.type) && (

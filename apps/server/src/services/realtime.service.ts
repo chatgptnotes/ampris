@@ -68,6 +68,27 @@ export class RealtimeService {
         socket.leave(`substation:${substationId}`);
       });
 
+      // Tag setValue from client
+      socket.on('tag:setValue', (data: { tagName: string; value: any }) => {
+        if (data && data.tagName !== undefined) {
+          try {
+            const { tagEngine } = require('./tag-engine.service');
+            tagEngine.setTagValue(data.tagName, data.value);
+          } catch { /* tag engine not ready */ }
+        }
+      });
+
+      // Tag getValue request
+      socket.on('tag:getValue', (tagName: string, callback: (val: any) => void) => {
+        try {
+          const { tagEngine } = require('./tag-engine.service');
+          const tv = tagEngine.getTagValue(tagName);
+          if (typeof callback === 'function') {
+            callback(tv ? { tag: tagName, value: tv.value, timestamp: tv.timestamp } : null);
+          }
+        } catch { /* tag engine not ready */ }
+      });
+
       // Heartbeat pong
       socket.on('ping', () => {
         socket.emit('pong', { serverTime: Date.now() });

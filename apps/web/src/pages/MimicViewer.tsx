@@ -246,6 +246,35 @@ export default function MimicViewer() {
     return style;
   };
 
+  // Handle control element clicks
+  const handleControlClick = useCallback(async (el: MimicElement) => {
+    const tag = el.properties.targetTag;
+    if (!tag) return;
+    const action = el.properties.controlAction || 'setValue';
+    try {
+      if (action === 'toggle') {
+        const currentVal = values[tag];
+        const current = currentVal !== undefined ? currentVal : false;
+        const newVal = !(current === true || current === 'true' || current === 1 || current === '1');
+        await api.post('/tags/by-name/set-value', { tagName: tag, value: newVal });
+      } else if (action === 'increment') {
+        const currentVal = values[tag];
+        const current = typeof currentVal === 'number' ? currentVal : parseFloat(String(currentVal)) || 0;
+        const inc = parseFloat(el.properties.controlValue || '1') || 1;
+        await api.post('/tags/by-name/set-value', { tagName: tag, value: current + inc });
+      } else if (action === 'script') {
+        await api.post('/tags/execute-script', { code: el.properties.controlScript || '' });
+      } else {
+        // setValue
+        const v = el.properties.controlValue;
+        const numV = Number(v);
+        await api.post('/tags/by-name/set-value', { tagName: tag, value: isNaN(numV) ? v : numV });
+      }
+    } catch (err) {
+      console.error('Control action failed:', err);
+    }
+  }, [values]);
+
   const handleNavClick = useCallback((el: MimicElement) => {
     if (el.type === 'page-link' && el.properties.targetPageId) {
       setActivePageId(el.properties.targetPageId);
@@ -259,8 +288,10 @@ export default function MimicViewer() {
 
   const renderElement = (el: MimicElement) => {
     const animated = getAnimatedStyle(el);
-    const tagValue = el.properties.tagBinding ? values[el.properties.tagBinding] : undefined;
+    const tagKey = el.properties.tagBinding || el.properties.targetTag;
+    const tagValue = tagKey ? values[tagKey] : undefined;
     const isNav = ['page-link', 'back-button', 'home-button'].includes(el.type);
+    const isCtrl = el.type.startsWith('ctrl-');
 
     return (
       <g
@@ -268,13 +299,15 @@ export default function MimicViewer() {
         transform={`translate(${el.x}, ${el.y}) rotate(${el.rotation}, ${el.width / 2}, ${el.height / 2})`}
         onClick={(e) => {
           e.stopPropagation();
-          if (isNav) {
+          if (isCtrl) {
+            handleControlClick(el);
+          } else if (isNav) {
             handleNavClick(el);
           } else if (el.type !== 'text' && el.type !== 'shape') {
             setSelectedEquipment(el);
           }
         }}
-        style={{ cursor: isNav || (el.type !== 'text' && el.type !== 'shape') ? 'pointer' : 'default' }}
+        style={{ cursor: isNav || isCtrl || (el.type !== 'text' && el.type !== 'shape') ? 'pointer' : 'default' }}
       >
         {el.type === 'text' ? (
           <text
@@ -319,6 +352,47 @@ export default function MimicViewer() {
             <text x={el.width / 2} y={el.height / 2 + 5} textAnchor="middle" fontSize={12} fill="#1E40AF" fontFamily="monospace">
               {tagValue !== undefined ? String(tagValue) : '---'}
             </text>
+          </g>
+        ) : isCtrl ? (
+          <g>
+            <rect
+              width={el.width}
+              height={el.height}
+              fill={el.properties.buttonColor || '#3B82F6'}
+              stroke="#1E3A5F"
+              strokeWidth={1.5}
+              rx={6}
+              className="hover:opacity-80 transition-opacity"
+            />
+            {el.type === 'ctrl-slider' ? (
+              <>
+                <line x1={10} y1={el.height / 2} x2={el.width - 10} y2={el.height / 2} stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" />
+                <circle cx={el.width / 2} cy={el.height / 2} r={8} fill="#FFFFFF" stroke="#3B82F6" strokeWidth={2} />
+                <text x={el.width / 2} y={el.height - 4} textAnchor="middle" fontSize={8} fill="#FFFFFF" fontFamily="sans-serif">{el.properties.targetTag || 'Slider'}</text>
+              </>
+            ) : el.type === 'ctrl-value-setter' ? (
+              <>
+                <rect x={4} y={6} width={el.width - 40} height={el.height - 12} fill="#FFFFFF" stroke="#CBD5E1" strokeWidth={1} rx={3} />
+                <text x={(el.width - 36) / 2 + 4} y={el.height / 2 + 4} textAnchor="middle" fontSize={10} fill="#6B7280" fontFamily="monospace">
+                  {tagValue !== undefined ? String(tagValue) : '0.00'}
+                </text>
+                <rect x={el.width - 32} y={6} width={28} height={el.height - 12} fill="#1E40AF" rx={3} />
+                <text x={el.width - 18} y={el.height / 2 + 4} textAnchor="middle" fontSize={9} fill="#FFFFFF" fontWeight="600">SET</text>
+              </>
+            ) : (
+              <text
+                x={el.width / 2}
+                y={el.height / 2 + 1}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={11}
+                fill="#FFFFFF"
+                fontFamily="sans-serif"
+                fontWeight="600"
+              >
+                {el.properties.buttonText || el.properties.label || 'Button'}
+              </text>
+            )}
           </g>
         ) : isNav ? (
           <g>

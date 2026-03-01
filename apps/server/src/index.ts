@@ -4,6 +4,7 @@ import { env } from './config/environment';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { realtimeService } from './services/realtime.service';
 import { alarmService } from './services/alarm.service';
+import { tagEngine } from './services/tag-engine.service';
 
 async function main(): Promise<void> {
   console.log('Starting GridVision SCADA Server...');
@@ -22,6 +23,9 @@ async function main(): Promise<void> {
 
   // Start the MSEDCL simulator — begins generating data immediately
   realtimeService.startSimulator();
+
+  // Initialize tag engine (internal/simulated/calculated tags)
+  await tagEngine.initialize();
 
   // Start HTTP server
   httpServer.listen(env.PORT, () => {
