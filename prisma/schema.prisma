@@ -301,6 +301,69 @@ model TestScenario {
   @@map("test_scenarios")
 }
 
+// ─── AI Analytics ─────────────────────────────────
+
+model TagHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  tagId     String   @map("tag_id") @db.Uuid
+  tagName   String   @map("tag_name") @db.VarChar(200)
+  value     Float
+  timestamp DateTime @db.Timestamptz()
+  quality   String?  @db.VarChar(20) // GOOD, BAD, UNCERTAIN
+
+  @@index([tagName, timestamp])
+  @@map("tag_history")
+}
+
+model AIPrediction {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  predictionType String   @map("prediction_type") @db.VarChar(50) // load_forecast, equipment_failure, maintenance
+  targetEntity   String?  @map("target_entity") @db.VarChar(200)
+  predictedAt    DateTime @map("predicted_at") @db.Timestamptz()
+  forecastTime   DateTime @map("forecast_time") @db.Timestamptz()
+  predictedValue Float?   @map("predicted_value")
+  confidence     Float?
+  upperBound     Float?   @map("upper_bound")
+  lowerBound     Float?   @map("lower_bound")
+  metadata       Json?    @db.JsonB
+
+  @@index([projectId, predictionType])
+  @@map("ai_predictions")
+}
+
+model EquipmentHealth {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @map("project_id") @db.Uuid
+  equipmentName String   @map("equipment_name") @db.VarChar(200)
+  equipmentType String   @map("equipment_type") @db.VarChar(50)
+  healthScore   Float    @map("health_score")
+  status        String   @db.VarChar(20) // healthy, degraded, critical, failed
+  anomalies     Json?    @db.JsonB
+  predictions   Json?    @db.JsonB
+  lastUpdated   DateTime @map("last_updated") @db.Timestamptz()
+
+  @@index([projectId])
+  @@map("equipment_health")
+}
+
+model AlarmEvent {
+  id           String    @id @default(uuid()) @db.Uuid
+  projectId    String    @map("project_id") @db.Uuid
+  alarmType    String    @map("alarm_type") @db.VarChar(100)
+  severity     String    @db.VarChar(20) // info, warning, critical
+  source       String    @db.VarChar(200)
+  message      String    @db.Text
+  timestamp    DateTime  @db.Timestamptz()
+  acknowledged Boolean   @default(false)
+  clearedAt    DateTime? @map("cleared_at") @db.Timestamptz()
+  duration     Int?
+  metadata     Json?     @db.JsonB
+
+  @@index([projectId, timestamp])
+  @@map("alarm_events")
+}
+
 // ─── Control & Audit ───────────────────────────────
 
 model ControlCommand {

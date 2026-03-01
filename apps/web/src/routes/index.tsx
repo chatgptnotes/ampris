@@ -23,6 +23,11 @@ import MimicViewer from '@/pages/MimicViewer';
 import ProjectMembers from '@/pages/ProjectMembers';
 import TagManager from '@/pages/TagManager';
 import TagTestPanel from '@/pages/TagTestPanel';
+import AILoadForecasting from '@/pages/AILoadForecasting';
+import AIEquipmentHealth from '@/pages/AIEquipmentHealth';
+import AIPredictiveMaintenance from '@/pages/AIPredictiveMaintenance';
+import AIPowerQuality from '@/pages/AIPowerQuality';
+import AIOperationsCenter from '@/pages/AIOperationsCenter';
 import HomePage from '@/pages/public/HomePage';
 import FeaturesPage from '@/pages/public/FeaturesPage';
 import DemoPage from '@/pages/public/DemoPage';
@@ -81,6 +86,11 @@ export const router = createBrowserRouter([
           { path: 'components', element: <ComponentLibrary /> },
           { path: 'tags', element: <TagManager /> },
           { path: 'tag-test', element: <TagTestPanel /> },
+          { path: 'ai/load-forecast', element: <AILoadForecasting /> },
+          { path: 'ai/equipment-health', element: <AIEquipmentHealth /> },
+          { path: 'ai/maintenance', element: <AIPredictiveMaintenance /> },
+          { path: 'ai/power-quality', element: <AIPowerQuality /> },
+          { path: 'ai/ops-center', element: <AIOperationsCenter /> },
         ],
       },
     ],

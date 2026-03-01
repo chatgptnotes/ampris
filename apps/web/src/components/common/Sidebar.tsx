@@ -17,6 +17,8 @@ import {
   X,
   Tag,
   TestTube2,
+  BrainCircuit,
+  Zap,
 } from 'lucide-react';
 import { useAlarmStore } from '@/stores/alarmStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -44,6 +46,11 @@ const navItems: NavItem[] = [
   { path: '/app/components', icon: BookOpen, label: 'Components' },
   { path: '/app/tags', icon: Tag, label: 'Tags' },
   { path: '/app/tag-test', icon: TestTube2, label: 'Testing' },
+  { path: '/app/ai/load-forecast', icon: TrendingUp, label: 'AI Forecast' },
+  { path: '/app/ai/equipment-health', icon: Activity, label: 'AI Health' },
+  { path: '/app/ai/maintenance', icon: Wrench, label: 'AI Maint.' },
+  { path: '/app/ai/power-quality', icon: Zap, label: 'AI Power' },
+  { path: '/app/ai/ops-center', icon: BrainCircuit, label: 'AI Ops' },
   { path: '/app/setup', icon: Wrench, label: 'Setup', permission: 'manage:settings' },
   { path: '/app/settings', icon: Settings, label: 'Settings' },
 ];
