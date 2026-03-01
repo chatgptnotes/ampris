@@ -477,15 +477,21 @@ export default function MimicViewer() {
                   height: el.height,
                   ...(conditionalColor ? { color: conditionalColor } : {}),
                   ...(el.type === 'Transformer' ? {
-                    hvLabel: el.properties.hvTag
-                      ? `${values[el.properties.hvTag] ?? '...'} kV`
-                      : el.properties.hvRating || undefined,
-                    lvLabel: el.properties.lvTag
-                      ? `${values[el.properties.lvTag] ?? '...'} kV`
-                      : el.properties.lvRating || undefined,
-                    mvaLabel: el.properties.mvaTag
-                      ? `${values[el.properties.mvaTag] ?? '...'} MVA`
-                      : el.properties.mvaRating || undefined,
+                    hvLabel: el.properties.tagBindings?.hvVoltage
+                      ? `${values[el.properties.tagBindings.hvVoltage] ?? '...'} kV`
+                      : el.properties.hvTag
+                        ? `${values[el.properties.hvTag] ?? '...'} kV`
+                        : el.properties.hvRating || undefined,
+                    lvLabel: el.properties.tagBindings?.lvVoltage
+                      ? `${values[el.properties.tagBindings.lvVoltage] ?? '...'} kV`
+                      : el.properties.lvTag
+                        ? `${values[el.properties.lvTag] ?? '...'} kV`
+                        : el.properties.lvRating || undefined,
+                    mvaLabel: el.properties.tagBindings?.mvaRating
+                      ? `${values[el.properties.tagBindings.mvaRating] ?? '...'} MVA`
+                      : el.properties.mvaTag
+                        ? `${values[el.properties.mvaTag] ?? '...'} MVA`
+                        : el.properties.mvaRating || undefined,
                   } : {}),
                 })}
               </div>
@@ -658,6 +664,21 @@ export default function MimicViewer() {
                       : '---'}
                   </span>
                 </div>
+              </>
+            )}
+            {selectedEquipment.properties.tagBindings && Object.keys(selectedEquipment.properties.tagBindings).length > 0 && (
+              <>
+                <div className="border-t border-gray-100 pt-1 mt-1">
+                  <span className="text-gray-500 font-semibold">Tag Bindings</span>
+                </div>
+                {Object.entries(selectedEquipment.properties.tagBindings).map(([suffix, tagName]) => (
+                  <div key={suffix} className="flex justify-between">
+                    <span className="text-gray-500">{suffix.replace(/([A-Z])/g, ' $1').replace(/^./, (s: string) => s.toUpperCase())}</span>
+                    <span className="font-mono font-bold text-blue-600">
+                      {values[tagName as string] !== undefined ? String(values[tagName as string]) : '---'}
+                    </span>
+                  </div>
+                ))}
               </>
             )}
           </div>

@@ -231,19 +231,9 @@ interface TagData {
 }
 
 // Quick tag templates per symbol type
-const TAG_TEMPLATES: Record<string, { suffix: string; dataType: 'BOOLEAN' | 'FLOAT' | 'INTEGER' | 'STRING'; unit: string; min?: number; max?: number }[]> = {
-  Transformer: [
-    { suffix: 'hvVoltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
-    { suffix: 'lvVoltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 100 },
-    { suffix: 'tapPosition', dataType: 'INTEGER', unit: '', min: 1, max: 32 },
-    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 150 },
-    { suffix: 'oilLevel', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
-  ],
-  AutoTransformer: [
-    { suffix: 'hvVoltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
-    { suffix: 'lvVoltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 100 },
-    { suffix: 'tapPosition', dataType: 'INTEGER', unit: '', min: 1, max: 32 },
-  ],
+type TagTemplate = { suffix: string; dataType: 'BOOLEAN' | 'FLOAT' | 'INTEGER' | 'STRING'; unit: string; min?: number; max?: number };
+const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
+  // ── Switchgear ──
   CB: [
     { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'tripCount', dataType: 'INTEGER', unit: '', min: 0, max: 99999 },
@@ -252,15 +242,126 @@ const TAG_TEMPLATES: Record<string, { suffix: string; dataType: 'BOOLEAN' | 'FLO
   VacuumCB: [
     { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'tripCount', dataType: 'INTEGER', unit: '', min: 0, max: 99999 },
+    { suffix: 'vacuumIntegrity', dataType: 'BOOLEAN', unit: '' },
   ],
   SF6CB: [
     { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'sf6Pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 10 },
+    { suffix: 'tripCount', dataType: 'INTEGER', unit: '', min: 0, max: 99999 },
   ],
-  BusBar: [
-    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+  ACB: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripCount', dataType: 'INTEGER', unit: '', min: 0, max: 99999 },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+  ],
+  MCCB: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
+  ],
+  MCB: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  RCCB: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'leakageCurrent', dataType: 'FLOAT', unit: 'mA', min: 0, max: 300 },
+  ],
+  Isolator: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  EarthSwitch: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  Fuse: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
+  ],
+  Contactor: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'operationCount', dataType: 'INTEGER', unit: '', min: 0, max: 999999 },
+  ],
+  LoadBreakSwitch: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+  ],
+  AutoRecloser: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'reclosureCount', dataType: 'INTEGER', unit: '', min: 0, max: 9999 },
+  ],
+  Sectionalizer: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'faultCount', dataType: 'INTEGER', unit: '', min: 0, max: 9999 },
+  ],
+  RingMainUnit: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 36 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 630 },
+  ],
+  GIS: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'sf6Pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 10 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 100 },
+  ],
+  // ── Transformers & Reactors ──
+  Transformer: [
+    { suffix: 'hvVoltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+    { suffix: 'lvVoltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 100 },
+    { suffix: 'mvaRating', dataType: 'FLOAT', unit: 'MVA', min: 0, max: 500 },
+    { suffix: 'tapPosition', dataType: 'INTEGER', unit: '', min: 1, max: 32 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 150 },
+    { suffix: 'oilLevel', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+  ],
+  AutoTransformer: [
+    { suffix: 'hvVoltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+    { suffix: 'lvVoltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 100 },
+    { suffix: 'tapPosition', dataType: 'INTEGER', unit: '', min: 1, max: 32 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 150 },
+  ],
+  ZigZagTransformer: [
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 150 },
+  ],
+  InstrumentTransformer: [
+    { suffix: 'ratio', dataType: 'FLOAT', unit: '', min: 0, max: 10000 },
+    { suffix: 'burden', dataType: 'FLOAT', unit: 'VA', min: 0, max: 200 },
+  ],
+  StepVoltageRegulator: [
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+    { suffix: 'tapPosition', dataType: 'INTEGER', unit: '', min: 1, max: 32 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+  ],
+  ShuntReactor: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 150 },
+  ],
+  SeriesReactor: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+  ],
+  SaturableReactor: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+  ],
+  Reactor: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 150 },
+  ],
+  // ── Rotating Machines ──
+  Generator: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 33 },
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'MW', min: 0, max: 500 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+  ],
+  SyncGenerator: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 33 },
+    { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'MW', min: 0, max: 500 },
+    { suffix: 'powerFactor', dataType: 'FLOAT', unit: '', min: 0, max: 1 },
   ],
   Motor: [
     { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
@@ -272,29 +373,373 @@ const TAG_TEMPLATES: Record<string, { suffix: string; dataType: 'BOOLEAN' | 'FLO
     { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
     { suffix: 'speed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 3600 },
+    { suffix: 'slip', dataType: 'FLOAT', unit: '%', min: 0, max: 10 },
   ],
   SyncMotor: [
     { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
+    { suffix: 'speed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 3600 },
+    { suffix: 'powerFactor', dataType: 'FLOAT', unit: '', min: 0, max: 1 },
   ],
-  Generator: [
-    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 33 },
+  VFD: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 0, max: 60 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
+    { suffix: 'speed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 3600 },
+  ],
+  SoftStarter: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
+  ],
+  // ── Power Electronics ──
+  Rectifier: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'dcVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 1000 },
+    { suffix: 'dcCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 500 },
+  ],
+  Inverter: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'acVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 1000 },
+  ],
+  UPSDetail: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'batteryLevel', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+    { suffix: 'load', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+    { suffix: 'inputVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+    { suffix: 'outputVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+  ],
+  StaticTransferSwitch: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'activeSource', dataType: 'INTEGER', unit: '', min: 1, max: 2 },
+  ],
+  SVC: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'reactivePower', dataType: 'FLOAT', unit: 'MVAr', min: -200, max: 200 },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+  ],
+  STATCOM: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'reactivePower', dataType: 'FLOAT', unit: 'MVAr', min: -200, max: 200 },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+  ],
+  Thyristor: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'firingAngle', dataType: 'FLOAT', unit: '°', min: 0, max: 180 },
+  ],
+  CapacitorBank: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'reactivePower', dataType: 'FLOAT', unit: 'kVAr', min: 0, max: 10000 },
+    { suffix: 'steps', dataType: 'INTEGER', unit: '', min: 0, max: 12 },
+  ],
+  Battery: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+    { suffix: 'soc', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: -500, max: 500 },
+  ],
+  // ── Renewable Energy ──
+  SolarPanel: [
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 500 },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 1000 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 20 },
+    { suffix: 'irradiance', dataType: 'FLOAT', unit: 'W/m²', min: 0, max: 1200 },
+  ],
+  SolarInverter: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 1000 },
+    { suffix: 'efficiency', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+    { suffix: 'dcVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 1000 },
+  ],
+  WindTurbine: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 5000 },
+    { suffix: 'windSpeed', dataType: 'FLOAT', unit: 'm/s', min: 0, max: 30 },
+    { suffix: 'rotorSpeed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 30 },
+  ],
+  BESS: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'soc', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: -5000, max: 5000 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 60 },
+  ],
+  SolarString: [
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 1000 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 20 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 50 },
+  ],
+  // ── Metering ──
+  CT: [
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+    { suffix: 'ratio', dataType: 'FLOAT', unit: '', min: 0, max: 10000 },
+  ],
+  PT: [
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+    { suffix: 'ratio', dataType: 'FLOAT', unit: '', min: 0, max: 10000 },
+  ],
+  Meter: [
+    { suffix: 'value', dataType: 'FLOAT', unit: '', min: 0, max: 9999 },
+  ],
+  Transducer: [
+    { suffix: 'input', dataType: 'FLOAT', unit: '', min: 0, max: 9999 },
+    { suffix: 'output', dataType: 'FLOAT', unit: '', min: 0, max: 9999 },
+  ],
+  EnergyMeter: [
+    { suffix: 'energy', dataType: 'FLOAT', unit: 'kWh', min: 0, max: 999999 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 10000 },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+  ],
+  PowerAnalyzer: [
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 10000 },
+    { suffix: 'powerFactor', dataType: 'FLOAT', unit: '', min: 0, max: 1 },
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
-    { suffix: 'power', dataType: 'FLOAT', unit: 'MW', min: 0, max: 500 },
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
   ],
-  SyncGenerator: [
-    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 33 },
+  MaxDemandIndicator: [
+    { suffix: 'maxDemand', dataType: 'FLOAT', unit: 'kW', min: 0, max: 10000 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+  ],
+  FrequencyMeter: [
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
-    { suffix: 'power', dataType: 'FLOAT', unit: 'MW', min: 0, max: 500 },
   ],
-  Isolator: [
+  Synchroscope: [
+    { suffix: 'angleDiff', dataType: 'FLOAT', unit: '°', min: -180, max: 180 },
+    { suffix: 'freqDiff', dataType: 'FLOAT', unit: 'Hz', min: -1, max: 1 },
+  ],
+  PowerFactorMeter: [
+    { suffix: 'powerFactor', dataType: 'FLOAT', unit: '', min: 0, max: 1 },
+  ],
+  Ammeter: [
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+  ],
+  Voltmeter: [
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+  ],
+  Wattmeter: [
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 10000 },
+  ],
+  // ── Protection Relays ──
+  Relay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+  ],
+  OvercurrentRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'pickupCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+  ],
+  EarthFaultRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'residualCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 500 },
+  ],
+  DistanceRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'impedance', dataType: 'FLOAT', unit: 'Ω', min: 0, max: 100 },
+  ],
+  DifferentialRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'differentialCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
+  ],
+  DirectionalRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+  ],
+  UnderFrequencyRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
+  ],
+  OverFrequencyRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
+  ],
+  LockoutRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'locked', dataType: 'BOOLEAN', unit: '' },
+  ],
+  BuchholzRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'gasLevel', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+  ],
+  OvervoltageRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+  ],
+  UndervoltageRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+  ],
+  NegativeSequenceRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'negSeqCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 500 },
+  ],
+  ThermalOverloadRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'thermalLoad', dataType: 'FLOAT', unit: '%', min: 0, max: 200 },
+  ],
+  ReversePowerRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: -1000, max: 1000 },
+  ],
+  SynchCheckRelay: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'synchOk', dataType: 'BOOLEAN', unit: '' },
+  ],
+  // ── Bus & Connections ──
+  BusBar: [
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+    { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
+  ],
+  DoubleBusBar: [
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
+  ],
+  BusSection: [
     { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
   ],
-  EarthSwitch: [
+  BusTie: [
     { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  Cable: [
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 90 },
+  ],
+  OverheadLine: [
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: -20, max: 80 },
+  ],
+  UndergroundCable: [
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 90 },
+  ],
+  LightningArrester: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'leakageCurrent', dataType: 'FLOAT', unit: 'mA', min: 0, max: 10 },
+  ],
+  Feeder: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 10000 },
+  ],
+  // ── Indicators ──
+  IndicatorLamp: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  AlarmHorn: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  PushButton: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  SelectorSwitch: [
+    { suffix: 'position', dataType: 'INTEGER', unit: '', min: 0, max: 3 },
+  ],
+  LEDIndicator: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  DigitalDisplay: [
+    { suffix: 'value', dataType: 'FLOAT', unit: '', min: 0, max: 9999 },
+  ],
+  Annunciator: [
+    { suffix: 'alarm', dataType: 'BOOLEAN', unit: '' },
+  ],
+  // ── Infrastructure ──
+  Panel: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  MCC: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+  ],
+  PLC: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'commStatus', dataType: 'BOOLEAN', unit: '' },
+  ],
+  HMI: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  Communication: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+  ],
+  Antenna: [
+    { suffix: 'signalStrength', dataType: 'FLOAT', unit: 'dBm', min: -120, max: 0 },
+  ],
+  // ── Piping & Mechanical ──
+  Valve: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'position', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+  ],
+  Pump: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'flow', dataType: 'FLOAT', unit: 'm³/h', min: 0, max: 1000 },
+    { suffix: 'pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 20 },
+    { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 500 },
+  ],
+  Compressor: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 30 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 200 },
+  ],
+  Tank: [
+    { suffix: 'level', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 200 },
+    { suffix: 'pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 20 },
+  ],
+  HeatExchanger: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'inletTemp', dataType: 'FLOAT', unit: '°C', min: 0, max: 300 },
+    { suffix: 'outletTemp', dataType: 'FLOAT', unit: '°C', min: 0, max: 300 },
+  ],
+  Filter: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'differentialPressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 5 },
+  ],
+  FlowMeter: [
+    { suffix: 'flow', dataType: 'FLOAT', unit: 'm³/h', min: 0, max: 1000 },
+    { suffix: 'totalFlow', dataType: 'FLOAT', unit: 'm³', min: 0, max: 999999 },
+  ],
+  PressureGauge: [
+    { suffix: 'pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 100 },
+  ],
+  TemperatureSensor: [
+    { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: -50, max: 500 },
+  ],
+  LevelSensor: [
+    { suffix: 'level', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+  ],
+  // ── Miscellaneous ──
+  DGSet: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+    { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
+    { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 5000 },
+    { suffix: 'fuelLevel', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
+  ],
+  AVR: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
+  ],
+  RTCC: [
+    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'tapPosition', dataType: 'INTEGER', unit: '', min: 1, max: 32 },
   ],
 };
+
+function formatLabel(suffix: string): string {
+  return suffix.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+}
 
 // ─── Symbol Palette ──────────────────────────────
 const SYMBOL_CATEGORIES = [
@@ -633,25 +1078,58 @@ export default function MimicEditor() {
     } catch {}
   }, [loadTags]);
 
-  // Quick create from template and bind
-  const quickCreateAndBind = useCallback(async (prefix: string, template: typeof TAG_TEMPLATES['CB'][0], elementId: string) => {
+  // Quick create from template and bind to tagBindings map
+  const quickCreateAndBind = useCallback(async (prefix: string, template: TagTemplate, elementId: string) => {
     const tagName = `${prefix}.${template.suffix}`;
-    const ok = await createTag({
-      name: tagName,
-      type: 'SIMULATED',
-      dataType: template.dataType,
-      unit: template.unit,
-      minValue: template.min ?? null,
-      maxValue: template.max ?? null,
-      simPattern: 'rand',
-      simFrequency: 1,
-      simAmplitude: template.max ? (template.max - (template.min || 0)) / 2 : 10,
-      simOffset: template.max ? ((template.max + (template.min || 0)) / 2) : 0,
-    });
-    if (ok) {
-      updateElementProps(elementId, { tagBinding: tagName });
+    const existing = tags.find(t => t.name === tagName);
+    if (!existing) {
+      const ok = await createTag({
+        name: tagName,
+        type: 'SIMULATED',
+        dataType: template.dataType,
+        unit: template.unit,
+        minValue: template.min ?? null,
+        maxValue: template.max ?? null,
+        simPattern: 'rand',
+        simFrequency: 1,
+        simAmplitude: template.max ? (template.max - (template.min || 0)) / 2 : 10,
+        simOffset: template.max ? ((template.max + (template.min || 0)) / 2) : 0,
+      });
+      if (!ok) return;
     }
-  }, [createTag, updateElementProps]);
+    const el = elements.find(e => e.id === elementId);
+    const newBindings = { ...(el?.properties.tagBindings || {}), [template.suffix]: tagName };
+    updateElementProps(elementId, { tagBindings: newBindings });
+  }, [createTag, updateElementProps, tags, elements]);
+
+  // Quick bind all: create all tags for a symbol and bind them
+  const quickBindAll = useCallback(async (elementId: string) => {
+    const el = elements.find(e => e.id === elementId);
+    if (!el || !(el.type in TAG_TEMPLATES)) return;
+    const prefix = (el.properties.label || el.type).replace(/\s+/g, '');
+    const newBindings = { ...(el.properties.tagBindings || {}) };
+    for (const tmpl of TAG_TEMPLATES[el.type]) {
+      const tagName = `${prefix}.${tmpl.suffix}`;
+      const existing = tags.find(t => t.name === tagName);
+      if (!existing) {
+        const ok = await createTag({
+          name: tagName,
+          type: 'SIMULATED',
+          dataType: tmpl.dataType,
+          unit: tmpl.unit,
+          minValue: tmpl.min ?? null,
+          maxValue: tmpl.max ?? null,
+          simPattern: 'rand',
+          simFrequency: 1,
+          simAmplitude: tmpl.max ? (tmpl.max - (tmpl.min || 0)) / 2 : 10,
+          simOffset: tmpl.max ? ((tmpl.max + (tmpl.min || 0)) / 2) : 0,
+        });
+        if (!ok) continue;
+      }
+      newBindings[tmpl.suffix] = tagName;
+    }
+    updateElementProps(elementId, { tagBindings: newBindings });
+  }, [createTag, updateElementProps, tags, elements]);
 
   const snap = useCallback((v: number) => snapToGrid ? Math.round(v / gridSize) * gridSize : v, [snapToGrid, gridSize]);
 
@@ -1235,9 +1713,9 @@ export default function MimicEditor() {
                 width: el.width,
                 height: el.height,
                 ...(el.type === 'Transformer' ? {
-                  hvLabel: el.properties.hvTag ? `🔗 ${el.properties.hvTag}` : el.properties.hvRating || undefined,
-                  lvLabel: el.properties.lvTag ? `🔗 ${el.properties.lvTag}` : el.properties.lvRating || undefined,
-                  mvaLabel: el.properties.mvaTag ? `🔗 ${el.properties.mvaTag}` : el.properties.mvaRating || undefined,
+                  hvLabel: el.properties.tagBindings?.hvVoltage ? `🔗 ${el.properties.tagBindings.hvVoltage}` : el.properties.hvRating || undefined,
+                  lvLabel: el.properties.tagBindings?.lvVoltage ? `🔗 ${el.properties.tagBindings.lvVoltage}` : el.properties.lvRating || undefined,
+                  mvaLabel: el.properties.tagBindings?.mvaRating ? `🔗 ${el.properties.tagBindings.mvaRating}` : el.properties.mvaRating || undefined,
                 } : {}),
               })}
             </div>
@@ -1309,18 +1787,24 @@ export default function MimicEditor() {
         )}
 
         {/* Tag binding indicator */}
-        {(el.properties.tagBinding || el.properties.targetTag) && (
-          <g>
-            <rect x={el.width - 14} y={-6} width={16} height={12} rx={3} fill="#3B82F6" opacity={0.9} />
-            <text x={el.width - 6} y={3} textAnchor="middle" fontSize={8} fill="white" fontFamily="sans-serif">T</text>
-            {hoveredElementId === el.id && (
-              <g>
-                <rect x={el.width + 6} y={-10} width={Math.max((el.properties.tagBinding || el.properties.targetTag || '').length * 5.5 + 12, 60)} height={16} rx={4} fill="#1E293B" opacity={0.9} />
-                <text x={el.width + 12} y={1} fontSize={9} fill="#93C5FD" fontFamily="monospace">{el.properties.tagBinding || el.properties.targetTag}</text>
-              </g>
-            )}
-          </g>
-        )}
+        {(() => {
+          const bindingsCount = el.properties.tagBindings ? Object.keys(el.properties.tagBindings).length : 0;
+          const hasLegacyBinding = el.properties.tagBinding || el.properties.targetTag;
+          if (!bindingsCount && !hasLegacyBinding) return null;
+          const label = bindingsCount > 0 ? `${bindingsCount} tag${bindingsCount > 1 ? 's' : ''}` : (el.properties.tagBinding || el.properties.targetTag || '');
+          return (
+            <g>
+              <rect x={el.width - 14} y={-6} width={16} height={12} rx={3} fill="#3B82F6" opacity={0.9} />
+              <text x={el.width - 6} y={3} textAnchor="middle" fontSize={8} fill="white" fontFamily="sans-serif">{bindingsCount || 'T'}</text>
+              {hoveredElementId === el.id && (
+                <g>
+                  <rect x={el.width + 6} y={-10} width={Math.max(label.length * 5.5 + 12, 60)} height={16} rx={4} fill="#1E293B" opacity={0.9} />
+                  <text x={el.width + 12} y={1} fontSize={9} fill="#93C5FD" fontFamily="monospace">{label}</text>
+                </g>
+              )}
+            </g>
+          );
+        })()}
 
         {/* Connection points on hover */}
         {(hoveredElementId === el.id || connectingFrom?.elementId === el.id) && el.type !== 'text' && el.type !== 'shape' && (
@@ -1876,219 +2360,126 @@ export default function MimicEditor() {
                 />
               </div>
 
-              {/* Tag Binding — searchable dropdown */}
-              <div className="relative">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Tag Binding</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={tagBindingDropdown ? tagBindingSearch : (selectedEl.properties.tagBinding || '')}
-                    onChange={(e) => {
-                      setTagBindingSearch(e.target.value);
-                      if (!tagBindingDropdown) setTagBindingDropdown(true);
-                      updateElementProps(selectedEl.id, { tagBinding: e.target.value });
-                    }}
-                    onFocus={() => { setTagBindingDropdown(true); setTagBindingSearch(selectedEl.properties.tagBinding || ''); }}
-                    placeholder="Search or type tag name..."
-                    className="w-full px-2 py-1 pr-7 text-sm border border-gray-200 rounded text-gray-700 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  />
-                  {selectedEl.properties.tagBinding && (
-                    <button
-                      onClick={() => { updateElementProps(selectedEl.id, { tagBinding: '' }); setTagBindingSearch(''); }}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                {tagBindingDropdown && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-y-auto">
-                    {tags
-                      .filter((t) => t.name.toLowerCase().includes(tagBindingSearch.toLowerCase()))
-                      .slice(0, 20)
-                      .map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                            updateElementProps(selectedEl.id, { tagBinding: t.name });
-                            setTagBindingDropdown(false);
-                            setTagBindingSearch('');
-                          }}
-                          className="w-full text-left px-2 py-1 text-xs hover:bg-blue-50 flex items-center gap-1.5 border-b border-gray-50"
-                        >
-                          <span className="font-mono text-gray-700 truncate flex-1">{t.name}</span>
-                          <span className="text-[9px] text-gray-400">{t.dataType}</span>
-                          {t.unit && <span className="text-[9px] text-gray-400">{t.unit}</span>}
-                        </button>
-                      ))}
-                    {tags.filter((t) => t.name.toLowerCase().includes(tagBindingSearch.toLowerCase())).length === 0 && (
-                      <div className="px-2 py-2 text-[10px] text-gray-400 text-center">No matching tags</div>
-                    )}
-                    <button
-                      onClick={() => { setShowTagForm(true); setLeftTab('tags'); setTagBindingDropdown(false); }}
-                      className="w-full text-left px-2 py-1.5 text-xs text-blue-600 hover:bg-blue-50 flex items-center gap-1 border-t border-gray-100"
-                    >
-                      <Plus className="w-3 h-3" /> Create New Tag
-                    </button>
-                  </div>
-                )}
-                {tagBindingDropdown && <div className="fixed inset-0 z-40" onClick={() => setTagBindingDropdown(false)} />}
-              </div>
-
-              {/* Quick tag templates */}
+              {/* Tag Bindings — per-property binding for all symbol types */}
               {selectedEl.type in TAG_TEMPLATES && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Quick Tags</label>
-                  <div className="space-y-1">
-                    {TAG_TEMPLATES[selectedEl.type].map((tmpl) => {
-                      const prefix = (selectedEl.properties.label || selectedEl.type).replace(/\s+/g, '');
-                      const tagName = `${prefix}.${tmpl.suffix}`;
-                      const exists = tags.some((t) => t.name === tagName);
-                      return (
-                        <button
-                          key={tmpl.suffix}
-                          onClick={() => {
-                            if (exists) {
-                              updateElementProps(selectedEl.id, { tagBinding: tagName });
-                            } else {
-                              quickCreateAndBind(prefix, tmpl, selectedEl.id);
-                            }
-                          }}
-                          className={`w-full text-left px-2 py-1 text-[10px] rounded border transition-colors ${
-                            exists
-                              ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
-                              : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-blue-50 hover:border-blue-200'
-                          }`}
-                        >
-                          <span className="font-mono">{tagName}</span>
-                          <span className="text-gray-400 ml-1">({tmpl.dataType}{tmpl.unit ? `, ${tmpl.unit}` : ''})</span>
-                          {exists ? (
-                            <span className="float-right text-green-600">Bind</span>
-                          ) : (
-                            <span className="float-right text-blue-500">+ Create</span>
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Tag Bindings</h4>
+                  {TAG_TEMPLATES[selectedEl.type].map((tmpl) => {
+                    const boundTag = selectedEl.properties.tagBindings?.[tmpl.suffix] || '';
+                    const filteredTags = tags.filter((t) => {
+                      if (tmpl.dataType === 'BOOLEAN') return t.dataType === 'BOOLEAN';
+                      if (tmpl.dataType === 'FLOAT' || tmpl.dataType === 'INTEGER') return t.dataType === 'FLOAT' || t.dataType === 'INTEGER';
+                      return true;
+                    });
+                    return (
+                      <div key={tmpl.suffix} className="mb-2">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          {formatLabel(tmpl.suffix)} {tmpl.unit && <span className="text-gray-400">({tmpl.unit})</span>}
+                        </label>
+                        <div className="flex gap-1 items-center">
+                          <select
+                            value={boundTag}
+                            onChange={(e) => {
+                              const newBindings = { ...(selectedEl.properties.tagBindings || {}), [tmpl.suffix]: e.target.value || undefined };
+                              if (!e.target.value) delete newBindings[tmpl.suffix];
+                              updateElementProps(selectedEl.id, { tagBindings: newBindings });
+                            }}
+                            className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded text-gray-700 bg-white"
+                          >
+                            <option value="">-- No tag --</option>
+                            {filteredTags.map((t) => (
+                              <option key={t.id} value={t.name}>{t.name} {t.unit ? `(${t.unit})` : ''}</option>
+                            ))}
+                          </select>
+                          {boundTag && (
+                            <button
+                              onClick={() => {
+                                const newBindings = { ...(selectedEl.properties.tagBindings || {}) };
+                                delete newBindings[tmpl.suffix];
+                                updateElementProps(selectedEl.id, { tagBindings: Object.keys(newBindings).length > 0 ? newBindings : undefined });
+                              }}
+                              className="text-red-400 hover:text-red-600 text-sm shrink-0"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
                           )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                        </div>
+                        {boundTag && (
+                          <div className="mt-0.5 text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded truncate">
+                            Bound: {boundTag}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <button
+                    onClick={() => quickBindAll(selectedEl.id)}
+                    className="w-full mt-2 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Auto-Create &amp; Bind All Tags
+                  </button>
                 </div>
               )}
 
-              {/* Transformer properties */}
-              {selectedEl.type === 'Transformer' && (
-                <>
-                  {/* HV Rating — tag-bindable */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">HV Rating</label>
-                    <div className="flex gap-1">
-                      <select
-                        value={selectedEl.properties.hvTag || ''}
-                        onChange={(e) => {
-                          const tagName = e.target.value;
-                          updateElementProps(selectedEl.id, {
-                            hvTag: tagName || undefined,
-                            hvRating: tagName ? `{{${tagName}}}` : selectedEl.properties.hvRating,
-                          });
-                        }}
-                        className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+              {/* Legacy tag binding — for types NOT in TAG_TEMPLATES */}
+              {!(selectedEl.type in TAG_TEMPLATES) && selectedEl.type !== 'text' && selectedEl.type !== 'shape' && !selectedEl.type.startsWith('ctrl-') && !['page-link', 'back-button', 'home-button'].includes(selectedEl.type) && (
+                <div className="relative">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Tag Binding</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={tagBindingDropdown ? tagBindingSearch : (selectedEl.properties.tagBinding || '')}
+                      onChange={(e) => {
+                        setTagBindingSearch(e.target.value);
+                        if (!tagBindingDropdown) setTagBindingDropdown(true);
+                        updateElementProps(selectedEl.id, { tagBinding: e.target.value });
+                      }}
+                      onFocus={() => { setTagBindingDropdown(true); setTagBindingSearch(selectedEl.properties.tagBinding || ''); }}
+                      placeholder="Search or type tag name..."
+                      className="w-full px-2 py-1 pr-7 text-sm border border-gray-200 rounded text-gray-700 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                    {selectedEl.properties.tagBinding && (
+                      <button
+                        onClick={() => { updateElementProps(selectedEl.id, { tagBinding: '' }); setTagBindingSearch(''); }}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        <option value="">Static value</option>
-                        {tags.filter(t => t.dataType === 'FLOAT' || t.dataType === 'INTEGER').map(t => (
-                          <option key={t.id} value={t.name}>{t.name} ({t.unit || t.dataType})</option>
-                        ))}
-                      </select>
-                    </div>
-                    {!selectedEl.properties.hvTag && (
-                      <input
-                        type="text"
-                        value={selectedEl.properties.hvRating || ''}
-                        onChange={(e) => updateElementProps(selectedEl.id, { hvRating: e.target.value })}
-                        placeholder="e.g. 33kV, 132kV"
-                        className="w-full mt-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
-                      />
-                    )}
-                    {selectedEl.properties.hvTag && (
-                      <div className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center justify-between">
-                        <span>🔗 Bound to: {selectedEl.properties.hvTag}</span>
-                        <button onClick={() => updateElementProps(selectedEl.id, { hvTag: undefined, hvRating: '' })} className="text-red-400 hover:text-red-600 ml-1">✕</button>
-                      </div>
+                        <X className="w-3 h-3" />
+                      </button>
                     )}
                   </div>
-                  {/* LV Rating — tag-bindable */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">LV Rating</label>
-                    <div className="flex gap-1">
-                      <select
-                        value={selectedEl.properties.lvTag || ''}
-                        onChange={(e) => {
-                          const tagName = e.target.value;
-                          updateElementProps(selectedEl.id, {
-                            lvTag: tagName || undefined,
-                            lvRating: tagName ? `{{${tagName}}}` : selectedEl.properties.lvRating,
-                          });
-                        }}
-                        className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
-                      >
-                        <option value="">Static value</option>
-                        {tags.filter(t => t.dataType === 'FLOAT' || t.dataType === 'INTEGER').map(t => (
-                          <option key={t.id} value={t.name}>{t.name} ({t.unit || t.dataType})</option>
+                  {tagBindingDropdown && (
+                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-y-auto">
+                      {tags
+                        .filter((t) => t.name.toLowerCase().includes(tagBindingSearch.toLowerCase()))
+                        .slice(0, 20)
+                        .map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => {
+                              updateElementProps(selectedEl.id, { tagBinding: t.name });
+                              setTagBindingDropdown(false);
+                              setTagBindingSearch('');
+                            }}
+                            className="w-full text-left px-2 py-1 text-xs hover:bg-blue-50 flex items-center gap-1.5 border-b border-gray-50"
+                          >
+                            <span className="font-mono text-gray-700 truncate flex-1">{t.name}</span>
+                            <span className="text-[9px] text-gray-400">{t.dataType}</span>
+                            {t.unit && <span className="text-[9px] text-gray-400">{t.unit}</span>}
+                          </button>
                         ))}
-                      </select>
-                    </div>
-                    {!selectedEl.properties.lvTag && (
-                      <input
-                        type="text"
-                        value={selectedEl.properties.lvRating || ''}
-                        onChange={(e) => updateElementProps(selectedEl.id, { lvRating: e.target.value })}
-                        placeholder="e.g. 11kV, 0.433kV"
-                        className="w-full mt-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
-                      />
-                    )}
-                    {selectedEl.properties.lvTag && (
-                      <div className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center justify-between">
-                        <span>🔗 Bound to: {selectedEl.properties.lvTag}</span>
-                        <button onClick={() => updateElementProps(selectedEl.id, { lvTag: undefined, lvRating: '' })} className="text-red-400 hover:text-red-600 ml-1">✕</button>
-                      </div>
-                    )}
-                  </div>
-                  {/* MVA Rating — tag-bindable */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">MVA Rating</label>
-                    <div className="flex gap-1">
-                      <select
-                        value={selectedEl.properties.mvaTag || ''}
-                        onChange={(e) => {
-                          const tagName = e.target.value;
-                          updateElementProps(selectedEl.id, {
-                            mvaTag: tagName || undefined,
-                            mvaRating: tagName ? `{{${tagName}}}` : selectedEl.properties.mvaRating,
-                          });
-                        }}
-                        className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      {tags.filter((t) => t.name.toLowerCase().includes(tagBindingSearch.toLowerCase())).length === 0 && (
+                        <div className="px-2 py-2 text-[10px] text-gray-400 text-center">No matching tags</div>
+                      )}
+                      <button
+                        onClick={() => { setShowTagForm(true); setLeftTab('tags'); setTagBindingDropdown(false); }}
+                        className="w-full text-left px-2 py-1.5 text-xs text-blue-600 hover:bg-blue-50 flex items-center gap-1 border-t border-gray-100"
                       >
-                        <option value="">Static value</option>
-                        {tags.filter(t => t.dataType === 'FLOAT' || t.dataType === 'INTEGER').map(t => (
-                          <option key={t.id} value={t.name}>{t.name} ({t.unit || t.dataType})</option>
-                        ))}
-                      </select>
+                        <Plus className="w-3 h-3" /> Create New Tag
+                      </button>
                     </div>
-                    {!selectedEl.properties.mvaTag && (
-                      <input
-                        type="text"
-                        value={selectedEl.properties.mvaRating || ''}
-                        onChange={(e) => updateElementProps(selectedEl.id, { mvaRating: e.target.value })}
-                        placeholder="e.g. 10MVA, 5MVA"
-                        className="w-full mt-1 px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
-                      />
-                    )}
-                    {selectedEl.properties.mvaTag && (
-                      <div className="mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center justify-between">
-                        <span>🔗 Bound to: {selectedEl.properties.mvaTag}</span>
-                        <button onClick={() => updateElementProps(selectedEl.id, { mvaTag: undefined, mvaRating: '' })} className="text-red-400 hover:text-red-600 ml-1">✕</button>
-                      </div>
-                    )}
-                  </div>
-                </>
+                  )}
+                  {tagBindingDropdown && <div className="fixed inset-0 z-40" onClick={() => setTagBindingDropdown(false)} />}
+                </div>
               )}
 
               {/* BusBar properties */}
