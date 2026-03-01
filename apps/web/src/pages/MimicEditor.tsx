@@ -789,7 +789,7 @@ function TagBindingField({ label, boundTag, availableTags, onBind, onUnbind }: {
         onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         placeholder="Search tags..."
-        className="w-full px-2 py-1 text-xs border border-gray-200 rounded text-gray-700 bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+        className="w-full px-2 py-1 text-xs border border-gray-200 rounded text-gray-900 bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
       />
       {open && filtered.length > 0 && (
         <div className="absolute z-50 left-0 right-0 mt-1 max-h-32 overflow-y-auto bg-white border border-gray-200 rounded shadow-lg">
@@ -797,16 +797,16 @@ function TagBindingField({ label, boundTag, availableTags, onBind, onUnbind }: {
             <button
               key={t.id}
               onClick={() => { onBind(t.name); setSearch(''); setOpen(false); }}
-              className="w-full text-left px-2 py-1 text-xs hover:bg-blue-50 flex items-center justify-between"
+              className="w-full text-left px-2 py-1.5 text-xs text-gray-900 hover:bg-blue-100 hover:text-blue-900 flex items-center justify-between"
             >
               <span className="truncate">{t.name}</span>
-              <span className="text-gray-400 ml-1 shrink-0">{t.unit || t.dataType}</span>
+              <span className="text-gray-500 ml-1 shrink-0">{t.unit || t.dataType}</span>
             </button>
           ))}
         </div>
       )}
       {open && filtered.length === 0 && search && (
-        <div className="absolute z-50 left-0 right-0 mt-1 px-2 py-1 bg-white border border-gray-200 rounded shadow-lg text-xs text-gray-400">
+        <div className="absolute z-50 left-0 right-0 mt-1 px-2 py-1 bg-white border border-gray-200 rounded shadow-lg text-xs text-gray-600">
           No matching tags
         </div>
       )}
@@ -1926,7 +1926,7 @@ export default function MimicEditor() {
         <select
           value={activePageId}
           onChange={(e) => setActivePageId(e.target.value)}
-          className="text-sm border border-gray-200 rounded px-2 py-1 text-gray-700 bg-white"
+          className="text-sm border border-gray-200 rounded px-2 py-1 text-gray-900 bg-white"
         >
           {project?.mimicPages.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
@@ -2137,13 +2137,13 @@ export default function MimicEditor() {
                     placeholder="Name (e.g. SUB1.voltage)"
                     value={tagForm.name}
                     onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
-                    className="w-full px-2 py-1 text-xs border border-gray-200 rounded text-gray-700 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-2 py-1 text-xs border border-gray-200 rounded text-gray-900 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
                   <div className="grid grid-cols-2 gap-1">
                     <select
                       value={tagForm.type}
                       onChange={(e) => setTagForm({ ...tagForm, type: e.target.value as 'INTERNAL' | 'SIMULATED' })}
-                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                     >
                       <option value="INTERNAL">Internal</option>
                       <option value="SIMULATED">Simulated</option>
@@ -2151,7 +2151,7 @@ export default function MimicEditor() {
                     <select
                       value={tagForm.dataType}
                       onChange={(e) => setTagForm({ ...tagForm, dataType: e.target.value as any })}
-                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                     >
                       <option value="BOOLEAN">Boolean</option>
                       <option value="FLOAT">Float</option>
@@ -2165,21 +2165,21 @@ export default function MimicEditor() {
                       placeholder="Unit"
                       value={tagForm.unit}
                       onChange={(e) => setTagForm({ ...tagForm, unit: e.target.value })}
-                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                     />
                     <input
                       type="number"
                       placeholder="Min"
                       value={tagForm.minValue}
                       onChange={(e) => setTagForm({ ...tagForm, minValue: e.target.value })}
-                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                     />
                     <input
                       type="number"
                       placeholder="Max"
                       value={tagForm.maxValue}
                       onChange={(e) => setTagForm({ ...tagForm, maxValue: e.target.value })}
-                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                      className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                     />
                   </div>
                   {tagForm.type === 'SIMULATED' && (
@@ -2187,7 +2187,7 @@ export default function MimicEditor() {
                       <select
                         value={tagForm.simPattern}
                         onChange={(e) => setTagForm({ ...tagForm, simPattern: e.target.value })}
-                        className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                        className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                       >
                         <option value="rand">rand(min,max)</option>
                         <option value="sine">Sine Wave</option>
@@ -2200,7 +2200,7 @@ export default function MimicEditor() {
                         placeholder="Freq"
                         value={tagForm.simFrequency}
                         onChange={(e) => setTagForm({ ...tagForm, simFrequency: e.target.value })}
-                        className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                        className="px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                       />
                     </div>
                   )}
@@ -2278,7 +2278,7 @@ export default function MimicEditor() {
                     </div>
                   ))}
                 {tags.length === 0 && (
-                  <div className="p-4 text-center text-xs text-gray-400">
+                  <div className="p-4 text-center text-xs text-gray-600">
                     No tags yet. Create one above or go to Tags page.
                   </div>
                 )}
@@ -2384,11 +2384,11 @@ export default function MimicEditor() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-[10px] text-gray-400">X</span>
-                    <input type="number" value={selectedEl.x} onChange={(e) => updateElement(selectedEl.id, { x: Number(e.target.value) })} className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white" />
+                    <input type="number" value={selectedEl.x} onChange={(e) => updateElement(selectedEl.id, { x: Number(e.target.value) })} className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
                   </div>
                   <div>
                     <span className="text-[10px] text-gray-400">Y</span>
-                    <input type="number" value={selectedEl.y} onChange={(e) => updateElement(selectedEl.id, { y: Number(e.target.value) })} className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white" />
+                    <input type="number" value={selectedEl.y} onChange={(e) => updateElement(selectedEl.id, { y: Number(e.target.value) })} className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
                   </div>
                 </div>
               </div>
@@ -2399,11 +2399,11 @@ export default function MimicEditor() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-[10px] text-gray-400">W</span>
-                    <input type="number" value={selectedEl.width} onChange={(e) => updateElement(selectedEl.id, { width: Number(e.target.value) })} className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white" />
+                    <input type="number" value={selectedEl.width} onChange={(e) => updateElement(selectedEl.id, { width: Number(e.target.value) })} className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
                   </div>
                   <div>
                     <span className="text-[10px] text-gray-400">H</span>
-                    <input type="number" value={selectedEl.height} onChange={(e) => updateElement(selectedEl.id, { height: Number(e.target.value) })} className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white" />
+                    <input type="number" value={selectedEl.height} onChange={(e) => updateElement(selectedEl.id, { height: Number(e.target.value) })} className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
                   </div>
                 </div>
               </div>
@@ -2414,7 +2414,7 @@ export default function MimicEditor() {
                 <select
                   value={selectedEl.rotation}
                   onChange={(e) => updateElement(selectedEl.id, { rotation: Number(e.target.value) })}
-                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                 >
                   {[0, 90, 180, 270].map((r) => (
                     <option key={r} value={r}>{r}°</option>
@@ -2429,7 +2429,7 @@ export default function MimicEditor() {
                   type="text"
                   value={selectedEl.properties.label || ''}
                   onChange={(e) => updateElementProps(selectedEl.id, { label: e.target.value })}
-                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                 />
               </div>
 
@@ -2486,7 +2486,7 @@ export default function MimicEditor() {
                       }}
                       onFocus={() => { setTagBindingDropdown(true); setTagBindingSearch(selectedEl.properties.tagBinding || ''); }}
                       placeholder="Search or type tag name..."
-                      className="w-full px-2 py-1 pr-7 text-sm border border-gray-200 rounded text-gray-700 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      className="w-full px-2 py-1 pr-7 text-sm border border-gray-200 rounded text-gray-900 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     />
                     {selectedEl.properties.tagBinding && (
                       <button
@@ -2510,7 +2510,7 @@ export default function MimicEditor() {
                               setTagBindingDropdown(false);
                               setTagBindingSearch('');
                             }}
-                            className="w-full text-left px-2 py-1 text-xs hover:bg-blue-50 flex items-center gap-1.5 border-b border-gray-50"
+                            className="w-full text-left px-2 py-1.5 text-xs text-gray-900 hover:bg-blue-100 flex items-center gap-1.5 border-b border-gray-50"
                           >
                             <span className="font-mono text-gray-700 truncate flex-1">{t.name}</span>
                             <span className="text-[9px] text-gray-400">{t.dataType}</span>
@@ -2574,7 +2574,7 @@ export default function MimicEditor() {
                             rules[i] = { ...rules[i], condition: e.target.value };
                             updateElementProps(selectedEl.id, { colorRules: rules });
                           }}
-                          className="w-14 px-1 py-0.5 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                          className="w-14 px-1 py-0.5 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                         >
                           <option value="==">==</option>
                           <option value="!=">!=</option>
@@ -2591,7 +2591,7 @@ export default function MimicEditor() {
                             updateElementProps(selectedEl.id, { colorRules: rules });
                           }}
                           placeholder="value"
-                          className="flex-1 px-1 py-0.5 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                          className="flex-1 px-1 py-0.5 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                         />
                       </div>
                       <div className="flex gap-1 items-center">
@@ -2613,7 +2613,7 @@ export default function MimicEditor() {
                             updateElementProps(selectedEl.id, { colorRules: rules });
                           }}
                           placeholder="Label"
-                          className="flex-1 px-1 py-0.5 text-[10px] border border-gray-200 rounded text-gray-700 bg-white"
+                          className="flex-1 px-1 py-0.5 text-[10px] border border-gray-200 rounded text-gray-900 bg-white"
                         />
                         <button
                           onClick={() => {
@@ -2655,7 +2655,7 @@ export default function MimicEditor() {
                         }}
                         onFocus={() => { setTargetTagDropdown(true); setTargetTagSearch(selectedEl.properties.targetTag || ''); }}
                         placeholder="Search or type tag name..."
-                        className="w-full px-2 py-1 pr-7 text-sm border border-gray-200 rounded text-gray-700 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                        className="w-full px-2 py-1 pr-7 text-sm border border-gray-200 rounded text-gray-900 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
                       />
                       {selectedEl.properties.targetTag && (
                         <button
@@ -2679,7 +2679,7 @@ export default function MimicEditor() {
                                 setTargetTagDropdown(false);
                                 setTargetTagSearch('');
                               }}
-                              className="w-full text-left px-2 py-1 text-xs hover:bg-blue-50 flex items-center gap-1.5 border-b border-gray-50"
+                              className="w-full text-left px-2 py-1.5 text-xs text-gray-900 hover:bg-blue-100 flex items-center gap-1.5 border-b border-gray-50"
                             >
                               <span className="font-mono text-gray-700 truncate flex-1">{t.name}</span>
                               <span className="text-[9px] text-gray-400">{t.dataType}</span>
@@ -2703,7 +2703,7 @@ export default function MimicEditor() {
                     <select
                       value={selectedEl.properties.controlAction || 'setValue'}
                       onChange={(e) => updateElementProps(selectedEl.id, { controlAction: e.target.value })}
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                     >
                       <option value="setValue">Set Value</option>
                       <option value="toggle">Toggle</option>
@@ -2718,7 +2718,7 @@ export default function MimicEditor() {
                         type="text"
                         value={selectedEl.properties.controlValue || ''}
                         onChange={(e) => updateElementProps(selectedEl.id, { controlValue: e.target.value })}
-                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                       />
                     </div>
                   )}
@@ -2730,7 +2730,7 @@ export default function MimicEditor() {
                         onChange={(e) => updateElementProps(selectedEl.id, { controlScript: e.target.value })}
                         rows={3}
                         placeholder='setTag("CB1.status", !getTag("CB1.status"))'
-                        className="w-full px-2 py-1 text-xs font-mono border border-gray-200 rounded text-gray-700 bg-white"
+                        className="w-full px-2 py-1 text-xs font-mono border border-gray-200 rounded text-gray-900 bg-white"
                       />
                     </div>
                   )}
@@ -2740,7 +2740,7 @@ export default function MimicEditor() {
                       type="text"
                       value={selectedEl.properties.buttonText || ''}
                       onChange={(e) => updateElementProps(selectedEl.id, { buttonText: e.target.value })}
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                     />
                   </div>
                   <div>
@@ -2764,7 +2764,7 @@ export default function MimicEditor() {
                       type="text"
                       value={selectedEl.properties.buttonText || ''}
                       onChange={(e) => updateElementProps(selectedEl.id, { buttonText: e.target.value })}
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                     />
                   </div>
                   {selectedEl.type === 'page-link' && (
@@ -2773,7 +2773,7 @@ export default function MimicEditor() {
                       <select
                         value={selectedEl.properties.targetPageId || ''}
                         onChange={(e) => updateElementProps(selectedEl.id, { targetPageId: e.target.value })}
-                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                       >
                         <option value="">-- Select Page --</option>
                         {project?.mimicPages.map((p) => (
@@ -2803,7 +2803,7 @@ export default function MimicEditor() {
                       type="text"
                       value={selectedEl.properties.text || ''}
                       onChange={(e) => updateElementProps(selectedEl.id, { text: e.target.value })}
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                     />
                   </div>
                   <div>
@@ -2812,7 +2812,7 @@ export default function MimicEditor() {
                       type="number"
                       value={selectedEl.properties.fontSize || 14}
                       onChange={(e) => updateElementProps(selectedEl.id, { fontSize: Number(e.target.value) })}
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                     />
                   </div>
                 </>
@@ -2852,17 +2852,17 @@ export default function MimicEditor() {
                       const rules = [...(selectedEl.properties.animationRules || [])];
                       rules[i] = { ...rules[i], condition: e.target.value };
                       updateElementProps(selectedEl.id, { animationRules: rules });
-                    }} placeholder="condition" className="flex-1 px-1 py-0.5 border border-gray-200 rounded text-gray-700 bg-white" />
+                    }} placeholder="condition" className="flex-1 px-1 py-0.5 border border-gray-200 rounded text-gray-900 bg-white" />
                     <input value={rule.property} onChange={(e) => {
                       const rules = [...(selectedEl.properties.animationRules || [])];
                       rules[i] = { ...rules[i], property: e.target.value };
                       updateElementProps(selectedEl.id, { animationRules: rules });
-                    }} placeholder="prop" className="w-12 px-1 py-0.5 border border-gray-200 rounded text-gray-700 bg-white" />
+                    }} placeholder="prop" className="w-12 px-1 py-0.5 border border-gray-200 rounded text-gray-900 bg-white" />
                     <input value={rule.value} onChange={(e) => {
                       const rules = [...(selectedEl.properties.animationRules || [])];
                       rules[i] = { ...rules[i], value: e.target.value };
                       updateElementProps(selectedEl.id, { animationRules: rules });
-                    }} placeholder="value" className="w-14 px-1 py-0.5 border border-gray-200 rounded text-gray-700 bg-white" />
+                    }} placeholder="value" className="w-14 px-1 py-0.5 border border-gray-200 rounded text-gray-900 bg-white" />
                   </div>
                 ))}
                 <button
@@ -2903,7 +2903,7 @@ export default function MimicEditor() {
                   type="text"
                   value={pageName}
                   onChange={(e) => setPageName(e.target.value)}
-                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -2920,7 +2920,7 @@ export default function MimicEditor() {
                 <select
                   value={gridSize}
                   onChange={(e) => setGridSize(Number(e.target.value))}
-                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
                 >
                   {[10, 20, 50].map((g) => (
                     <option key={g} value={g}>{g}px</option>

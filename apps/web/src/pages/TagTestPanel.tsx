@@ -464,7 +464,7 @@ export default function TagTestPanel() {
           <select
             value={filterProjectId}
             onChange={(e) => setFilterProjectId(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-900 bg-white"
           >
             <option value="">All Projects</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -506,7 +506,7 @@ export default function TagTestPanel() {
                   value={bulkValue}
                   onChange={(e) => setBulkValue(e.target.value)}
                   placeholder="Value for all"
-                  className="px-3 py-1.5 text-sm border border-blue-200 rounded text-gray-700 bg-white"
+                  className="px-3 py-1.5 text-sm border border-blue-200 rounded text-gray-900 bg-white"
                 />
                 <button onClick={handleBulkSet} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
                   Set All

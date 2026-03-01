@@ -238,7 +238,7 @@ export default function TagManager() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tags..."
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="flex items-center gap-1.5">
@@ -246,7 +246,7 @@ export default function TagManager() {
           <select
             value={filterProjectId}
             onChange={(e) => setFilterProjectId(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-700 bg-white"
+            className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-white"
           >
             <option value="">All Projects</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -254,7 +254,7 @@ export default function TagManager() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-700 bg-white"
+            className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-white"
           >
             <option value="">All Types</option>
             {TAG_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -263,7 +263,7 @@ export default function TagManager() {
             <select
               value={filterGroup}
               onChange={(e) => setFilterGroup(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-700 bg-white"
+              className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-white"
             >
               <option value="">All Groups</option>
               {groups.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -473,7 +473,7 @@ export default function TagManager() {
                       <select
                         value={form.simPattern || 'sine'}
                         onChange={(e) => setForm({ ...form, simPattern: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-700 bg-white"
+                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-900 bg-white"
                       >
                         {SIM_PATTERNS.map((p) => <option key={p} value={p}>{
                           p === 'rand' ? 'rand(min,max) — Random between range' :
@@ -491,7 +491,7 @@ export default function TagManager() {
                         step="0.1"
                         value={form.simFrequency ?? 1}
                         onChange={(e) => setForm({ ...form, simFrequency: Number(e.target.value) })}
-                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-700 bg-white"
+                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-900 bg-white"
                       />
                     </div>
                     <div>
@@ -504,7 +504,7 @@ export default function TagManager() {
                         placeholder={form.simPattern === 'rand' ? 'e.g. 100' : ''}
                         value={form.simAmplitude ?? 1}
                         onChange={(e) => setForm({ ...form, simAmplitude: Number(e.target.value) })}
-                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-700 bg-white"
+                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-900 bg-white"
                       />
                     </div>
                     <div>
@@ -516,7 +516,7 @@ export default function TagManager() {
                         step="0.1"
                         value={form.simOffset ?? 0}
                         onChange={(e) => setForm({ ...form, simOffset: Number(e.target.value) })}
-                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-700 bg-white"
+                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-900 bg-white"
                       />
                     </div>
                   </div>
@@ -533,7 +533,7 @@ export default function TagManager() {
                     onChange={(e) => setForm({ ...form, formula: e.target.value })}
                     rows={3}
                     placeholder="e.g. MANUAL.voltage_bus1 + MANUAL.voltage_bus2 * 0.5"
-                    className="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg text-gray-700 bg-white font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg text-gray-900 bg-white font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   />
                 </div>
               )}
