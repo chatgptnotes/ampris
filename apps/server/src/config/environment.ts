@@ -16,4 +16,5 @@ export const env = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
   OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o',
   SLD_GENERATION_MAX_FILE_SIZE_MB: parseInt(process.env.SLD_GENERATION_MAX_FILE_SIZE_MB || '20', 10),
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
 } as const;

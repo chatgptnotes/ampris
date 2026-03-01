@@ -20,7 +20,7 @@ export default function Login() {
     try {
       const result = await loginApi(username, password);
       setAuth(result.user, result.accessToken, result.refreshToken);
-      navigate('/');
+      navigate('/app');
     } catch {
       setError('Invalid credentials. Please try again.');
     } finally {

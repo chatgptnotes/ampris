@@ -2,8 +2,11 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import AlarmStatusBar from './AlarmStatusBar';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 export default function AppShell() {
+  useWebSocket();
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header />

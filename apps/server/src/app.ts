@@ -12,6 +12,7 @@ import trendRoutes from './routes/trend.routes';
 import controlRoutes from './routes/control.routes';
 import reportRoutes from './routes/report.routes';
 import sldGenerationRoutes from './routes/sld-generation.routes';
+import geminiRoutes from './routes/gemini.routes';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/trends', trendRoutes);
 app.use('/api/control', controlRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/sld', sldGenerationRoutes);
+app.use('/api/gemini', geminiRoutes);
 app.use('/api/data-points', (_req, res) => {
   import('./controllers/substation.controller').then((ctrl) => ctrl.getDataPoints(_req, res));
 });

@@ -15,6 +15,18 @@ export default {
           danger: '#DC2626',
           orange: '#F97316',
         },
+        public: {
+          bg: '#FFFFFF',
+          surface: '#F8FAFC',
+          border: '#E2E8F0',
+          text: '#1E293B',
+          muted: '#64748B',
+          accent: '#2563EB',
+          'accent-light': '#DBEAFE',
+          success: '#059669',
+          warning: '#D97706',
+          danger: '#DC2626',
+        },
         voltage: {
           '132kv': '#1E40AF',
           '33kv': '#DC2626',
