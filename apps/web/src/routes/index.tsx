@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import ProtectedRoute from './ProtectedRoute';
 import AppShell from '@/components/common/AppShell';
 import PublicLayout from '@/components/public/PublicLayout';
@@ -18,16 +19,20 @@ import ConnectionManager from '@/pages/ConnectionManager';
 import ComponentLibrary from '@/pages/ComponentLibrary';
 import SLDGenerator from '@/pages/SLDGenerator';
 import ProjectHub from '@/pages/ProjectHub';
-import MimicEditor from '@/pages/MimicEditor';
-import MimicViewer from '@/pages/MimicViewer';
 import ProjectMembers from '@/pages/ProjectMembers';
-import TagManager from '@/pages/TagManager';
-import TagTestPanel from '@/pages/TagTestPanel';
-import AILoadForecasting from '@/pages/AILoadForecasting';
-import AIEquipmentHealth from '@/pages/AIEquipmentHealth';
-import AIPredictiveMaintenance from '@/pages/AIPredictiveMaintenance';
-import AIPowerQuality from '@/pages/AIPowerQuality';
-import AIOperationsCenter from '@/pages/AIOperationsCenter';
+
+// Lazy-loaded heavy pages
+const MimicEditor = lazy(() => import('@/pages/MimicEditor'));
+const MimicViewer = lazy(() => import('@/pages/MimicViewer'));
+const TagManager = lazy(() => import('@/pages/TagManager'));
+const TagTestPanel = lazy(() => import('@/pages/TagTestPanel'));
+const AILoadForecasting = lazy(() => import('@/pages/AILoadForecasting'));
+const AIEquipmentHealth = lazy(() => import('@/pages/AIEquipmentHealth'));
+const AIPredictiveMaintenance = lazy(() => import('@/pages/AIPredictiveMaintenance'));
+const AIPowerQuality = lazy(() => import('@/pages/AIPowerQuality'));
+const AIOperationsCenter = lazy(() => import('@/pages/AIOperationsCenter'));
+
+const LazyFallback = () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
 import HomePage from '@/pages/public/HomePage';
 import FeaturesPage from '@/pages/public/FeaturesPage';
 import DemoPage from '@/pages/public/DemoPage';
@@ -67,9 +72,9 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Dashboard /> },
           { path: 'projects', element: <ProjectHub /> },
-          { path: 'projects/:projectId', element: <MimicViewer /> },
-          { path: 'projects/:projectId/edit', element: <MimicEditor /> },
-          { path: 'projects/:projectId/edit/:pageId', element: <MimicEditor /> },
+          { path: 'projects/:projectId', element: <Suspense fallback={<LazyFallback />}><MimicViewer /></Suspense> },
+          { path: 'projects/:projectId/edit', element: <Suspense fallback={<LazyFallback />}><MimicEditor /></Suspense> },
+          { path: 'projects/:projectId/edit/:pageId', element: <Suspense fallback={<LazyFallback />}><MimicEditor /></Suspense> },
           { path: 'projects/:projectId/members', element: <ProjectMembers /> },
           { path: 'sld', element: <SLDView /> },
           { path: 'sld/:substationId', element: <SLDView /> },
@@ -84,13 +89,13 @@ export const router = createBrowserRouter([
           { path: 'setup', element: <SetupWizard /> },
           { path: 'connections', element: <ConnectionManager /> },
           { path: 'components', element: <ComponentLibrary /> },
-          { path: 'tags', element: <TagManager /> },
-          { path: 'tag-test', element: <TagTestPanel /> },
-          { path: 'ai/load-forecast', element: <AILoadForecasting /> },
-          { path: 'ai/equipment-health', element: <AIEquipmentHealth /> },
-          { path: 'ai/maintenance', element: <AIPredictiveMaintenance /> },
-          { path: 'ai/power-quality', element: <AIPowerQuality /> },
-          { path: 'ai/ops-center', element: <AIOperationsCenter /> },
+          { path: 'tags', element: <Suspense fallback={<LazyFallback />}><TagManager /></Suspense> },
+          { path: 'tag-test', element: <Suspense fallback={<LazyFallback />}><TagTestPanel /></Suspense> },
+          { path: 'ai/load-forecast', element: <Suspense fallback={<LazyFallback />}><AILoadForecasting /></Suspense> },
+          { path: 'ai/equipment-health', element: <Suspense fallback={<LazyFallback />}><AIEquipmentHealth /></Suspense> },
+          { path: 'ai/maintenance', element: <Suspense fallback={<LazyFallback />}><AIPredictiveMaintenance /></Suspense> },
+          { path: 'ai/power-quality', element: <Suspense fallback={<LazyFallback />}><AIPowerQuality /></Suspense> },
+          { path: 'ai/ops-center', element: <Suspense fallback={<LazyFallback />}><AIOperationsCenter /></Suspense> },
         ],
       },
     ],
