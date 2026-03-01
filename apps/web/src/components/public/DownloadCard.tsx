@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Download } from 'lucide-react';
+import { Download, ExternalLink } from 'lucide-react';
 
 interface Props {
   icon: LucideIcon;
@@ -9,9 +9,14 @@ interface Props {
   size?: string;
   available?: boolean;
   href?: string;
+  downloadFile?: boolean;
+  buttonLabel?: string;
 }
 
-export default function DownloadCard({ icon: Icon, title, description, version, size, available = false, href }: Props) {
+export default function DownloadCard({ icon: Icon, title, description, version, size, available = false, href, downloadFile, buttonLabel }: Props) {
+  const label = buttonLabel || (downloadFile ? 'Download' : 'View');
+  const LinkIcon = downloadFile ? Download : ExternalLink;
+
   return (
     <div className={`bg-white rounded-xl border border-gray-200 p-6 transition-all ${available ? 'hover:shadow-lg' : 'opacity-75'}`}>
       <div className="flex items-start gap-4">
@@ -37,10 +42,13 @@ export default function DownloadCard({ icon: Icon, title, description, version, 
       {available && href ? (
         <a
           href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          {...(downloadFile ? { download: '' } : {})}
           className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
         >
-          <Download className="w-4 h-4" />
-          Download
+          <LinkIcon className="w-4 h-4" />
+          {label}
         </a>
       ) : (
         <button

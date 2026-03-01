@@ -118,17 +118,25 @@ export default function DownloadsPage() {
           />
           <DownloadCard
             icon={Terminal}
-            title="Linux (DEB/AppImage)"
-            description="Native Linux installer for Ubuntu/Debian. AppImage also available for other distros."
+            title="Linux Installer"
+            description="Automated shell script for Ubuntu/Debian. Installs Node.js, PostgreSQL, Redis, and creates systemd service."
             version="1.0.0"
-            size="~150 MB"
+            size="~8 KB"
+            available
+            href="https://raw.githubusercontent.com/chatgptnotes/GridVision/main/installers/linux/install.sh"
+            downloadFile
+            buttonLabel="Download install.sh"
           />
           <DownloadCard
             icon={Monitor}
             title="Windows Installer"
-            description="Standalone Windows installer with built-in Node.js runtime and database."
+            description="PowerShell installer script. Installs prerequisites, clones repo, builds app, creates shortcuts and auto-start."
             version="1.0.0"
-            size="~180 MB"
+            size="~10 KB"
+            available
+            href="https://raw.githubusercontent.com/chatgptnotes/GridVision/main/installers/windows/windows-setup.ps1"
+            downloadFile
+            buttonLabel="Download .ps1"
           />
           <DownloadCard
             icon={Code}
@@ -141,16 +149,21 @@ export default function DownloadsPage() {
           <DownloadCard
             icon={Monitor}
             title="Desktop App (Electron)"
-            description="Cross-platform desktop application with offline mode, native notifications, and system tray."
+            description="Cross-platform desktop application with system tray, native notifications, offline detection, and auto-updater."
             version="1.0.0"
             size="~200 MB"
+            available
+            href="https://github.com/chatgptnotes/GridVision/tree/main/apps/electron"
+            buttonLabel="Build Instructions"
           />
           <DownloadCard
             icon={FileText}
-            title="Documentation PDF"
-            description="Complete offline documentation including installation guide, user manual, and API reference."
+            title="Documentation"
+            description="Complete documentation: user manual, installation guide, API reference, and protocol integration guide."
             version="1.0.0"
-            size="~15 MB"
+            available
+            href="https://github.com/chatgptnotes/GridVision/tree/main/docs"
+            buttonLabel="View Docs"
           />
         </div>
 

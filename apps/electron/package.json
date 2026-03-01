@@ -1,12 +1,17 @@
 {
-  "name": "@gridvision/electron",
+  "name": "gridvision-desktop",
   "version": "1.0.0",
+  "description": "GridVision SCADA Desktop Application",
   "private": true,
   "main": "dist/main.js",
   "scripts": {
-    "dev": "electron .",
+    "start": "electron .",
+    "dev": "tsc && electron .",
     "build": "tsc && electron-builder",
-    "clean": "rm -rf dist"
+    "build:win": "tsc && electron-builder --win",
+    "build:linux": "tsc && electron-builder --linux",
+    "build:mac": "tsc && electron-builder --mac",
+    "clean": "rm -rf dist release"
   },
   "dependencies": {
     "@gridvision/shared": "workspace:*"
@@ -15,5 +20,47 @@
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
     "typescript": "^5.3.0"
+  },
+  "build": {
+    "appId": "com.gridvision.scada",
+    "productName": "GridVision SCADA",
+    "copyright": "Copyright 2026 GridVision Technologies",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility",
+      "maintainer": "GridVision Technologies"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.utilities"
+    }
   }
 }
