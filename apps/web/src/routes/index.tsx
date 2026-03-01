@@ -22,15 +22,23 @@ import ProjectHub from '@/pages/ProjectHub';
 import ProjectMembers from '@/pages/ProjectMembers';
 
 // Lazy-loaded heavy pages
-const MimicEditor = lazy(() => import('@/pages/MimicEditor'));
-const MimicViewer = lazy(() => import('@/pages/MimicViewer'));
-const TagManager = lazy(() => import('@/pages/TagManager'));
-const TagTestPanel = lazy(() => import('@/pages/TagTestPanel'));
-const AILoadForecasting = lazy(() => import('@/pages/AILoadForecasting'));
-const AIEquipmentHealth = lazy(() => import('@/pages/AIEquipmentHealth'));
-const AIPredictiveMaintenance = lazy(() => import('@/pages/AIPredictiveMaintenance'));
-const AIPowerQuality = lazy(() => import('@/pages/AIPowerQuality'));
-const AIOperationsCenter = lazy(() => import('@/pages/AIOperationsCenter'));
+// Auto-retry on chunk load failure (stale cache after deploy)
+function lazyRetry(fn: () => Promise<any>) {
+  return lazy(() => fn().catch(() => {
+    window.location.reload();
+    return fn();
+  }));
+}
+
+const MimicEditor = lazyRetry(() => import('@/pages/MimicEditor'));
+const MimicViewer = lazyRetry(() => import('@/pages/MimicViewer'));
+const TagManager = lazyRetry(() => import('@/pages/TagManager'));
+const TagTestPanel = lazyRetry(() => import('@/pages/TagTestPanel'));
+const AILoadForecasting = lazyRetry(() => import('@/pages/AILoadForecasting'));
+const AIEquipmentHealth = lazyRetry(() => import('@/pages/AIEquipmentHealth'));
+const AIPredictiveMaintenance = lazyRetry(() => import('@/pages/AIPredictiveMaintenance'));
+const AIPowerQuality = lazyRetry(() => import('@/pages/AIPowerQuality'));
+const AIOperationsCenter = lazyRetry(() => import('@/pages/AIOperationsCenter'));
 
 const LazyFallback = () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
 import HomePage from '@/pages/public/HomePage';
