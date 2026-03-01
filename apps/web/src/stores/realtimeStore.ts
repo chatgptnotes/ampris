@@ -7,6 +7,7 @@ interface RealtimeState {
 
   setValues: (values: Record<string, RealTimeValue>) => void;
   updateValue: (value: RealTimeValue) => void;
+  batchUpdateValues: (values: RealTimeValue[]) => void;
   setConnectionStatus: (status: RealtimeState['connectionStatus']) => void;
   getValue: (tag: string) => RealTimeValue | undefined;
 }
@@ -21,6 +22,15 @@ export const useRealtimeStore = create<RealtimeState>()((set, get) => ({
     set((state) => ({
       values: { ...state.values, [value.tag]: value },
     })),
+
+  batchUpdateValues: (values) =>
+    set((state) => {
+      const updated = { ...state.values };
+      for (const v of values) {
+        updated[v.tag] = v;
+      }
+      return { values: updated };
+    }),
 
   setConnectionStatus: (status) => set({ connectionStatus: status }),
 

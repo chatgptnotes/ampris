@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useRealtimeStore } from '@/stores/realtimeStore';
+import NotificationCenter from '@/components/NotificationCenter';
 import { LogOut, Wifi, WifiOff, Zap, Menu } from 'lucide-react';
 
 interface HeaderProps {
@@ -39,6 +41,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               <Wifi className="w-4 h-4 text-scada-success" />
               <span className="text-scada-success hidden sm:inline">LIVE</span>
             </>
+          ) : connectionStatus === 'connecting' ? (
+            <>
+              <Wifi className="w-4 h-4 text-yellow-400 animate-pulse" />
+              <span className="text-yellow-400 hidden sm:inline">CONNECTING</span>
+            </>
           ) : (
             <>
               <WifiOff className="w-4 h-4 text-scada-danger" />
@@ -49,7 +56,12 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
         {/* Current time */}
         <div className="hidden sm:block">
-          <Clock />
+          <LiveClock />
+        </div>
+
+        {/* Notification Center */}
+        <div className="relative flex items-center gap-1">
+          <NotificationCenter />
         </div>
 
         {/* User info */}
@@ -71,10 +83,17 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   );
 }
 
-function Clock() {
+function LiveClock() {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="text-xs font-mono text-gray-400">
-      {new Date().toLocaleString('en-IN', {
+      {time.toLocaleString('en-IN', {
         timeZone: 'Asia/Kolkata',
         hour: '2-digit',
         minute: '2-digit',

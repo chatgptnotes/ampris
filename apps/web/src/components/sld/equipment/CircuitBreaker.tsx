@@ -49,7 +49,7 @@ export default function CircuitBreaker({ x, y, tag, label, onClick, onDoubleClic
       )}
 
       {/* Tripped animation */}
-      {cbState === 'TRIPPED' && (
+      {(cbState as string) === 'TRIPPED' && (
         <rect
           x={x - size / 2 - 2}
           y={y - size / 2 - 2}

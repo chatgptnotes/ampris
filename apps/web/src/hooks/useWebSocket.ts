@@ -8,6 +8,7 @@ import type { RealTimeValue } from '@gridvision/shared';
 export function useWebSocket(): void {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const updateValue = useRealtimeStore((s) => s.updateValue);
+  const batchUpdateValues = useRealtimeStore((s) => s.batchUpdateValues);
   const setValues = useRealtimeStore((s) => s.setValues);
   const setConnectionStatus = useRealtimeStore((s) => s.setConnectionStatus);
   const addAlarm = useAlarmStore((s) => s.addAlarm);
@@ -35,10 +36,15 @@ export function useWebSocket(): void {
       setConnectionStatus('disconnected');
     });
 
+    socket.on('reconnect_attempt', () => {
+      setConnectionStatus('connecting');
+    });
+
     socket.on('snapshot', (data: Record<string, RealTimeValue>) => {
       setValues(data);
     });
 
+    // Individual updates (legacy)
     socket.on('measurement', (data: RealTimeValue) => {
       updateValue(data);
     });
@@ -47,6 +53,16 @@ export function useWebSocket(): void {
       updateValue(data);
     });
 
+    // Batched updates from enhanced server (250ms batches)
+    socket.on('measurements:batch', (data: RealTimeValue[]) => {
+      batchUpdateValues(data);
+    });
+
+    socket.on('digitals:batch', (data: RealTimeValue[]) => {
+      batchUpdateValues(data);
+    });
+
+    // Alarms
     socket.on('alarm:raised', (data: unknown) => {
       addAlarm(data as Parameters<typeof addAlarm>[0]);
     });
@@ -59,5 +75,5 @@ export function useWebSocket(): void {
       initialized.current = false;
       disconnectSocket();
     };
-  }, [isAuthenticated, updateValue, setValues, setConnectionStatus, addAlarm, removeAlarm]);
+  }, [isAuthenticated, updateValue, batchUpdateValues, setValues, setConnectionStatus, addAlarm, removeAlarm]);
 }

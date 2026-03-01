@@ -9,6 +9,7 @@ import {
   Settings,
   Activity,
   Shield,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 import { useAlarmStore } from '@/stores/alarmStore';
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { path: '/app/events', icon: List, label: 'Events' },
   { path: '/app/reports', icon: FileText, label: 'Reports' },
   { path: '/app/analytics', icon: Activity, label: 'Analytics' },
+  { path: '/app/control', icon: SlidersHorizontal, label: 'Control', permission: 'control:operate' },
   { path: '/app/audit', icon: Shield, label: 'Audit', permission: 'view:audit' },
   { path: '/app/settings', icon: Settings, label: 'Settings' },
 ];

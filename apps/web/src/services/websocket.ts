@@ -14,7 +14,8 @@ export function getSocket(): Socket {
       },
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      reconnectionDelayMax: 30000,
+      reconnectionAttempts: Infinity,
     });
   }
   return socket;
@@ -32,5 +33,21 @@ export function disconnectSocket(): void {
   if (socket) {
     socket.disconnect();
     socket = null;
+  }
+}
+
+/** Subscribe to specific tags. */
+export function subscribeTags(tags: string[]): void {
+  const s = getSocket();
+  if (s.connected) {
+    s.emit('subscribe:tags', tags);
+  }
+}
+
+/** Unsubscribe from specific tags. */
+export function unsubscribeTags(tags: string[]): void {
+  const s = getSocket();
+  if (s.connected) {
+    s.emit('unsubscribe:tags', tags);
   }
 }

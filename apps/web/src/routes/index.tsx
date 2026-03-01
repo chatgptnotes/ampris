@@ -12,6 +12,7 @@ import Reports from '@/pages/Reports';
 import Analytics from '@/pages/Analytics';
 import AuditLog from '@/pages/AuditLog';
 import Settings from '@/pages/Settings';
+import ControlPanel from '@/pages/ControlPanel';
 import SLDGenerator from '@/pages/SLDGenerator';
 import HomePage from '@/pages/public/HomePage';
 import FeaturesPage from '@/pages/public/FeaturesPage';
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
           { path: 'events', element: <Events /> },
           { path: 'reports', element: <Reports /> },
           { path: 'analytics', element: <Analytics /> },
+          { path: 'control', element: <ControlPanel /> },
           { path: 'audit', element: <AuditLog /> },
           { path: 'settings', element: <Settings /> },
         ],

@@ -20,6 +20,9 @@ async function main(): Promise<void> {
   // Initialize WebSocket / real-time service
   realtimeService.initialize(httpServer);
 
+  // Start the MSEDCL simulator — begins generating data immediately
+  realtimeService.startSimulator();
+
   // Start HTTP server
   httpServer.listen(env.PORT, () => {
     console.log(`GridVision SCADA Server running on port ${env.PORT}`);

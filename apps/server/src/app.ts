@@ -13,6 +13,8 @@ import controlRoutes from './routes/control.routes';
 import reportRoutes from './routes/report.routes';
 import sldGenerationRoutes from './routes/sld-generation.routes';
 import geminiRoutes from './routes/gemini.routes';
+import historianRoutes from './routes/historian.routes';
+import realtimeRoutes from './routes/realtime.routes';
 
 const app = express();
 
@@ -47,6 +49,8 @@ app.use('/api/control', controlRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/sld', sldGenerationRoutes);
 app.use('/api/gemini', geminiRoutes);
+app.use('/api/historian', historianRoutes);
+app.use('/api/realtime', realtimeRoutes);
 app.use('/api/data-points', (_req, res) => {
   import('./controllers/substation.controller').then((ctrl) => ctrl.getDataPoints(_req, res));
 });
