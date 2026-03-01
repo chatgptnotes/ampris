@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
 import { useRealtimeStore } from '@/stores/realtimeStore';
@@ -9,6 +9,126 @@ import {
   ChevronLeft,
   Users,
 } from 'lucide-react';
+import * as ScadaSymbols from '@/components/scada-symbols';
+
+// ─── Symbol type → Component mapping ─────────────
+const SYMBOL_MAP: Record<string, React.ComponentType<any>> = {
+  CB: ScadaSymbols.CBSymbol,
+  VacuumCB: ScadaSymbols.VacuumCBSymbol,
+  SF6CB: ScadaSymbols.SF6CBSymbol,
+  ACB: ScadaSymbols.ACBSymbol,
+  MCCB: ScadaSymbols.MCCBSymbol,
+  MCB: ScadaSymbols.MCBSymbol,
+  RCCB: ScadaSymbols.RCCBSymbol,
+  Isolator: ScadaSymbols.IsolatorSymbol,
+  EarthSwitch: ScadaSymbols.EarthSwitchSymbol,
+  Fuse: ScadaSymbols.FuseSymbol,
+  Contactor: ScadaSymbols.ContactorSymbol,
+  LoadBreakSwitch: ScadaSymbols.LoadBreakSwitchSymbol,
+  AutoRecloser: ScadaSymbols.AutoRecloserSymbol,
+  Sectionalizer: ScadaSymbols.SectionalizerSymbol,
+  RingMainUnit: ScadaSymbols.RingMainUnitSymbol,
+  GIS: ScadaSymbols.GISSymbol,
+  Transformer: ScadaSymbols.TransformerSymbol,
+  AutoTransformer: ScadaSymbols.AutoTransformerSymbol,
+  ZigZagTransformer: ScadaSymbols.ZigZagTransformerSymbol,
+  InstrumentTransformer: ScadaSymbols.InstrumentTransformerSymbol,
+  StepVoltageRegulator: ScadaSymbols.StepVoltageRegulatorSymbol,
+  ShuntReactor: ScadaSymbols.ShuntReactorSymbol,
+  SeriesReactor: ScadaSymbols.SeriesReactorSymbol,
+  SaturableReactor: ScadaSymbols.SaturableReactorSymbol,
+  Reactor: ScadaSymbols.ReactorSymbol,
+  Generator: ScadaSymbols.GeneratorSymbol,
+  SyncGenerator: ScadaSymbols.SyncGeneratorSymbol,
+  Motor: ScadaSymbols.MotorSymbol,
+  AsyncMotor: ScadaSymbols.AsyncMotorSymbol,
+  SyncMotor: ScadaSymbols.SyncMotorSymbol,
+  VFD: ScadaSymbols.VFDSymbol,
+  SoftStarter: ScadaSymbols.SoftStarterSymbol,
+  Rectifier: ScadaSymbols.RectifierSymbol,
+  Inverter: ScadaSymbols.InverterSymbol,
+  UPSDetail: ScadaSymbols.UPSDetailSymbol,
+  StaticTransferSwitch: ScadaSymbols.StaticTransferSwitchSymbol,
+  SVC: ScadaSymbols.SVCSymbol,
+  STATCOM: ScadaSymbols.STATCOMSymbol,
+  Thyristor: ScadaSymbols.ThyristorSymbol,
+  CapacitorBank: ScadaSymbols.CapacitorBankSymbol,
+  Battery: ScadaSymbols.BatterySymbol,
+  SolarPanel: ScadaSymbols.SolarPanelSymbol,
+  SolarInverter: ScadaSymbols.SolarInverterSymbol,
+  WindTurbine: ScadaSymbols.WindTurbineSymbol,
+  BESS: ScadaSymbols.BESSSymbol,
+  SolarString: ScadaSymbols.SolarStringSymbol,
+  CT: ScadaSymbols.CTSymbol,
+  PT: ScadaSymbols.PTSymbol,
+  Meter: ScadaSymbols.MeterSymbol,
+  Transducer: ScadaSymbols.TransducerSymbol,
+  EnergyMeter: ScadaSymbols.EnergyMeterSymbol,
+  PowerAnalyzer: ScadaSymbols.PowerAnalyzerSymbol,
+  MaxDemandIndicator: ScadaSymbols.MaxDemandIndicatorSymbol,
+  FrequencyMeter: ScadaSymbols.FrequencyMeterSymbol,
+  Synchroscope: ScadaSymbols.SynchroscopeSymbol,
+  PowerFactorMeter: ScadaSymbols.PowerFactorMeterSymbol,
+  Ammeter: ScadaSymbols.AmmeterSymbol,
+  Voltmeter: ScadaSymbols.VoltmeterSymbol,
+  Wattmeter: ScadaSymbols.WattmeterSymbol,
+  Relay: ScadaSymbols.RelaySymbol,
+  OvercurrentRelay: ScadaSymbols.OvercurrentRelaySymbol,
+  EarthFaultRelay: ScadaSymbols.EarthFaultRelaySymbol,
+  DistanceRelay: ScadaSymbols.DistanceRelaySymbol,
+  DifferentialRelay: ScadaSymbols.DifferentialRelaySymbol,
+  DirectionalRelay: ScadaSymbols.DirectionalRelaySymbol,
+  UnderFrequencyRelay: ScadaSymbols.UnderFrequencyRelaySymbol,
+  OverFrequencyRelay: ScadaSymbols.OverFrequencyRelaySymbol,
+  LockoutRelay: ScadaSymbols.LockoutRelaySymbol,
+  BuchholzRelay: ScadaSymbols.BuchholzRelaySymbol,
+  OvervoltageRelay: ScadaSymbols.OvervoltageRelaySymbol,
+  UndervoltageRelay: ScadaSymbols.UndervoltageRelaySymbol,
+  NegativeSequenceRelay: ScadaSymbols.NegativeSequenceRelaySymbol,
+  ThermalOverloadRelay: ScadaSymbols.ThermalOverloadRelaySymbol,
+  ReversePowerRelay: ScadaSymbols.ReversePowerRelaySymbol,
+  SynchCheckRelay: ScadaSymbols.SynchCheckRelaySymbol,
+  BusBar: ScadaSymbols.BusBarSymbol,
+  DoubleBusBar: ScadaSymbols.DoubleBusBarSymbol,
+  BusSection: ScadaSymbols.BusSectionSymbol,
+  BusTie: ScadaSymbols.BusTieSymbol,
+  Cable: ScadaSymbols.CableSymbol,
+  OverheadLine: ScadaSymbols.OverheadLineSymbol,
+  UndergroundCable: ScadaSymbols.UndergroundCableSymbol,
+  Junction: ScadaSymbols.JunctionSymbol,
+  Crossover: ScadaSymbols.CrossoverSymbol,
+  Terminal: ScadaSymbols.TerminalSymbol,
+  LightningArrester: ScadaSymbols.LightningArresterSymbol,
+  Ground: ScadaSymbols.GroundSymbol,
+  Feeder: ScadaSymbols.FeederSymbol,
+  IndicatorLamp: ScadaSymbols.IndicatorLampSymbol,
+  AlarmHorn: ScadaSymbols.AlarmHornSymbol,
+  PushButton: ScadaSymbols.PushButtonSymbol,
+  SelectorSwitch: ScadaSymbols.SelectorSwitchSymbol,
+  LEDIndicator: ScadaSymbols.LEDIndicatorSymbol,
+  DigitalDisplay: ScadaSymbols.DigitalDisplaySymbol,
+  Annunciator: ScadaSymbols.AnnunciatorSymbol,
+  Panel: ScadaSymbols.PanelSymbol,
+  MCC: ScadaSymbols.MCCSymbol,
+  PLC: ScadaSymbols.PLCSymbol,
+  HMI: ScadaSymbols.HMISymbol,
+  Communication: ScadaSymbols.CommunicationSymbol,
+  Antenna: ScadaSymbols.AntennaSymbol,
+  Enclosure: ScadaSymbols.EnclosureSymbol,
+  Valve: ScadaSymbols.ValveSymbol,
+  Pump: ScadaSymbols.PumpSymbol,
+  Compressor: ScadaSymbols.CompressorSymbol,
+  Tank: ScadaSymbols.TankSymbol,
+  HeatExchanger: ScadaSymbols.HeatExchangerSymbol,
+  Filter: ScadaSymbols.FilterSymbol,
+  FlowMeter: ScadaSymbols.FlowMeterSymbol,
+  PressureGauge: ScadaSymbols.PressureGaugeSymbol,
+  TemperatureSensor: ScadaSymbols.TemperatureSensorSymbol,
+  LevelSensor: ScadaSymbols.LevelSensorSymbol,
+  DGSet: ScadaSymbols.DGSetSymbol,
+  AVR: ScadaSymbols.AVRSymbol,
+  RTCC: ScadaSymbols.RTCCSymbol,
+};
 
 interface MimicElement {
   id: string;
@@ -126,9 +246,21 @@ export default function MimicViewer() {
     return style;
   };
 
+  const handleNavClick = useCallback((el: MimicElement) => {
+    if (el.type === 'page-link' && el.properties.targetPageId) {
+      setActivePageId(el.properties.targetPageId);
+    } else if (el.type === 'back-button') {
+      window.history.back();
+    } else if (el.type === 'home-button') {
+      const home = project?.mimicPages?.find((p) => p.isHomePage) || project?.mimicPages?.[0];
+      if (home) setActivePageId(home.id);
+    }
+  }, [project]);
+
   const renderElement = (el: MimicElement) => {
     const animated = getAnimatedStyle(el);
     const tagValue = el.properties.tagBinding ? values[el.properties.tagBinding] : undefined;
+    const isNav = ['page-link', 'back-button', 'home-button'].includes(el.type);
 
     return (
       <g
@@ -136,9 +268,13 @@ export default function MimicViewer() {
         transform={`translate(${el.x}, ${el.y}) rotate(${el.rotation}, ${el.width / 2}, ${el.height / 2})`}
         onClick={(e) => {
           e.stopPropagation();
-          if (el.type !== 'text' && el.type !== 'shape') setSelectedEquipment(el);
+          if (isNav) {
+            handleNavClick(el);
+          } else if (el.type !== 'text' && el.type !== 'shape') {
+            setSelectedEquipment(el);
+          }
         }}
-        style={{ cursor: el.type !== 'text' && el.type !== 'shape' ? 'pointer' : 'default' }}
+        style={{ cursor: isNav || (el.type !== 'text' && el.type !== 'shape') ? 'pointer' : 'default' }}
       >
         {el.type === 'text' ? (
           <text
@@ -184,6 +320,35 @@ export default function MimicViewer() {
               {tagValue !== undefined ? String(tagValue) : '---'}
             </text>
           </g>
+        ) : isNav ? (
+          <g>
+            <rect
+              width={el.width}
+              height={el.height}
+              fill={el.properties.buttonColor || '#3B82F6'}
+              stroke="#1E40AF"
+              strokeWidth={1.5}
+              rx={6}
+            />
+            <text
+              x={el.width / 2}
+              y={el.height / 2 + 1}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={12}
+              fill="#FFFFFF"
+              fontFamily="sans-serif"
+              fontWeight="600"
+            >
+              {el.properties.buttonText || el.properties.label || el.type}
+            </text>
+          </g>
+        ) : SYMBOL_MAP[el.type] ? (
+          <foreignObject width={el.width} height={el.height}>
+            <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: el.width, height: el.height }}>
+              {React.createElement(SYMBOL_MAP[el.type], { width: el.width, height: el.height })}
+            </div>
+          </foreignObject>
         ) : (
           <g>
             <rect

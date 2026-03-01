@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
 import {
@@ -26,7 +26,130 @@ import {
   ArrowDownToLine,
   Search,
   FileText,
+  Link,
+  Home,
+  ArrowLeft,
 } from 'lucide-react';
+import * as ScadaSymbols from '@/components/scada-symbols';
+
+// ─── Symbol type → Component mapping ─────────────
+const SYMBOL_MAP: Record<string, React.ComponentType<any>> = {
+  CB: ScadaSymbols.CBSymbol,
+  VacuumCB: ScadaSymbols.VacuumCBSymbol,
+  SF6CB: ScadaSymbols.SF6CBSymbol,
+  ACB: ScadaSymbols.ACBSymbol,
+  MCCB: ScadaSymbols.MCCBSymbol,
+  MCB: ScadaSymbols.MCBSymbol,
+  RCCB: ScadaSymbols.RCCBSymbol,
+  Isolator: ScadaSymbols.IsolatorSymbol,
+  EarthSwitch: ScadaSymbols.EarthSwitchSymbol,
+  Fuse: ScadaSymbols.FuseSymbol,
+  Contactor: ScadaSymbols.ContactorSymbol,
+  LoadBreakSwitch: ScadaSymbols.LoadBreakSwitchSymbol,
+  AutoRecloser: ScadaSymbols.AutoRecloserSymbol,
+  Sectionalizer: ScadaSymbols.SectionalizerSymbol,
+  RingMainUnit: ScadaSymbols.RingMainUnitSymbol,
+  GIS: ScadaSymbols.GISSymbol,
+  Transformer: ScadaSymbols.TransformerSymbol,
+  AutoTransformer: ScadaSymbols.AutoTransformerSymbol,
+  ZigZagTransformer: ScadaSymbols.ZigZagTransformerSymbol,
+  InstrumentTransformer: ScadaSymbols.InstrumentTransformerSymbol,
+  StepVoltageRegulator: ScadaSymbols.StepVoltageRegulatorSymbol,
+  ShuntReactor: ScadaSymbols.ShuntReactorSymbol,
+  SeriesReactor: ScadaSymbols.SeriesReactorSymbol,
+  SaturableReactor: ScadaSymbols.SaturableReactorSymbol,
+  Reactor: ScadaSymbols.ReactorSymbol,
+  Generator: ScadaSymbols.GeneratorSymbol,
+  SyncGenerator: ScadaSymbols.SyncGeneratorSymbol,
+  Motor: ScadaSymbols.MotorSymbol,
+  AsyncMotor: ScadaSymbols.AsyncMotorSymbol,
+  SyncMotor: ScadaSymbols.SyncMotorSymbol,
+  VFD: ScadaSymbols.VFDSymbol,
+  SoftStarter: ScadaSymbols.SoftStarterSymbol,
+  Rectifier: ScadaSymbols.RectifierSymbol,
+  Inverter: ScadaSymbols.InverterSymbol,
+  UPSDetail: ScadaSymbols.UPSDetailSymbol,
+  StaticTransferSwitch: ScadaSymbols.StaticTransferSwitchSymbol,
+  SVC: ScadaSymbols.SVCSymbol,
+  STATCOM: ScadaSymbols.STATCOMSymbol,
+  Thyristor: ScadaSymbols.ThyristorSymbol,
+  CapacitorBank: ScadaSymbols.CapacitorBankSymbol,
+  Battery: ScadaSymbols.BatterySymbol,
+  SolarPanel: ScadaSymbols.SolarPanelSymbol,
+  SolarInverter: ScadaSymbols.SolarInverterSymbol,
+  WindTurbine: ScadaSymbols.WindTurbineSymbol,
+  BESS: ScadaSymbols.BESSSymbol,
+  SolarString: ScadaSymbols.SolarStringSymbol,
+  CT: ScadaSymbols.CTSymbol,
+  PT: ScadaSymbols.PTSymbol,
+  Meter: ScadaSymbols.MeterSymbol,
+  Transducer: ScadaSymbols.TransducerSymbol,
+  EnergyMeter: ScadaSymbols.EnergyMeterSymbol,
+  PowerAnalyzer: ScadaSymbols.PowerAnalyzerSymbol,
+  MaxDemandIndicator: ScadaSymbols.MaxDemandIndicatorSymbol,
+  FrequencyMeter: ScadaSymbols.FrequencyMeterSymbol,
+  Synchroscope: ScadaSymbols.SynchroscopeSymbol,
+  PowerFactorMeter: ScadaSymbols.PowerFactorMeterSymbol,
+  Ammeter: ScadaSymbols.AmmeterSymbol,
+  Voltmeter: ScadaSymbols.VoltmeterSymbol,
+  Wattmeter: ScadaSymbols.WattmeterSymbol,
+  Relay: ScadaSymbols.RelaySymbol,
+  OvercurrentRelay: ScadaSymbols.OvercurrentRelaySymbol,
+  EarthFaultRelay: ScadaSymbols.EarthFaultRelaySymbol,
+  DistanceRelay: ScadaSymbols.DistanceRelaySymbol,
+  DifferentialRelay: ScadaSymbols.DifferentialRelaySymbol,
+  DirectionalRelay: ScadaSymbols.DirectionalRelaySymbol,
+  UnderFrequencyRelay: ScadaSymbols.UnderFrequencyRelaySymbol,
+  OverFrequencyRelay: ScadaSymbols.OverFrequencyRelaySymbol,
+  LockoutRelay: ScadaSymbols.LockoutRelaySymbol,
+  BuchholzRelay: ScadaSymbols.BuchholzRelaySymbol,
+  OvervoltageRelay: ScadaSymbols.OvervoltageRelaySymbol,
+  UndervoltageRelay: ScadaSymbols.UndervoltageRelaySymbol,
+  NegativeSequenceRelay: ScadaSymbols.NegativeSequenceRelaySymbol,
+  ThermalOverloadRelay: ScadaSymbols.ThermalOverloadRelaySymbol,
+  ReversePowerRelay: ScadaSymbols.ReversePowerRelaySymbol,
+  SynchCheckRelay: ScadaSymbols.SynchCheckRelaySymbol,
+  BusBar: ScadaSymbols.BusBarSymbol,
+  DoubleBusBar: ScadaSymbols.DoubleBusBarSymbol,
+  BusSection: ScadaSymbols.BusSectionSymbol,
+  BusTie: ScadaSymbols.BusTieSymbol,
+  Cable: ScadaSymbols.CableSymbol,
+  OverheadLine: ScadaSymbols.OverheadLineSymbol,
+  UndergroundCable: ScadaSymbols.UndergroundCableSymbol,
+  Junction: ScadaSymbols.JunctionSymbol,
+  Crossover: ScadaSymbols.CrossoverSymbol,
+  Terminal: ScadaSymbols.TerminalSymbol,
+  LightningArrester: ScadaSymbols.LightningArresterSymbol,
+  Ground: ScadaSymbols.GroundSymbol,
+  Feeder: ScadaSymbols.FeederSymbol,
+  IndicatorLamp: ScadaSymbols.IndicatorLampSymbol,
+  AlarmHorn: ScadaSymbols.AlarmHornSymbol,
+  PushButton: ScadaSymbols.PushButtonSymbol,
+  SelectorSwitch: ScadaSymbols.SelectorSwitchSymbol,
+  LEDIndicator: ScadaSymbols.LEDIndicatorSymbol,
+  DigitalDisplay: ScadaSymbols.DigitalDisplaySymbol,
+  Annunciator: ScadaSymbols.AnnunciatorSymbol,
+  Panel: ScadaSymbols.PanelSymbol,
+  MCC: ScadaSymbols.MCCSymbol,
+  PLC: ScadaSymbols.PLCSymbol,
+  HMI: ScadaSymbols.HMISymbol,
+  Communication: ScadaSymbols.CommunicationSymbol,
+  Antenna: ScadaSymbols.AntennaSymbol,
+  Enclosure: ScadaSymbols.EnclosureSymbol,
+  Valve: ScadaSymbols.ValveSymbol,
+  Pump: ScadaSymbols.PumpSymbol,
+  Compressor: ScadaSymbols.CompressorSymbol,
+  Tank: ScadaSymbols.TankSymbol,
+  HeatExchanger: ScadaSymbols.HeatExchangerSymbol,
+  Filter: ScadaSymbols.FilterSymbol,
+  FlowMeter: ScadaSymbols.FlowMeterSymbol,
+  PressureGauge: ScadaSymbols.PressureGaugeSymbol,
+  TemperatureSensor: ScadaSymbols.TemperatureSensorSymbol,
+  LevelSensor: ScadaSymbols.LevelSensorSymbol,
+  DGSet: ScadaSymbols.DGSetSymbol,
+  AVR: ScadaSymbols.AVRSymbol,
+  RTCC: ScadaSymbols.RTCCSymbol,
+};
 
 // ─── Types ───────────────────────────────────────
 interface MimicElement {
@@ -260,6 +383,14 @@ const SYMBOL_CATEGORIES = [
       { type: 'RTCC', label: 'RTCC', w: 60, h: 50 },
     ],
   },
+  {
+    name: 'Navigation',
+    symbols: [
+      { type: 'page-link', label: 'Page Link', w: 120, h: 40 },
+      { type: 'back-button', label: 'Back Button', w: 100, h: 40 },
+      { type: 'home-button', label: 'Home Button', w: 100, h: 40 },
+    ],
+  },
 ];
 
 let nextId = 1;
@@ -293,6 +424,8 @@ export default function MimicEditor() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; elementId: string } | null>(null);
   const [clipboard, setClipboard] = useState<MimicElement[]>([]);
   const [tool, setTool] = useState<'select' | 'text' | 'rect' | 'circle' | 'line'>('select');
+  const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
+  const [connectingFrom, setConnectingFrom] = useState<{ elementId: string; point: string } | null>(null);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
@@ -424,6 +557,7 @@ export default function MimicEditor() {
     if (!svgRect) return;
     const x = snap((e.clientX - svgRect.left - pan.x) / zoom);
     const y = snap((e.clientY - svgRect.top - pan.y) / zoom);
+    const isNav = ['page-link', 'back-button', 'home-button'].includes(parsed.type);
     const newEl: MimicElement = {
       id: genId(),
       type: parsed.type,
@@ -433,7 +567,10 @@ export default function MimicEditor() {
       height: parsed.h || 60,
       rotation: 0,
       zIndex: elements.length,
-      properties: { label: parsed.label || parsed.type },
+      properties: {
+        label: parsed.label || parsed.type,
+        ...(isNav ? { buttonText: parsed.label, buttonColor: '#3B82F6', targetPageId: '' } : {}),
+      },
     };
     const newEls = [...elements, newEl];
     setElements(newEls);
@@ -441,8 +578,45 @@ export default function MimicEditor() {
     setSelectedIds([newEl.id]);
   }, [elements, pan, zoom, snap, pushHistory]);
 
+  // Connection point click
+  const handleConnectionPointClick = useCallback((elementId: string, point: string) => {
+    if (!connectingFrom) {
+      setConnectingFrom({ elementId, point });
+      return;
+    }
+    if (connectingFrom.elementId === elementId) return;
+    const fromEl = elements.find((el) => el.id === connectingFrom.elementId);
+    const toEl = elements.find((el) => el.id === elementId);
+    if (!fromEl || !toEl) return;
+    const getPoint = (el: MimicElement, p: string) => {
+      switch (p) {
+        case 'top': return { x: el.x + el.width / 2, y: el.y };
+        case 'bottom': return { x: el.x + el.width / 2, y: el.y + el.height };
+        case 'left': return { x: el.x, y: el.y + el.height / 2 };
+        case 'right': return { x: el.x + el.width, y: el.y + el.height / 2 };
+        default: return { x: el.x, y: el.y };
+      }
+    };
+    const from = getPoint(fromEl, connectingFrom.point);
+    const to = getPoint(toEl, point);
+    const newConn: MimicConnection = {
+      id: genId(),
+      fromId: connectingFrom.elementId,
+      toId: elementId,
+      points: [from, to],
+      color: '#374151',
+      thickness: 2,
+    };
+    setConnections((prev) => [...prev, newConn]);
+    setConnectingFrom(null);
+  }, [connectingFrom, elements]);
+
   // Canvas click to add shapes/text
   const handleCanvasClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (connectingFrom) {
+      setConnectingFrom(null);
+      return;
+    }
     if (tool === 'select') {
       if (!(e.target as Element).closest('[data-element-id]')) {
         setSelectedIds([]);
@@ -637,6 +811,8 @@ export default function MimicEditor() {
         data-element-id={el.id}
         transform={`translate(${el.x}, ${el.y}) rotate(${el.rotation}, ${el.width / 2}, ${el.height / 2})`}
         onMouseDown={(e) => handleElementMouseDown(e, el.id)}
+        onMouseEnter={() => setHoveredElementId(el.id)}
+        onMouseLeave={() => setHoveredElementId(null)}
         onContextMenu={(e) => handleContextMenu(e, el.id)}
         style={{ cursor: 'move' }}
       >
@@ -687,8 +863,36 @@ export default function MimicEditor() {
               {el.properties.tagBinding || '---'}
             </text>
           </g>
+        ) : ['page-link', 'back-button', 'home-button'].includes(el.type) ? (
+          <g>
+            <rect
+              width={el.width}
+              height={el.height}
+              fill={el.properties.buttonColor || '#3B82F6'}
+              stroke="#1E40AF"
+              strokeWidth={1.5}
+              rx={6}
+            />
+            <text
+              x={el.width / 2}
+              y={el.height / 2 + 1}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={12}
+              fill="#FFFFFF"
+              fontFamily="sans-serif"
+              fontWeight="600"
+            >
+              {el.properties.buttonText || el.properties.label || el.type}
+            </text>
+          </g>
+        ) : SYMBOL_MAP[el.type] ? (
+          <foreignObject width={el.width} height={el.height}>
+            <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: el.width, height: el.height, pointerEvents: 'none' }}>
+              {React.createElement(SYMBOL_MAP[el.type], { width: el.width, height: el.height })}
+            </div>
+          </foreignObject>
         ) : (
-          // SCADA symbol placeholder
           <g>
             <rect
               width={el.width}
@@ -709,18 +913,6 @@ export default function MimicEditor() {
             >
               {el.type}
             </text>
-            {el.properties.label && (
-              <text
-                x={el.width / 2}
-                y={el.height + 14}
-                textAnchor="middle"
-                fontSize={10}
-                fill="#64748B"
-                fontFamily="sans-serif"
-              >
-                {el.properties.label}
-              </text>
-            )}
           </g>
         )}
 
@@ -763,6 +955,33 @@ export default function MimicEditor() {
                 />
               );
             })}
+          </g>
+        )}
+
+        {/* Connection points on hover */}
+        {(hoveredElementId === el.id || connectingFrom?.elementId === el.id) && el.type !== 'text' && el.type !== 'shape' && (
+          <g>
+            {[
+              { point: 'top', cx: el.width / 2, cy: 0 },
+              { point: 'bottom', cx: el.width / 2, cy: el.height },
+              { point: 'left', cx: 0, cy: el.height / 2 },
+              { point: 'right', cx: el.width, cy: el.height / 2 },
+            ].map(({ point, cx, cy }) => (
+              <circle
+                key={point}
+                cx={cx}
+                cy={cy}
+                r={5}
+                fill={connectingFrom?.elementId === el.id && connectingFrom.point === point ? '#2563EB' : '#60A5FA'}
+                stroke="#FFFFFF"
+                strokeWidth={2}
+                style={{ cursor: 'crosshair' }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  handleConnectionPointClick(el.id, point);
+                }}
+              />
+            ))}
           </g>
         )}
       </g>
@@ -902,8 +1121,18 @@ export default function MimicEditor() {
                           }}
                           className="flex flex-col items-center p-2 rounded border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 cursor-grab text-center transition-colors"
                         >
-                          <div className="w-8 h-8 bg-white border border-gray-200 rounded flex items-center justify-center mb-1">
-                            <span className="text-[8px] font-mono text-gray-500">{sym.type.slice(0, 3)}</span>
+                          <div className="w-10 h-10 flex items-center justify-center mb-1">
+                            {['page-link', 'back-button', 'home-button'].includes(sym.type) ? (
+                              <div className="w-8 h-6 bg-blue-500 rounded flex items-center justify-center">
+                                {sym.type === 'page-link' ? <Link className="w-3 h-3 text-white" /> : sym.type === 'back-button' ? <ArrowLeft className="w-3 h-3 text-white" /> : <Home className="w-3 h-3 text-white" />}
+                              </div>
+                            ) : SYMBOL_MAP[sym.type] ? (
+                              React.createElement(SYMBOL_MAP[sym.type], { width: 32, height: 32 })
+                            ) : (
+                              <div className="w-8 h-8 bg-white border border-gray-200 rounded flex items-center justify-center">
+                                <span className="text-[8px] font-mono text-gray-500">{sym.type.slice(0, 3)}</span>
+                              </div>
+                            )}
                           </div>
                           <span className="text-[10px] text-gray-600 leading-tight">{sym.label}</span>
                         </div>
@@ -1057,6 +1286,45 @@ export default function MimicEditor() {
                   className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
                 />
               </div>
+
+              {/* Navigation properties */}
+              {['page-link', 'back-button', 'home-button'].includes(selectedEl.type) && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Button Text</label>
+                    <input
+                      type="text"
+                      value={selectedEl.properties.buttonText || ''}
+                      onChange={(e) => updateElementProps(selectedEl.id, { buttonText: e.target.value })}
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                    />
+                  </div>
+                  {selectedEl.type === 'page-link' && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Target Page</label>
+                      <select
+                        value={selectedEl.properties.targetPageId || ''}
+                        onChange={(e) => updateElementProps(selectedEl.id, { targetPageId: e.target.value })}
+                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-700 bg-white"
+                      >
+                        <option value="">-- Select Page --</option>
+                        {project?.mimicPages.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Button Color</label>
+                    <input
+                      type="color"
+                      value={selectedEl.properties.buttonColor || '#3B82F6'}
+                      onChange={(e) => updateElementProps(selectedEl.id, { buttonColor: e.target.value })}
+                      className="w-full h-8 rounded border border-gray-200 cursor-pointer"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Text properties */}
               {selectedEl.type === 'text' && (
