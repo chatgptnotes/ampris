@@ -1422,9 +1422,16 @@ export default function MimicEditor() {
         // Second click: create bus bar
         let endX = cx;
         let endY = cy;
-        // Snap to axis if within 10px tolerance
-        if (Math.abs(endY - drawingBus.y) <= 10) endY = drawingBus.y; // horizontal
-        if (Math.abs(endX - drawingBus.x) <= 10) endX = drawingBus.x; // vertical
+        // Snap to axis — choose the dominant direction
+        const dx = Math.abs(endX - drawingBus.x);
+        const dy = Math.abs(endY - drawingBus.y);
+        if (dx <= dy) {
+          // More vertical movement → snap to vertical (lock X)
+          endX = drawingBus.x;
+        } else {
+          // More horizontal movement → snap to horizontal (lock Y)
+          endY = drawingBus.y;
+        }
 
         const x1 = drawingBus.x, y1 = drawingBus.y;
         const x2 = endX, y2 = endY;
@@ -1617,9 +1624,10 @@ export default function MimicEditor() {
       if (!svgRect) return;
       let mx = snap((e.clientX - svgRect.left - pan.x) / zoom);
       let my = snap((e.clientY - svgRect.top - pan.y) / zoom);
-      // Snap to axis
-      if (Math.abs(my - drawingBus.y) <= 10) my = drawingBus.y;
-      if (Math.abs(mx - drawingBus.x) <= 10) mx = drawingBus.x;
+      // Snap to dominant axis
+      const dxP = Math.abs(mx - drawingBus.x);
+      const dyP = Math.abs(my - drawingBus.y);
+      if (dxP <= dyP) { mx = drawingBus.x; } else { my = drawingBus.y; }
       setBusPreviewEnd({ x: mx, y: my });
     }
   }, [drawingBus, pan, zoom, snap]);
