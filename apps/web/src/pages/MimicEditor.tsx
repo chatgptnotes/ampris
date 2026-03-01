@@ -572,6 +572,19 @@ export default function MimicEditor() {
     });
   }, [projectId, activePageId]);
 
+  // Element update helpers (must be before callbacks that reference them)
+  const updateElement = useCallback((id: string, updates: Partial<MimicElement>) => {
+    const newEls = elements.map((el) => el.id === id ? { ...el, ...updates } : el);
+    setElements(newEls);
+  }, [elements]);
+
+  const updateElementProps = useCallback((id: string, props: Partial<MimicElement['properties']>) => {
+    const newEls = elements.map((el) =>
+      el.id === id ? { ...el, properties: { ...el.properties, ...props } } : el,
+    );
+    setElements(newEls);
+  }, [elements]);
+
   // Load tags (scoped to project)
   const loadTags = useCallback(() => {
     if (!projectId) return;
@@ -1075,20 +1088,7 @@ export default function MimicEditor() {
     setActivePageId(data.id);
   };
 
-  // Update element property
-  const updateElement = useCallback((id: string, updates: Partial<MimicElement>) => {
-    const newEls = elements.map((el) => el.id === id ? { ...el, ...updates } : el);
-    setElements(newEls);
-  }, [elements]);
-
-  const updateElementProps = useCallback((id: string, props: Partial<MimicElement['properties']>) => {
-    const newEls = elements.map((el) =>
-      el.id === id ? { ...el, properties: { ...el.properties, ...props } } : el,
-    );
-    setElements(newEls);
-  }, [elements]);
-
-  const selectedEl = selectedIds.length === 1 ? elements.find((el) => el.id === selectedIds[0]) : null;
+    const selectedEl = selectedIds.length === 1 ? elements.find((el) => el.id === selectedIds[0]) : null;
 
   // Render element on canvas
   const renderElement = (el: MimicElement) => {
