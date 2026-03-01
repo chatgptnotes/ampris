@@ -1,4 +1,4 @@
-import { Monitor, Container, Code, FileText, Server, Terminal } from 'lucide-react';
+import { Monitor, Container, Code, FileText, Server, Terminal, Laptop } from 'lucide-react';
 import DownloadCard from '@/components/public/DownloadCard';
 import CodeBlock from '@/components/public/CodeBlock';
 
@@ -65,7 +65,7 @@ const sysRequirements = [
   { component: 'CPU', minimum: '2 cores', recommended: '4+ cores' },
   { component: 'RAM', minimum: '4 GB', recommended: '8+ GB' },
   { component: 'Disk', minimum: '20 GB', recommended: '50+ GB (SSD)' },
-  { component: 'OS', minimum: 'Windows 10 / Ubuntu 20.04', recommended: 'Ubuntu 22.04 LTS' },
+  { component: 'OS', minimum: 'Windows 10 / Ubuntu 20.04 / macOS 12', recommended: 'Ubuntu 22.04 LTS / macOS 14+' },
   { component: 'Node.js', minimum: 'v18.0', recommended: 'v20 LTS' },
   { component: 'Docker', minimum: 'v20.0', recommended: 'v24+ with Compose v2' },
   { component: 'PostgreSQL', minimum: '14', recommended: '16 with TimescaleDB' },
@@ -139,6 +139,17 @@ export default function DownloadsPage() {
             buttonLabel="Download .ps1"
           />
           <DownloadCard
+            icon={Laptop}
+            title="macOS Installer"
+            description="Native macOS installer using Homebrew. Supports Apple Silicon (M1/M2/M3) and Intel Macs."
+            version="1.0.0"
+            size="~120 MB"
+            available
+            href="https://raw.githubusercontent.com/chatgptnotes/GridVision/main/installers/macos/install.sh"
+            downloadFile
+            buttonLabel="Download for Mac"
+          />
+          <DownloadCard
             icon={Code}
             title="Source Code"
             description="Clone from GitHub and build from source. Full monorepo with all packages."
@@ -149,7 +160,7 @@ export default function DownloadsPage() {
           <DownloadCard
             icon={Monitor}
             title="Desktop App (Electron)"
-            description="Cross-platform desktop application with system tray, native notifications, offline detection, and auto-updater."
+            description="Cross-platform desktop application for Windows, macOS, and Linux with offline mode, native notifications, and system tray."
             version="1.0.0"
             size="~200 MB"
             available

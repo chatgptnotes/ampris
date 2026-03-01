@@ -9,10 +9,11 @@ Version 1.0.0 | GridVision Technologies
 1. [Prerequisites](#prerequisites)
 2. [Docker Deployment (Recommended)](#docker-deployment-recommended)
 3. [Manual Installation — Linux](#manual-installation--linux)
-4. [Manual Installation — Windows](#manual-installation--windows)
-5. [Desktop App (Electron)](#desktop-app-electron)
-6. [Configuration Reference](#configuration-reference)
-7. [Troubleshooting](#troubleshooting)
+4. [Manual Installation — macOS](#manual-installation--macos)
+5. [Manual Installation — Windows](#manual-installation--windows)
+6. [Desktop App (Electron)](#desktop-app-electron)
+7. [Configuration Reference](#configuration-reference)
+8. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -25,7 +26,7 @@ Version 1.0.0 | GridVision Technologies
 | CPU       | 2 cores          | 4+ cores           |
 | RAM       | 4 GB             | 8+ GB              |
 | Disk      | 20 GB            | 50+ GB (SSD)       |
-| OS        | Windows 10 / Ubuntu 20.04 | Ubuntu 22.04 LTS |
+| OS        | Windows 10 / Ubuntu 20.04 / macOS 12 | Ubuntu 22.04 LTS / macOS 14+ |
 | Node.js   | v18.0            | v20 LTS            |
 | Docker    | v20.0            | v24+ with Compose v2 |
 | PostgreSQL| 14               | 16 with TimescaleDB |
@@ -224,6 +225,102 @@ sudo systemctl start gridvision
 ```bash
 sudo bash /opt/gridvision/installers/linux/uninstall.sh
 ```
+
+---
+
+## Manual Installation — macOS
+
+### Automated Installer
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chatgptnotes/GridVision/main/installers/macos/install.sh | bash
+```
+
+### Manual Steps
+
+#### 1. Install Xcode Command Line Tools
+
+```bash
+xcode-select --install
+```
+
+#### 2. Install Homebrew
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Apple Silicon: add to PATH
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+```
+
+#### 3. Install Dependencies
+
+```bash
+brew install node pnpm postgresql@16 redis
+brew tap timescale/tap && brew install timescaledb
+brew services start postgresql@16
+brew services start redis
+```
+
+#### 4. Create Database
+
+```bash
+psql -U $USER -d postgres <<EOF
+CREATE USER gridvision WITH PASSWORD 'gridvision_pass';
+CREATE DATABASE gridvision_scada OWNER gridvision;
+GRANT ALL PRIVILEGES ON DATABASE gridvision_scada TO gridvision;
+EOF
+psql -U $USER -d gridvision_scada -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;"
+```
+
+#### 5. Clone & Build
+
+```bash
+git clone https://github.com/chatgptnotes/GridVision.git ~/Applications/GridVision
+cd ~/Applications/GridVision
+pnpm install
+cd apps/web && npx vite build && cd ../..
+```
+
+#### 6. Configure
+
+```bash
+cp .env.example .env
+nano .env
+# Edit DATABASE_URL, JWT_SECRET, etc.
+# Generate JWT secret: openssl rand -hex 32
+```
+
+#### 7. LaunchAgent Auto-Start
+
+The automated installer creates a LaunchAgent at `~/Library/LaunchAgents/com.gridvision.scada.plist`.
+
+```bash
+# Start/Stop
+launchctl start com.gridvision.scada
+launchctl stop com.gridvision.scada
+
+# Disable auto-start
+launchctl unload ~/Library/LaunchAgents/com.gridvision.scada.plist
+```
+
+#### 8. Apple Silicon vs Intel
+
+All Homebrew packages install native versions for your architecture. No Rosetta 2 translation is needed. The installer automatically detects Apple Silicon (arm64) or Intel (x86_64).
+
+#### 9. Uninstall
+
+```bash
+bash ~/Applications/GridVision/installers/macos/uninstall.sh
+```
+
+### Troubleshooting (macOS)
+
+- **Gatekeeper blocks script**: Go to System Settings > Privacy & Security > Allow Anyway, or run `bash install.sh` directly
+- **Homebrew not in PATH (Apple Silicon)**: Run `eval "$(/opt/homebrew/bin/brew shellenv)"` and add to `~/.zprofile`
+- **Port in use**: `lsof -i :5173` to find the process, then `kill -9 <PID>`
+- **PostgreSQL won't start**: `brew services restart postgresql@16` and check `tail -100 /opt/homebrew/var/log/postgresql@16.log`
+- **Permission denied**: `sudo chown -R $USER ~/Applications/GridVision`
 
 ---
 
