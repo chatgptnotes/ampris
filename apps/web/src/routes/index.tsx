@@ -48,6 +48,10 @@ const CommandSequencer = lazyRetry(() => import('@/pages/CommandSequencer'));
 const InterlockManager = lazyRetry(() => import('@/pages/InterlockManager'));
 const SBOManager = lazyRetry(() => import('@/pages/SBOManager'));
 const AuthorityManager = lazyRetry(() => import('@/pages/AuthorityManager'));
+const PollingDashboard = lazyRetry(() => import('@/pages/PollingDashboard'));
+const HistorianManager = lazyRetry(() => import('@/pages/HistorianManager'));
+const RedundancyManager = lazyRetry(() => import('@/pages/RedundancyManager'));
+const CommDiagnostics = lazyRetry(() => import('@/pages/CommDiagnostics'));
 
 const LazyFallback = () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
 import HomePage from '@/pages/public/HomePage';
@@ -122,6 +126,10 @@ export const router = createBrowserRouter([
           { path: 'projects/:projectId/interlocks', element: <Suspense fallback={<LazyFallback />}><InterlockManager /></Suspense> },
           { path: 'projects/:projectId/sbo', element: <Suspense fallback={<LazyFallback />}><SBOManager /></Suspense> },
           { path: 'projects/:projectId/authority', element: <Suspense fallback={<LazyFallback />}><AuthorityManager /></Suspense> },
+          { path: 'projects/:projectId/polling', element: <Suspense fallback={<LazyFallback />}><PollingDashboard /></Suspense> },
+          { path: 'projects/:projectId/historian', element: <Suspense fallback={<LazyFallback />}><HistorianManager /></Suspense> },
+          { path: 'projects/:projectId/redundancy', element: <Suspense fallback={<LazyFallback />}><RedundancyManager /></Suspense> },
+          { path: 'projects/:projectId/diagnostics', element: <Suspense fallback={<LazyFallback />}><CommDiagnostics /></Suspense> },
         ],
       },
     ],

@@ -216,6 +216,12 @@ model Project {
   interlocks       Interlock[]
   sboConfigs       SBOConfig[]
   operatorAuthorities OperatorAuthority[]
+  historianConfigs  HistorianConfig[]
+  historianStats    HistorianStat[]
+  redundancyConfig  RedundancyConfig?
+  failoverEvents    FailoverEvent[]
+  commDiagnostics   CommDiagnostics[]
+  commLogs          CommLog[]
 
   @@map("projects")
 }
@@ -627,4 +633,128 @@ model OperatorAuthority {
 
   @@unique([projectId, userId])
   @@map("operator_authorities")
+}
+
+// ─── Historian Compression ────────────────────────
+
+model HistorianConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  tagName         String   @map("tag_name") @db.VarChar(200)
+  enabled         Boolean  @default(true)
+  compressionType String   @default("none") @map("compression_type") @db.VarChar(20)
+  deadband        Float?   @default(0)
+  deadbandPercent Float?   @map("deadband_percent")
+  slopeThreshold  Float?   @map("slope_threshold")
+  maxInterval     Int      @default(3600) @map("max_interval")
+  minInterval     Int      @default(0) @map("min_interval")
+  retentionDays   Int      @default(365) @map("retention_days")
+  projectId       String   @map("project_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, tagName])
+  @@map("historian_configs")
+}
+
+model HistorianStat {
+  id              String    @id @default(uuid()) @db.Uuid
+  tagName         String    @map("tag_name") @db.VarChar(200)
+  totalRawPoints  Int       @default(0) @map("total_raw_points")
+  totalStored     Int       @default(0) @map("total_stored")
+  compressionRatio Float?   @map("compression_ratio")
+  oldestPoint     DateTime? @map("oldest_point") @db.Timestamptz()
+  newestPoint     DateTime? @map("newest_point") @db.Timestamptz()
+  projectId       String    @map("project_id") @db.Uuid
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, tagName])
+  @@map("historian_stats")
+}
+
+// ─── Redundancy & Failover ────────────────────────
+
+model RedundancyConfig {
+  id              String    @id @default(uuid()) @db.Uuid
+  role            String    @db.VarChar(20)
+  partnerHost     String?   @map("partner_host") @db.VarChar(200)
+  partnerPort     Int?      @map("partner_port")
+  heartbeatMs     Int       @default(5000) @map("heartbeat_ms")
+  failoverTimeout Int       @default(15000) @map("failover_timeout")
+  autoFailover    Boolean   @default(true) @map("auto_failover")
+  syncInterval    Int       @default(10000) @map("sync_interval")
+  status          String    @default("standalone") @db.VarChar(20)
+  lastHeartbeat   DateTime? @map("last_heartbeat") @db.Timestamptz()
+  lastSync        DateTime? @map("last_sync") @db.Timestamptz()
+  projectId       String    @map("project_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId])
+  @@map("redundancy_configs")
+}
+
+model FailoverEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String   @db.VarChar(30)
+  fromRole    String   @map("from_role") @db.VarChar(20)
+  toRole      String   @map("to_role") @db.VarChar(20)
+  reason      String?  @db.Text
+  details     Json?    @db.JsonB
+  projectId   String   @map("project_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("failover_events")
+}
+
+// ─── Communication Diagnostics ────────────────────
+
+model CommDiagnostics {
+  id            String    @id @default(uuid()) @db.Uuid
+  deviceId      String    @map("device_id") @db.Uuid
+  deviceName    String    @map("device_name") @db.VarChar(200)
+  protocol      String    @db.VarChar(30)
+  totalRequests Int       @default(0) @map("total_requests")
+  successCount  Int       @default(0) @map("success_count")
+  errorCount    Int       @default(0) @map("error_count")
+  timeoutCount  Int       @default(0) @map("timeout_count")
+  avgLatencyMs  Float     @default(0) @map("avg_latency_ms")
+  maxLatencyMs  Float     @default(0) @map("max_latency_ms")
+  lastError     String?   @map("last_error") @db.Text
+  lastErrorAt   DateTime? @map("last_error_at") @db.Timestamptz()
+  bytesReceived BigInt    @default(0) @map("bytes_received")
+  bytesSent     BigInt    @default(0) @map("bytes_sent")
+  projectId     String    @map("project_id") @db.Uuid
+  periodStart   DateTime  @map("period_start") @db.Timestamptz()
+  periodEnd     DateTime? @map("period_end") @db.Timestamptz()
+
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("comm_diagnostics")
+}
+
+model CommLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  deviceId    String   @map("device_id") @db.Uuid
+  deviceName  String   @map("device_name") @db.VarChar(200)
+  direction   String   @db.VarChar(10)
+  protocol    String   @db.VarChar(30)
+  rawData     String?  @map("raw_data") @db.Text
+  parsed      Json?    @db.JsonB
+  status      String   @db.VarChar(20)
+  latencyMs   Float?   @map("latency_ms")
+  errorDetail String?  @map("error_detail") @db.Text
+  projectId   String   @map("project_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, createdAt])
+  @@map("comm_logs")
 }

@@ -27,6 +27,8 @@ import {
   Terminal,
   MousePointerClick,
   ShieldCheck,
+  Radio,
+  Database,
 } from 'lucide-react';
 import { useAlarmStore } from '@/stores/alarmStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -63,6 +65,10 @@ const navItems: NavItem[] = [
   { path: '/app/projects/_/interlocks', icon: Shield, label: 'Interlocks' },
   { path: '/app/projects/_/sbo', icon: MousePointerClick, label: 'SBO' },
   { path: '/app/projects/_/authority', icon: ShieldCheck, label: 'Authority' },
+  { path: '/app/projects/_/polling', icon: Radio, label: 'Polling' },
+  { path: '/app/projects/_/historian', icon: Database, label: 'Historian' },
+  { path: '/app/projects/_/redundancy', icon: Shield, label: 'Redundancy' },
+  { path: '/app/projects/_/diagnostics', icon: Activity, label: 'Comm Diag' },
   { path: '/app/ai/load-forecast', icon: TrendingUp, label: 'AI Forecast' },
   { path: '/app/ai/equipment-health', icon: Activity, label: 'AI Health' },
   { path: '/app/ai/maintenance', icon: Wrench, label: 'AI Maint.' },

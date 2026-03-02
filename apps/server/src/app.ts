@@ -27,6 +27,10 @@ import commandRoutes from './routes/command.routes';
 import interlockRoutes from './routes/interlock.routes';
 import sboRoutes from './routes/sbo.routes';
 import authorityRoutes from './routes/authority.routes';
+import pollingRoutes from './routes/polling.routes';
+import historianCompressionRoutes from './routes/historian-compression.routes';
+import redundancyRoutes from './routes/redundancy.routes';
+import commDiagnosticsRoutes from './routes/comm-diagnostics.routes';
 
 const app = express();
 
@@ -75,6 +79,10 @@ app.use('/api/commands', commandRoutes);
 app.use('/api/interlocks', interlockRoutes);
 app.use('/api/sbo', sboRoutes);
 app.use('/api/authority', authorityRoutes);
+app.use('/api/polling', pollingRoutes);
+app.use('/api/historian-compression', historianCompressionRoutes);
+app.use('/api/redundancy', redundancyRoutes);
+app.use('/api/diagnostics', commDiagnosticsRoutes);
 app.use('/api/data-points', (_req, res) => {
   import('./controllers/substation.controller').then((ctrl) => ctrl.getDataPoints(_req, res));
 });
