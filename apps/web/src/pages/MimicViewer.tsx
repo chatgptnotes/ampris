@@ -310,11 +310,92 @@ export default function MimicViewer() {
     return undefined;
   };
 
+  // SBO state
+  const [sboConfigs, setSboConfigs] = useState<Record<string, any>>({});
+  const [sboSelected, setSboSelected] = useState<Record<string, { value: any; timeout: number; startedAt: number }>>({});
+
+  // Load SBO configs
+  useEffect(() => {
+    if (!projectId) return;
+    api.get('/sbo/configs', { params: { projectId } }).then(({ data }) => {
+      const map: Record<string, any> = {};
+      for (const c of data) { if (c.enabled) map[c.tagName] = c; }
+      setSboConfigs(map);
+    }).catch(() => {});
+  }, [projectId]);
+
+  // SBO countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSboSelected(prev => {
+        const next = { ...prev };
+        let changed = false;
+        for (const tag of Object.keys(next)) {
+          const elapsed = (Date.now() - next[tag].startedAt) / 1000;
+          if (elapsed >= next[tag].timeout) {
+            delete next[tag];
+            changed = true;
+            api.post('/sbo/cancel', { tagName: tag }).catch(() => {});
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 500);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleSBOOperate = useCallback(async (tag: string) => {
+    try {
+      await api.post('/sbo/operate', { tagName: tag });
+      setSboSelected(prev => { const next = { ...prev }; delete next[tag]; return next; });
+    } catch (err) { console.error('SBO operate failed:', err); }
+  }, []);
+
+  const handleSBOCancel = useCallback(async (tag: string) => {
+    try {
+      await api.post('/sbo/cancel', { tagName: tag });
+      setSboSelected(prev => { const next = { ...prev }; delete next[tag]; return next; });
+    } catch (err) { console.error('SBO cancel failed:', err); }
+  }, []);
+
   // Handle control element clicks
   const handleControlClick = useCallback(async (el: MimicElement) => {
     const tag = el.properties.targetTag;
     if (!tag) return;
     const action = el.properties.controlAction || 'setValue';
+
+    // Check if SBO is enabled for this tag
+    if (sboConfigs[tag] && !sboSelected[tag]) {
+      // SBO: first click = SELECT
+      let pendingValue: any;
+      if (action === 'toggle') {
+        const currentVal = values[tag];
+        const current = currentVal !== undefined ? currentVal : false;
+        pendingValue = !(current === true || current === 'true' || current === 1 || current === '1');
+      } else if (action === 'increment') {
+        const currentVal = values[tag];
+        const current = typeof currentVal === 'number' ? currentVal : parseFloat(String(currentVal)) || 0;
+        pendingValue = current + (parseFloat(el.properties.controlValue || '1') || 1);
+      } else {
+        const v = el.properties.controlValue;
+        const numV = Number(v);
+        pendingValue = isNaN(numV) ? v : numV;
+      }
+      try {
+        const { data } = await api.post('/sbo/select', { tagName: tag, value: pendingValue, projectId });
+        if (data.success) {
+          setSboSelected(prev => ({
+            ...prev,
+            [tag]: { value: pendingValue, timeout: sboConfigs[tag].selectTimeout || 30, startedAt: Date.now() },
+          }));
+        }
+      } catch (err) { console.error('SBO select failed:', err); }
+      return;
+    }
+
+    // If SBO selected, the operate/cancel buttons handle it, not another click
+    if (sboSelected[tag]) return;
+
     try {
       if (action === 'toggle') {
         const currentVal = values[tag];
@@ -337,7 +418,7 @@ export default function MimicViewer() {
     } catch (err) {
       console.error('Control action failed:', err);
     }
-  }, [values]);
+  }, [values, sboConfigs, sboSelected, projectId]);
 
   const handleNavClick = useCallback((el: MimicElement) => {
     if (el.type === 'page-link' && el.properties.targetPageId) {

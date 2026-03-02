@@ -40,6 +40,14 @@ const AIEquipmentHealth = lazyRetry(() => import('@/pages/AIEquipmentHealth'));
 const AIPredictiveMaintenance = lazyRetry(() => import('@/pages/AIPredictiveMaintenance'));
 const AIPowerQuality = lazyRetry(() => import('@/pages/AIPowerQuality'));
 const AIOperationsCenter = lazyRetry(() => import('@/pages/AIOperationsCenter'));
+const TagImportExport = lazyRetry(() => import('@/pages/TagImportExport'));
+const RecipeManager = lazyRetry(() => import('@/pages/RecipeManager'));
+const ReportBuilder = lazyRetry(() => import('@/pages/ReportBuilder'));
+const DataExport = lazyRetry(() => import('@/pages/DataExport'));
+const CommandSequencer = lazyRetry(() => import('@/pages/CommandSequencer'));
+const InterlockManager = lazyRetry(() => import('@/pages/InterlockManager'));
+const SBOManager = lazyRetry(() => import('@/pages/SBOManager'));
+const AuthorityManager = lazyRetry(() => import('@/pages/AuthorityManager'));
 
 const LazyFallback = () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
 import HomePage from '@/pages/public/HomePage';
@@ -106,6 +114,14 @@ export const router = createBrowserRouter([
           { path: 'ai/maintenance', element: <Suspense fallback={<LazyFallback />}><AIPredictiveMaintenance /></Suspense> },
           { path: 'ai/power-quality', element: <Suspense fallback={<LazyFallback />}><AIPowerQuality /></Suspense> },
           { path: 'ai/ops-center', element: <Suspense fallback={<LazyFallback />}><AIOperationsCenter /></Suspense> },
+          { path: 'projects/:projectId/import', element: <Suspense fallback={<LazyFallback />}><TagImportExport /></Suspense> },
+          { path: 'projects/:projectId/recipes', element: <Suspense fallback={<LazyFallback />}><RecipeManager /></Suspense> },
+          { path: 'projects/:projectId/reports', element: <Suspense fallback={<LazyFallback />}><ReportBuilder /></Suspense> },
+          { path: 'projects/:projectId/export', element: <Suspense fallback={<LazyFallback />}><DataExport /></Suspense> },
+          { path: 'projects/:projectId/commands', element: <Suspense fallback={<LazyFallback />}><CommandSequencer /></Suspense> },
+          { path: 'projects/:projectId/interlocks', element: <Suspense fallback={<LazyFallback />}><InterlockManager /></Suspense> },
+          { path: 'projects/:projectId/sbo', element: <Suspense fallback={<LazyFallback />}><SBOManager /></Suspense> },
+          { path: 'projects/:projectId/authority', element: <Suspense fallback={<LazyFallback />}><AuthorityManager /></Suspense> },
         ],
       },
     ],

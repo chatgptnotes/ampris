@@ -156,6 +156,18 @@ class TagEngineService {
     return undefined;
   }
 
+  async setTagValueWithInterlocks(tagName: string, value: string | number | boolean, userId: string = 'system', projectId?: string): Promise<{ success: boolean; error?: string; blockedBy?: any[] }> {
+    try {
+      const { interlockService } = require('./interlock.service');
+      const result = await interlockService.checkInterlocks(tagName, value, userId, projectId);
+      if (!result.allowed) {
+        return { success: false, error: 'Blocked by interlock', blockedBy: result.blockedBy };
+      }
+    } catch {}
+    this.setTagValue(tagName, value);
+    return { success: true };
+  }
+
   setTagValue(tagName: string, value: string | number | boolean, persist: boolean = true): void {
     const tv: TagValue = { tag: tagName, value, timestamp: new Date() };
     this.tagValues.set(tagName, tv);

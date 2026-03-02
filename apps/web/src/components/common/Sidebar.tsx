@@ -20,6 +20,13 @@ import {
   BrainCircuit,
   Zap,
   Server,
+  Upload,
+  Workflow,
+  FileBarChart,
+  HardDriveDownload,
+  Terminal,
+  MousePointerClick,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAlarmStore } from '@/stores/alarmStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -48,6 +55,14 @@ const navItems: NavItem[] = [
   { path: '/app/tags', icon: Tag, label: 'Tags' },
   { path: '/app/devices', icon: Server, label: 'Devices' },
   { path: '/app/tag-test', icon: TestTube2, label: 'Testing' },
+  { path: '/app/projects/_/import', icon: Upload, label: 'Import' },
+  { path: '/app/projects/_/recipes', icon: Workflow, label: 'Recipes' },
+  { path: '/app/projects/_/reports', icon: FileBarChart, label: 'Reports+' },
+  { path: '/app/projects/_/export', icon: HardDriveDownload, label: 'Export' },
+  { path: '/app/projects/_/commands', icon: Terminal, label: 'Commands' },
+  { path: '/app/projects/_/interlocks', icon: Shield, label: 'Interlocks' },
+  { path: '/app/projects/_/sbo', icon: MousePointerClick, label: 'SBO' },
+  { path: '/app/projects/_/authority', icon: ShieldCheck, label: 'Authority' },
   { path: '/app/ai/load-forecast', icon: TrendingUp, label: 'AI Forecast' },
   { path: '/app/ai/equipment-health', icon: Activity, label: 'AI Health' },
   { path: '/app/ai/maintenance', icon: Wrench, label: 'AI Maint.' },

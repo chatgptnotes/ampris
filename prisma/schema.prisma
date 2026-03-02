@@ -209,6 +209,13 @@ model Project {
   tagScripts      TagScript[]
   testScenarios   TestScenario[]
   externalDevices ExternalDevice[]
+  recipes         Recipe[]
+  reportTemplates ReportTemplate[]
+  generatedReports GeneratedReport[]
+  commandSequences CommandSequence[]
+  interlocks       Interlock[]
+  sboConfigs       SBOConfig[]
+  operatorAuthorities OperatorAuthority[]
 
   @@map("projects")
 }
@@ -449,4 +456,175 @@ model AuditTrail {
   user            User?     @relation(fields: [userId], references: [id])
 
   @@map("audit_trail")
+}
+
+// ─── Recipes ──────────────────────────────────────
+
+model Recipe {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(200)
+  description String?   @db.Text
+  category    String?   @db.VarChar(100)
+  steps       Json      @default("[]") @db.JsonB
+  isActive    Boolean   @default(false) @map("is_active")
+  lastRunAt   DateTime? @map("last_run_at") @db.Timestamptz()
+  projectId   String    @map("project_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@map("recipes")
+}
+
+// ─── Report Templates ─────────────────────────────
+
+model ReportTemplate {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String    @db.VarChar(200)
+  description     String?   @db.Text
+  type            String    @db.VarChar(30)
+  schedule        String?   @db.VarChar(50)
+  config          Json      @db.JsonB
+  lastGeneratedAt DateTime? @map("last_generated_at") @db.Timestamptz()
+  projectId       String    @map("project_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("report_templates")
+}
+
+model GeneratedReport {
+  id         String   @id @default(uuid()) @db.Uuid
+  templateId String   @map("template_id") @db.Uuid
+  name       String   @db.VarChar(200)
+  data       Json     @db.JsonB
+  format     String   @db.VarChar(10)
+  projectId  String   @map("project_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("generated_reports")
+}
+
+// ─── Command Sequencing ───────────────────────────
+
+model CommandSequence {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @db.VarChar(200)
+  description     String?  @db.Text
+  category        String?  @db.VarChar(100)
+  steps           Json     @default("[]") @db.JsonB
+  requiresAuth    Boolean  @default(true) @map("requires_auth")
+  authorityLevel  Int      @default(1) @map("authority_level")
+  isEmergency     Boolean  @default(false) @map("is_emergency")
+  projectId       String   @map("project_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@map("command_sequences")
+}
+
+model CommandExecution {
+  id            String    @id @default(uuid()) @db.Uuid
+  sequenceId    String    @map("sequence_id") @db.Uuid
+  sequenceName  String    @map("sequence_name") @db.VarChar(200)
+  status        String    @db.VarChar(20)
+  currentStep   Int       @default(0) @map("current_step")
+  totalSteps    Int       @map("total_steps")
+  startedBy     String    @map("started_by") @db.VarChar(200)
+  stepResults   Json      @default("[]") @db.JsonB
+  errorMessage  String?   @map("error_message") @db.Text
+  startedAt     DateTime  @default(now()) @map("started_at") @db.Timestamptz()
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz()
+  projectId     String    @map("project_id") @db.Uuid
+
+  @@map("command_executions")
+}
+
+// ─── Interlocking Logic ───────────────────────────
+
+model Interlock {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(200)
+  description  String?  @db.Text
+  targetTag    String   @map("target_tag") @db.VarChar(200)
+  targetAction String   @map("target_action") @db.VarChar(20)
+  targetValue  String?  @map("target_value") @db.VarChar(100)
+  conditions   Json     @db.JsonB
+  enabled      Boolean  @default(true)
+  priority     Int      @default(1)
+  bypassable   Boolean  @default(false)
+  bypassLevel  Int      @default(3) @map("bypass_level")
+  projectId    String   @map("project_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("interlocks")
+}
+
+model InterlockEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  interlockId   String   @map("interlock_id") @db.Uuid
+  interlockName String   @map("interlock_name") @db.VarChar(200)
+  targetTag     String   @map("target_tag") @db.VarChar(200)
+  action        String   @db.VarChar(20)
+  attemptedBy   String   @map("attempted_by") @db.VarChar(200)
+  conditions    Json     @db.JsonB
+  bypassed      Boolean  @default(false)
+  bypassedBy    String?  @map("bypassed_by") @db.VarChar(200)
+  bypassReason  String?  @map("bypass_reason") @db.Text
+  projectId     String   @map("project_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("interlock_events")
+}
+
+// ─── Select-Before-Operate ────────────────────────
+
+model SBOConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  tagName         String   @map("tag_name") @db.VarChar(200)
+  enabled         Boolean  @default(true)
+  selectTimeout   Int      @default(30) @map("select_timeout")
+  confirmRequired Boolean  @default(true) @map("confirm_required")
+  authorityLevel  Int      @default(1) @map("authority_level")
+  projectId       String   @map("project_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, tagName])
+  @@map("sbo_configs")
+}
+
+// ─── Authority Levels ─────────────────────────────
+
+model OperatorAuthority {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  userName    String    @map("user_name") @db.VarChar(200)
+  level       Int
+  permissions Json      @default("[]") @db.JsonB
+  zones       Json      @default("[]") @db.JsonB
+  activeFrom  DateTime? @map("active_from") @db.Timestamptz()
+  activeTo    DateTime? @map("active_to") @db.Timestamptz()
+  isActive    Boolean   @default(true) @map("is_active")
+  projectId   String    @map("project_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("operator_authorities")
 }

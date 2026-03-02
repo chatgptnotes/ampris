@@ -19,6 +19,14 @@ import projectRoutes from './routes/project.routes';
 import tagRoutes from './routes/tag.routes';
 import deviceRoutes from './routes/device.routes';
 import aiRoutes from './routes/ai.routes';
+import importRoutes from './routes/import.routes';
+import exportRoutes from './routes/export.routes';
+import recipeRoutes from './routes/recipe.routes';
+import reportTemplateRoutes from './routes/report-template.routes';
+import commandRoutes from './routes/command.routes';
+import interlockRoutes from './routes/interlock.routes';
+import sboRoutes from './routes/sbo.routes';
+import authorityRoutes from './routes/authority.routes';
 
 const app = express();
 
@@ -29,7 +37,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Rate limiting on auth endpoints
 const authLimiter = rateLimit({
@@ -59,6 +67,14 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/import', importRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/recipes', recipeRoutes);
+app.use('/api/report-templates', reportTemplateRoutes);
+app.use('/api/commands', commandRoutes);
+app.use('/api/interlocks', interlockRoutes);
+app.use('/api/sbo', sboRoutes);
+app.use('/api/authority', authorityRoutes);
 app.use('/api/data-points', (_req, res) => {
   import('./controllers/substation.controller').then((ctrl) => ctrl.getDataPoints(_req, res));
 });
