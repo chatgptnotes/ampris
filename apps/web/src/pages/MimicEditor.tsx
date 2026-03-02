@@ -34,6 +34,7 @@ import {
   X,
   Activity,
   Zap,
+  Settings,
 } from 'lucide-react';
 import * as ScadaSymbols from '@/components/scada-symbols';
 
@@ -190,6 +191,20 @@ interface MimicConnection {
   thickness: number;
 }
 
+interface PageSettings {
+  header: {
+    show: boolean;
+    logoUrl: string;
+    title: string;
+    bgColor: string;
+  };
+  footer: {
+    show: boolean;
+    customText: string;
+    bgColor: string;
+  };
+}
+
 interface PageData {
   id: string;
   name: string;
@@ -202,6 +217,7 @@ interface PageData {
   elements: MimicElement[];
   connections: MimicConnection[];
   isHomePage: boolean;
+  pageSettings?: PageSettings;
 }
 
 interface ProjectData {
@@ -1045,6 +1061,11 @@ export default function MimicEditor() {
   const [connectingFrom, setConnectingFrom] = useState<{ elementId: string; point: string } | null>(null);
   const [drawingBus, setDrawingBus] = useState<null | 'active' | { x: number; y: number }>(null);
   const [busPreviewEnd, setBusPreviewEnd] = useState<{ x: number; y: number } | null>(null);
+  const [pageSettings, setPageSettings] = useState<PageSettings>({
+    header: { show: false, logoUrl: '', title: '', bgColor: '#1E293B' },
+    footer: { show: false, customText: '', bgColor: '#1E293B' },
+  });
+  const [rightTab, setRightTab] = useState<'properties' | 'pageSettings'>('properties');
 
   // Tags panel state
   const [leftTab, setLeftTab] = useState<'components' | 'tags'>('components');
@@ -1085,6 +1106,10 @@ export default function MimicEditor() {
       setGridSize(data.gridSize || 5);
       setBgColor(data.backgroundColor || '#FFFFFF');
       setPageName(data.name || '');
+      setPageSettings(data.pageSettings || {
+        header: { show: false, logoUrl: '', title: '', bgColor: '#1E293B' },
+        footer: { show: false, customText: '', bgColor: '#1E293B' },
+      });
       setHistory([els]);
       setHistoryIdx(0);
     });
@@ -1236,11 +1261,12 @@ export default function MimicEditor() {
         connections,
         gridSize,
         backgroundColor: bgColor,
+        pageSettings,
       });
     } finally {
       setSaving(false);
     }
-  }, [projectId, activePageId, pageName, elements, connections, gridSize, bgColor]);
+  }, [projectId, activePageId, pageName, elements, connections, gridSize, bgColor, pageSettings]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -2388,11 +2414,30 @@ export default function MimicEditor() {
 
         {/* Right Panel - Properties */}
         <div className="w-64 bg-white border-l border-gray-200 flex flex-col shrink-0 overflow-y-auto">
-          <div className="p-3 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700">
-              {selectedEl ? 'Properties' : 'Page Properties'}
-            </h3>
-          </div>
+          {selectedEl ? (
+            <div className="p-3 border-b border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-700">Properties</h3>
+            </div>
+          ) : (
+            <div className="flex border-b border-gray-200 shrink-0">
+              <button
+                onClick={() => setRightTab('properties')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-medium transition-colors ${
+                  rightTab === 'properties' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Page
+              </button>
+              <button
+                onClick={() => setRightTab('pageSettings')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-medium transition-colors ${
+                  rightTab === 'pageSettings' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" /> Page Settings
+              </button>
+            </div>
+          )}
 
           {selectedEl ? (
             <div className="p-3 space-y-3">
@@ -2915,7 +2960,7 @@ export default function MimicEditor() {
                 </button>
               </div>
             </div>
-          ) : (
+          ) : rightTab === 'properties' ? (
             <div className="p-3 space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Page Name</label>
@@ -2954,6 +2999,96 @@ export default function MimicEditor() {
               <div className="text-xs text-gray-400 pt-2 border-t border-gray-100">
                 {elements.length} element{elements.length !== 1 ? 's' : ''} on this page
               </div>
+            </div>
+          ) : (
+            <div className="p-3 space-y-3">
+              {/* Header Settings */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-600 uppercase">Header Bar</span>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pageSettings.header.show}
+                    onChange={(e) => setPageSettings(s => ({ ...s, header: { ...s.header, show: e.target.checked } }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-gray-500">Show</span>
+                </label>
+              </div>
+              <div className="text-[10px] text-gray-400">50px bar: logo left, title center, live datetime right</div>
+              {pageSettings.header.show && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Logo URL</label>
+                    <input
+                      type="text"
+                      value={pageSettings.header.logoUrl}
+                      onChange={(e) => setPageSettings(s => ({ ...s, header: { ...s.header, logoUrl: e.target.value } }))}
+                      placeholder="https://example.com/logo.png"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={pageSettings.header.title}
+                      onChange={(e) => setPageSettings(s => ({ ...s, header: { ...s.header, title: e.target.value } }))}
+                      placeholder="Page title..."
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Background Color</label>
+                    <input
+                      type="color"
+                      value={pageSettings.header.bgColor}
+                      onChange={(e) => setPageSettings(s => ({ ...s, header: { ...s.header, bgColor: e.target.value } }))}
+                      className="w-full h-8 rounded border border-gray-200 cursor-pointer"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="border-t border-gray-200 pt-3" />
+
+              {/* Footer Settings */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-600 uppercase">Footer Bar</span>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pageSettings.footer.show}
+                    onChange={(e) => setPageSettings(s => ({ ...s, footer: { ...s.footer, show: e.target.checked } }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-gray-500">Show</span>
+                </label>
+              </div>
+              <div className="text-[10px] text-gray-400">35px bar: user+role left, custom text center, project+page# right</div>
+              {pageSettings.footer.show && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Custom Text</label>
+                    <input
+                      type="text"
+                      value={pageSettings.footer.customText}
+                      onChange={(e) => setPageSettings(s => ({ ...s, footer: { ...s.footer, customText: e.target.value } }))}
+                      placeholder="Footer text..."
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Background Color</label>
+                    <input
+                      type="color"
+                      value={pageSettings.footer.bgColor}
+                      onChange={(e) => setPageSettings(s => ({ ...s, footer: { ...s.footer, bgColor: e.target.value } }))}
+                      className="w-full h-8 rounded border border-gray-200 cursor-pointer"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

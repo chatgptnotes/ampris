@@ -1,8 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { api } from '@/services/api';
 import {
-  Plus, Search, Trash2, Pencil, Download, Upload, Filter, X, Tag as TagIcon, Activity, Calculator, Wifi, ChevronDown,
+  Plus, Search, Trash2, Pencil, Download, Upload, Filter, X, Tag as TagIcon, Activity, Calculator, Wifi, ChevronDown, Server,
 } from 'lucide-react';
+
+interface DeviceInfo {
+  id: string;
+  name: string;
+  protocol: string;
+  status: string;
+}
 
 interface TagData {
   id: string;
@@ -24,6 +31,16 @@ interface TagData {
   projectId?: string;
   liveValue?: any;
   liveTimestamp?: string;
+  // Device mapping
+  deviceId?: string | null;
+  addressType?: string | null;
+  address?: string | null;
+  byteOrder?: string | null;
+  wordCount?: number | null;
+  bitIndex?: number | null;
+  scaleFactor?: number | null;
+  scaleOffset?: number | null;
+  device?: DeviceInfo | null;
 }
 
 interface ProjectInfo {
@@ -35,6 +52,31 @@ const TAG_TYPES = ['INTERNAL', 'SIMULATED', 'CALCULATED', 'EXTERNAL'] as const;
 const DATA_TYPES = ['BOOLEAN', 'INTEGER', 'FLOAT', 'STRING'] as const;
 const SIM_PATTERNS = ['rand', 'sine', 'random', 'ramp', 'square'] as const;
 const UNITS = ['kV', 'V', 'MW', 'kW', 'W', 'A', 'mA', 'Hz', '°C', '°F', 'bar', 'psi', '%', 'RPM', 'L/s', 'm³/h', 'Ω', 'PF', 'MVAr', 'kVAr', ''];
+const BYTE_ORDERS = ['BIG_ENDIAN', 'LITTLE_ENDIAN', 'MID_BIG', 'MID_LITTLE'] as const;
+
+const MODBUS_ADDRESS_TYPES = ['COIL', 'DISCRETE_INPUT', 'HOLDING_REGISTER', 'INPUT_REGISTER'] as const;
+const OPCUA_ADDRESS_TYPES = ['NODE_ID', 'BROWSE_PATH'] as const;
+const DNP3_ADDRESS_TYPES = ['BINARY_INPUT', 'BINARY_OUTPUT', 'ANALOG_INPUT', 'ANALOG_OUTPUT', 'COUNTER'] as const;
+const IEC61850_ADDRESS_TYPES = ['DATA_ATTRIBUTE', 'DATA_SET'] as const;
+
+function getAddressTypesForProtocol(protocol?: string): readonly string[] {
+  switch (protocol) {
+    case 'MODBUS_RTU':
+    case 'MODBUS_TCP': return MODBUS_ADDRESS_TYPES;
+    case 'OPC_UA': return OPCUA_ADDRESS_TYPES;
+    case 'DNP3': return DNP3_ADDRESS_TYPES;
+    case 'IEC61850': return IEC61850_ADDRESS_TYPES;
+    default: return MODBUS_ADDRESS_TYPES;
+  }
+}
+
+function getAddressPlaceholder(protocol?: string, addressType?: string): string {
+  if (protocol === 'OPC_UA') return addressType === 'BROWSE_PATH' ? 'Objects/Server/Status' : 'ns=2;i=1001';
+  if (protocol === 'IEC61850') return 'XCBR1$ST$Pos$stVal';
+  if (protocol === 'DNP3') return '0';
+  // Modbus
+  return '40001';
+}
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
   INTERNAL: TagIcon,
@@ -61,9 +103,36 @@ function getValueColor(tag: TagData): string {
   return 'text-green-600';
 }
 
-const emptyTag: Omit<TagData, 'id' | 'liveValue' | 'liveTimestamp' | 'currentValue'> = {
+interface TagForm {
+  name: string;
+  description?: string;
+  type: string;
+  dataType: string;
+  unit?: string;
+  minValue: number | null;
+  maxValue: number | null;
+  initialValue?: string;
+  simPattern: string | null;
+  simFrequency: number | null;
+  simAmplitude: number | null;
+  simOffset: number | null;
+  formula: string | null;
+  group: string | null;
+  // Device mapping
+  deviceId: string | null;
+  addressType: string | null;
+  address: string | null;
+  byteOrder: string | null;
+  wordCount: number | null;
+  bitIndex: number | null;
+  scaleFactor: number | null;
+  scaleOffset: number | null;
+}
+
+const emptyTag: TagForm = {
   name: '', description: '', type: 'INTERNAL', dataType: 'FLOAT', unit: '', minValue: null, maxValue: null,
   initialValue: '0', simPattern: null, simFrequency: null, simAmplitude: null, simOffset: null, formula: null, group: null,
+  deviceId: null, addressType: null, address: null, byteOrder: null, wordCount: null, bitIndex: null, scaleFactor: null, scaleOffset: null,
 };
 
 export default function TagManager() {
@@ -76,14 +145,30 @@ export default function TagManager() {
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTag, setEditingTag] = useState<TagData | null>(null);
-  const [form, setForm] = useState(emptyTag);
+  const [form, setForm] = useState<TagForm>(emptyTag);
   const [saving, setSaving] = useState(false);
   const refreshTimer = useRef<NodeJS.Timeout>();
+  const [devices, setDevices] = useState<DeviceInfo[]>([]);
 
   // Load projects for filter dropdown
   useEffect(() => {
     api.get('/projects').then(({ data }) => setProjects(data)).catch(() => {});
   }, []);
+
+  // Load devices when project changes
+  useEffect(() => {
+    if (filterProjectId) {
+      api.get('/devices', { params: { projectId: filterProjectId } })
+        .then(({ data }) => setDevices(data))
+        .catch(() => setDevices([]));
+    } else {
+      api.get('/devices').then(({ data }) => setDevices(data)).catch(() => setDevices([]));
+    }
+  }, [filterProjectId]);
+
+  const selectedDevice = useMemo(() =>
+    devices.find((d) => d.id === form.deviceId) || null
+  , [devices, form.deviceId]);
 
   const loadTags = useCallback(async () => {
     try {
@@ -124,6 +209,10 @@ export default function TagManager() {
       simPattern: tag.simPattern || null, simFrequency: tag.simFrequency ?? null,
       simAmplitude: tag.simAmplitude ?? null, simOffset: tag.simOffset ?? null,
       formula: tag.formula || null, group: tag.group || null,
+      deviceId: tag.deviceId || null, addressType: tag.addressType || null,
+      address: tag.address || null, byteOrder: tag.byteOrder || null,
+      wordCount: tag.wordCount ?? null, bitIndex: tag.bitIndex ?? null,
+      scaleFactor: tag.scaleFactor ?? null, scaleOffset: tag.scaleOffset ?? null,
     });
     setShowModal(true);
   };
@@ -138,7 +227,22 @@ export default function TagManager() {
         simFrequency: form.simFrequency === null ? null : Number(form.simFrequency),
         simAmplitude: form.simAmplitude === null ? null : Number(form.simAmplitude),
         simOffset: form.simOffset === null ? null : Number(form.simOffset),
+        scaleFactor: form.scaleFactor === null ? null : Number(form.scaleFactor),
+        scaleOffset: form.scaleOffset === null ? null : Number(form.scaleOffset),
+        wordCount: form.wordCount === null ? null : Number(form.wordCount),
+        bitIndex: form.bitIndex === null ? null : Number(form.bitIndex),
       };
+      // Clear device fields if not EXTERNAL
+      if (form.type !== 'EXTERNAL') {
+        payload.deviceId = null;
+        payload.addressType = null;
+        payload.address = null;
+        payload.byteOrder = null;
+        payload.wordCount = null;
+        payload.bitIndex = null;
+        payload.scaleFactor = null;
+        payload.scaleOffset = null;
+      }
       if (editingTag) {
         await api.put(`/tags/${editingTag.id}`, payload);
       } else {
@@ -170,7 +274,7 @@ export default function TagManager() {
   };
 
   const exportTags = () => {
-    const json = JSON.stringify(tags.map(({ id, liveValue, liveTimestamp, ...rest }) => rest), null, 2);
+    const json = JSON.stringify(tags.map(({ id, liveValue, liveTimestamp, device, ...rest }) => rest), null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -204,6 +308,16 @@ export default function TagManager() {
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Scale preview
+  const scalePreview = useMemo(() => {
+    if (form.type !== 'EXTERNAL' || (form.scaleFactor === null && form.scaleOffset === null)) return null;
+    const factor = form.scaleFactor ?? 1;
+    const offset = form.scaleOffset ?? 0;
+    const raw = 1000;
+    const scaled = raw * factor + offset;
+    return `Raw ${raw} => ${scaled.toFixed(2)}`;
+  }, [form.type, form.scaleFactor, form.scaleOffset]);
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -246,7 +360,7 @@ export default function TagManager() {
           <select
             value={filterProjectId}
             onChange={(e) => setFilterProjectId(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-white"
+            className="text-sm border border-gray-300 rounded-lg px-2 py-2 text-gray-900 bg-white"
           >
             <option value="">All Projects</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -254,7 +368,7 @@ export default function TagManager() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-white"
+            className="text-sm border border-gray-300 rounded-lg px-2 py-2 text-gray-900 bg-white"
           >
             <option value="">All Types</option>
             {TAG_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -263,7 +377,7 @@ export default function TagManager() {
             <select
               value={filterGroup}
               onChange={(e) => setFilterGroup(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-white"
+              className="text-sm border border-gray-300 rounded-lg px-2 py-2 text-gray-900 bg-white"
             >
               <option value="">All Groups</option>
               {groups.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -293,6 +407,7 @@ export default function TagManager() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Data Type</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Device</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Group</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Live Value</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Unit</th>
@@ -315,6 +430,17 @@ export default function TagManager() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{tag.dataType}</td>
+                      <td className="px-4 py-3">
+                        {tag.device ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-600">
+                            <Server className="w-3 h-3 text-gray-400" />
+                            <span className="truncate max-w-[120px]" title={tag.device.name}>{tag.device.name}</span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${tag.device.status === 'CONNECTED' ? 'bg-green-500' : tag.device.status === 'ERROR' ? 'bg-red-500' : 'bg-gray-300'}`} />
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-gray-500">{tag.group || '—'}</td>
                       <td className={`px-4 py-3 text-right font-mono ${getValueColor(tag)}`}>
                         {tag.liveValue !== undefined && tag.liveValue !== null
@@ -400,7 +526,7 @@ export default function TagManager() {
                   <select
                     value={form.type}
                     onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     {TAG_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -410,7 +536,7 @@ export default function TagManager() {
                   <select
                     value={form.dataType}
                     onChange={(e) => setForm({ ...form, dataType: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     {DATA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -420,7 +546,7 @@ export default function TagManager() {
                   <select
                     value={form.unit || ''}
                     onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     {UNITS.map((u) => <option key={u} value={u}>{u || '(none)'}</option>)}
                   </select>
@@ -464,7 +590,7 @@ export default function TagManager() {
                   <h3 className="text-sm font-semibold text-purple-700">Simulation Settings</h3>
                   {form.simPattern === 'rand' && (
                     <p className="text-xs text-purple-500 bg-purple-100 px-3 py-1.5 rounded">
-                      💡 <strong>rand(min, max)</strong> — generates random number between Min and Max values every tick. E.g., Min=0, Max=100 → rand(100)
+                      <strong>rand(min, max)</strong> — generates random number between Min and Max values every tick. E.g., Min=0, Max=100
                     </p>
                   )}
                   <div className="grid grid-cols-2 gap-3">
@@ -473,12 +599,12 @@ export default function TagManager() {
                       <select
                         value={form.simPattern || 'sine'}
                         onChange={(e) => setForm({ ...form, simPattern: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-purple-200 rounded-lg text-gray-900 bg-white"
+                        className="w-full px-3 py-2 text-sm border border-purple-300 rounded-lg text-gray-900 bg-white"
                       >
                         {SIM_PATTERNS.map((p) => <option key={p} value={p}>{
                           p === 'rand' ? 'rand(min,max) — Random between range' :
                           p === 'sine' ? 'Sine Wave' :
-                          p === 'random' ? 'Random (offset ± amplitude)' :
+                          p === 'random' ? 'Random (offset +/- amplitude)' :
                           p === 'ramp' ? 'Ramp (sawtooth)' :
                           p === 'square' ? 'Square Wave' : p
                         }</option>)}
@@ -535,6 +661,147 @@ export default function TagManager() {
                     placeholder="e.g. MANUAL.voltage_bus1 + MANUAL.voltage_bus2 * 0.5"
                     className="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg text-gray-900 bg-white font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   />
+                </div>
+              )}
+
+              {/* External device mapping */}
+              {form.type === 'EXTERNAL' && (
+                <div className="bg-green-50 rounded-lg p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-green-700 flex items-center gap-1.5">
+                    <Server className="w-4 h-4" /> External Device Mapping
+                  </h3>
+
+                  {/* Device dropdown */}
+                  <div>
+                    <label className="block text-xs font-medium text-green-600 mb-1">Device *</label>
+                    <select
+                      value={form.deviceId || ''}
+                      onChange={(e) => {
+                        const newDeviceId = e.target.value || null;
+                        const dev = devices.find((d) => d.id === newDeviceId);
+                        const addrTypes = dev ? getAddressTypesForProtocol(dev.protocol) : [];
+                        setForm({
+                          ...form,
+                          deviceId: newDeviceId,
+                          addressType: addrTypes.length > 0 ? addrTypes[0] : null,
+                          address: null,
+                        });
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-green-300 rounded-lg text-gray-900 bg-white"
+                    >
+                      <option value="">Select device...</option>
+                      {devices.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.protocol.replace('_', ' ')}) — {d.status}
+                        </option>
+                      ))}
+                    </select>
+                    {devices.length === 0 && (
+                      <p className="text-xs text-green-500 mt-1">No devices configured. Add one in the Devices page first.</p>
+                    )}
+                  </div>
+
+                  {selectedDevice && (
+                    <>
+                      {/* Address Type + Address */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-green-600 mb-1">Address Type *</label>
+                          <select
+                            value={form.addressType || ''}
+                            onChange={(e) => setForm({ ...form, addressType: e.target.value || null })}
+                            className="w-full px-3 py-2 text-sm border border-green-300 rounded-lg text-gray-900 bg-white"
+                          >
+                            {getAddressTypesForProtocol(selectedDevice.protocol).map((at) => (
+                              <option key={at} value={at}>{at.replace(/_/g, ' ')}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-green-600 mb-1">Address *</label>
+                          <input
+                            type="text"
+                            value={form.address || ''}
+                            onChange={(e) => setForm({ ...form, address: e.target.value || null })}
+                            placeholder={getAddressPlaceholder(selectedDevice.protocol, form.addressType || undefined)}
+                            className="w-full px-3 py-2 text-sm border border-green-200 rounded-lg text-gray-900 bg-white font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Word count + Byte order + Bit index */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-green-600 mb-1">Word Count</label>
+                          <input
+                            type="number"
+                            min={1} max={8}
+                            value={form.wordCount ?? ''}
+                            onChange={(e) => setForm({ ...form, wordCount: e.target.value ? Number(e.target.value) : null })}
+                            placeholder="1"
+                            className="w-full px-3 py-2 text-sm border border-green-200 rounded-lg text-gray-900 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-green-600 mb-1">Byte Order</label>
+                          <select
+                            value={form.byteOrder || ''}
+                            onChange={(e) => setForm({ ...form, byteOrder: e.target.value || null })}
+                            className="w-full px-3 py-2 text-sm border border-green-300 rounded-lg text-gray-900 bg-white"
+                          >
+                            <option value="">Default</option>
+                            {BYTE_ORDERS.map((bo) => (
+                              <option key={bo} value={bo}>{bo.replace(/_/g, ' ')}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-green-600 mb-1">Bit Index</label>
+                          <input
+                            type="number"
+                            min={0} max={15}
+                            value={form.bitIndex ?? ''}
+                            onChange={(e) => setForm({ ...form, bitIndex: e.target.value ? Number(e.target.value) : null })}
+                            placeholder="Optional"
+                            className="w-full px-3 py-2 text-sm border border-green-200 rounded-lg text-gray-900 bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Scale Factor + Offset + Preview */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-green-600 mb-1">Scale Factor</label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={form.scaleFactor ?? ''}
+                            onChange={(e) => setForm({ ...form, scaleFactor: e.target.value ? Number(e.target.value) : null })}
+                            placeholder="1.0"
+                            className="w-full px-3 py-2 text-sm border border-green-200 rounded-lg text-gray-900 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-green-600 mb-1">Scale Offset</label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={form.scaleOffset ?? ''}
+                            onChange={(e) => setForm({ ...form, scaleOffset: e.target.value ? Number(e.target.value) : null })}
+                            placeholder="0.0"
+                            className="w-full px-3 py-2 text-sm border border-green-200 rounded-lg text-gray-900 bg-white"
+                          />
+                        </div>
+                        <div className="flex items-end pb-0.5">
+                          {scalePreview && (
+                            <div className="text-xs text-green-600 bg-green-100 rounded px-2 py-1.5 font-mono w-full text-center">
+                              {scalePreview}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

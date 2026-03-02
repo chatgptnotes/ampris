@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
 import { useRealtimeStore } from '@/stores/realtimeStore';
+import { useAuthStore } from '@/stores/authStore';
 import {
   Maximize,
   Minimize,
   Pencil,
   ChevronLeft,
   Users,
+  Tags,
 } from 'lucide-react';
 import * as ScadaSymbols from '@/components/scada-symbols';
 
@@ -163,6 +165,20 @@ interface MimicConnection {
   thickness: number;
 }
 
+interface PageSettings {
+  header: {
+    show: boolean;
+    logoUrl: string;
+    title: string;
+    bgColor: string;
+  };
+  footer: {
+    show: boolean;
+    customText: string;
+    bgColor: string;
+  };
+}
+
 interface PageData {
   id: string;
   name: string;
@@ -171,6 +187,7 @@ interface PageData {
   backgroundColor: string;
   elements: MimicElement[];
   connections: MimicConnection[];
+  pageSettings?: PageSettings;
 }
 
 interface ProjectData {
@@ -193,6 +210,14 @@ export default function MimicViewer() {
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const values = useRealtimeStore((s) => s.values);
+  const user = useAuthStore((s) => s.user);
+  const [showTagValues, setShowTagValues] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [pageSettings, setPageSettings] = useState<PageSettings>({
+    header: { show: false, logoUrl: '', title: '', bgColor: '#1E293B' },
+    footer: { show: false, customText: '', bgColor: '#1E293B' },
+  });
+  const fullscreenRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!projectId) return;
@@ -207,17 +232,29 @@ export default function MimicViewer() {
     if (!projectId || !activePageId) return;
     api.get(`/projects/${projectId}/pages/${activePageId}`).then(({ data }) => {
       setPage(data);
+      if (data.pageSettings) setPageSettings(data.pageSettings);
     });
   }, [projectId, activePageId]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
+      fullscreenRef.current?.requestFullscreen();
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
+  }, []);
+
+  // Sync fullscreen state with browser
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
+  // Live datetime clock
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   // Evaluate animation rules
@@ -501,8 +538,8 @@ export default function MimicViewer() {
                 })}
               </div>
             </foreignObject>
-            {/* Tag value overlay */}
-            {tagValue !== undefined && el.properties.tagBinding && (
+            {/* Tag value overlay (pill) - shown when tag values labels are off */}
+            {tagValue !== undefined && el.properties.tagBinding && !showTagValues && (
               <g>
                 <rect
                   x={el.width / 2 - Math.max(String(tagValue).length * 4 + 8, 24) / 2}
@@ -526,6 +563,48 @@ export default function MimicViewer() {
                 </text>
               </g>
             )}
+            {/* Live tag value labels on symbols */}
+            {showTagValues && (() => {
+              const bindings = el.properties.tagBindings;
+              const isXfmr = ['Transformer', 'AutoTransformer', 'ZigZagTransformer'].includes(el.type);
+              if (isXfmr && bindings) {
+                const hvVal = bindings.hvVoltage ? values[bindings.hvVoltage as string] : undefined;
+                const lvVal = bindings.lvVoltage ? values[bindings.lvVoltage as string] : undefined;
+                return (
+                  <g>
+                    {hvVal !== undefined && (
+                      <text x={el.width / 2} y={-4} textAnchor="middle" fontSize={10} fill="#1E40AF" fontFamily="monospace">{`HV: ${hvVal}`}</text>
+                    )}
+                    {lvVal !== undefined && (
+                      <text x={el.width / 2} y={el.height + 12} textAnchor="middle" fontSize={10} fill="#1E40AF" fontFamily="monospace">{`LV: ${lvVal}`}</text>
+                    )}
+                  </g>
+                );
+              }
+              if (bindings && Object.keys(bindings).length > 0) {
+                return (
+                  <g>
+                    {Object.entries(bindings).map(([suffix, tagName], i) => {
+                      const val = values[tagName as string];
+                      if (val === undefined) return null;
+                      return (
+                        <text key={suffix} x={el.width / 2} y={el.height + 12 + i * 12} textAnchor="middle" fontSize={10} fill="#1E40AF" fontFamily="monospace">
+                          {`${suffix}: ${val}`}
+                        </text>
+                      );
+                    })}
+                  </g>
+                );
+              }
+              if (tagValue !== undefined && el.properties.tagBinding) {
+                return (
+                  <text x={el.width / 2} y={el.height + 12} textAnchor="middle" fontSize={10} fill="#1E40AF" fontFamily="monospace">
+                    {String(tagValue)}
+                  </text>
+                );
+              }
+              return null;
+            })()}
           </g>
         ) : (
           <g>
@@ -584,8 +663,9 @@ export default function MimicViewer() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-100">
-      {/* Top Bar */}
+    <div ref={fullscreenRef} className={`flex flex-col h-full ${isFullscreen ? 'bg-black' : 'bg-gray-100'}`}>
+      {/* Top Bar - hidden in fullscreen */}
+      {!isFullscreen && (
       <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-200 shrink-0">
         <button onClick={() => navigate('/app/projects')} className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded">
           <ChevronLeft className="w-5 h-5" />
@@ -629,6 +709,25 @@ export default function MimicViewer() {
           {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
         </button>
       </div>
+      )}
+
+      {/* Header Bar */}
+      {pageSettings.header.show && (
+        <div
+          className="flex items-center px-4 shrink-0"
+          style={{ height: 50, background: pageSettings.header.bgColor || '#1E293B' }}
+        >
+          {pageSettings.header.logoUrl && (
+            <img src={pageSettings.header.logoUrl} className="h-8 mr-3 object-contain" alt="logo" />
+          )}
+          <div className="flex-1 text-center text-white font-semibold text-sm">
+            {pageSettings.header.title || page?.name || ''}
+          </div>
+          <div className="text-white text-xs font-mono">
+            {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
+          </div>
+        </div>
+      )}
 
       {/* Canvas */}
       <div
@@ -654,6 +753,22 @@ export default function MimicViewer() {
       >
         {/* Zoom controls */}
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white/90 border border-gray-200 rounded-lg shadow px-2 py-1">
+          {isFullscreen && (
+            <>
+              <button onClick={toggleFullscreen} className="px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded">
+                Exit Fullscreen
+              </button>
+              <div className="w-px h-4 bg-gray-300" />
+            </>
+          )}
+          <button
+            onClick={() => setShowTagValues(v => !v)}
+            className={`px-1.5 py-0.5 rounded ${showTagValues ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:bg-gray-100'}`}
+            title="Show/Hide Tag Values"
+          >
+            <Tags className="w-4 h-4" />
+          </button>
+          <div className="w-px h-4 bg-gray-300" />
           <button onClick={() => setViewZoom(z => Math.min(10, z * 1.2))} className="px-2 py-0.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded">+</button>
           <span className="text-xs text-gray-500 min-w-[40px] text-center">{Math.round(viewZoom * 100)}%</span>
           <button onClick={() => setViewZoom(z => Math.max(0.1, z / 1.2))} className="px-2 py-0.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded">−</button>
@@ -692,6 +807,24 @@ export default function MimicViewer() {
           <div className="text-gray-400">Loading...</div>
         )}
       </div>
+
+      {/* Footer Bar */}
+      {pageSettings.footer.show && (
+        <div
+          className="flex items-center px-4 shrink-0"
+          style={{ height: 35, background: pageSettings.footer.bgColor || '#1E293B' }}
+        >
+          <div className="text-white text-xs">
+            {user?.name || 'User'} &middot; {user?.role || 'Viewer'}
+          </div>
+          <div className="flex-1 text-center text-white text-xs opacity-80">
+            {pageSettings.footer.customText}
+          </div>
+          <div className="text-white text-xs">
+            {project?.name} &middot; Page {(project?.mimicPages.findIndex(p => p.id === activePageId) ?? 0) + 1}/{project?.mimicPages.length || 1}
+          </div>
+        </div>
+      )}
 
       {/* Equipment popup */}
       {selectedEquipment && (

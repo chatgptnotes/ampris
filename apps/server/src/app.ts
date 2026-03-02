@@ -17,6 +17,7 @@ import historianRoutes from './routes/historian.routes';
 import realtimeRoutes from './routes/realtime.routes';
 import projectRoutes from './routes/project.routes';
 import tagRoutes from './routes/tag.routes';
+import deviceRoutes from './routes/device.routes';
 import aiRoutes from './routes/ai.routes';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/historian', historianRoutes);
 app.use('/api/realtime', realtimeRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tags', tagRoutes);
+app.use('/api/devices', deviceRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/data-points', (_req, res) => {
   import('./controllers/substation.controller').then((ctrl) => ctrl.getDataPoints(_req, res));

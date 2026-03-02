@@ -19,6 +19,15 @@ const createTagSchema = z.object({
   formula: z.string().optional().nullable(),
   group: z.string().max(100).optional().nullable(),
   projectId: z.string().uuid(),
+  // External device mapping
+  deviceId: z.string().uuid().optional().nullable(),
+  addressType: z.string().max(30).optional().nullable(),
+  address: z.string().max(200).optional().nullable(),
+  byteOrder: z.enum(['BIG_ENDIAN', 'LITTLE_ENDIAN', 'MID_BIG', 'MID_LITTLE']).optional().nullable(),
+  wordCount: z.number().int().min(1).max(8).optional().nullable(),
+  bitIndex: z.number().int().min(0).max(15).optional().nullable(),
+  scaleFactor: z.number().optional().nullable(),
+  scaleOffset: z.number().optional().nullable(),
 });
 
 const updateTagSchema = createTagSchema.partial();
@@ -60,6 +69,14 @@ export async function createTag(req: Request, res: Response): Promise<void> {
         formula: data.formula,
         group: data.group,
         projectId: data.projectId,
+        deviceId: data.deviceId,
+        addressType: data.addressType,
+        address: data.address,
+        byteOrder: data.byteOrder,
+        wordCount: data.wordCount,
+        bitIndex: data.bitIndex,
+        scaleFactor: data.scaleFactor,
+        scaleOffset: data.scaleOffset,
       },
     });
 
@@ -104,6 +121,7 @@ export async function getTags(req: Request, res: Response): Promise<void> {
 
     const tags = await prisma.tag.findMany({
       where,
+      include: { device: { select: { id: true, name: true, protocol: true, status: true } } },
       orderBy: [{ group: 'asc' }, { name: 'asc' }],
     });
 

@@ -34,6 +34,7 @@ const MimicEditor = lazyRetry(() => import('@/pages/MimicEditor'));
 const MimicViewer = lazyRetry(() => import('@/pages/MimicViewer'));
 const TagManager = lazyRetry(() => import('@/pages/TagManager'));
 const TagTestPanel = lazyRetry(() => import('@/pages/TagTestPanel'));
+const DeviceManager = lazyRetry(() => import('@/pages/DeviceManager'));
 const AILoadForecasting = lazyRetry(() => import('@/pages/AILoadForecasting'));
 const AIEquipmentHealth = lazyRetry(() => import('@/pages/AIEquipmentHealth'));
 const AIPredictiveMaintenance = lazyRetry(() => import('@/pages/AIPredictiveMaintenance'));
@@ -98,6 +99,7 @@ export const router = createBrowserRouter([
           { path: 'connections', element: <ConnectionManager /> },
           { path: 'components', element: <ComponentLibrary /> },
           { path: 'tags', element: <Suspense fallback={<LazyFallback />}><TagManager /></Suspense> },
+          { path: 'devices', element: <Suspense fallback={<LazyFallback />}><DeviceManager /></Suspense> },
           { path: 'tag-test', element: <Suspense fallback={<LazyFallback />}><TagTestPanel /></Suspense> },
           { path: 'ai/load-forecast', element: <Suspense fallback={<LazyFallback />}><AILoadForecasting /></Suspense> },
           { path: 'ai/equipment-health', element: <Suspense fallback={<LazyFallback />}><AIEquipmentHealth /></Suspense> },

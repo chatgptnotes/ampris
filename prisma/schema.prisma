@@ -202,12 +202,13 @@ model Project {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  owner       User     @relation(fields: [ownerId], references: [id])
-  mimicPages  MimicPage[]
-  members     ProjectMember[]
-  tags        Tag[]
-  tagScripts  TagScript[]
-  testScenarios TestScenario[]
+  owner           User     @relation(fields: [ownerId], references: [id])
+  mimicPages      MimicPage[]
+  members         ProjectMember[]
+  tags            Tag[]
+  tagScripts      TagScript[]
+  testScenarios   TestScenario[]
+  externalDevices ExternalDevice[]
 
   @@map("projects")
 }
@@ -246,6 +247,49 @@ model ProjectMember {
   @@map("project_members")
 }
 
+// ─── External Devices ─────────────────────────────
+
+model ExternalDevice {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String    @db.VarChar(200)
+  description     String?   @db.Text
+  protocol        String    @db.VarChar(20) // MODBUS_RTU, MODBUS_TCP, OPC_UA, DNP3, IEC61850
+  enabled         Boolean   @default(true)
+  // TCP / common
+  host            String?   @db.VarChar(200)
+  port            Int?
+  slaveId         Int?      @map("slave_id")
+  // RTU serial
+  serialPort      String?   @map("serial_port") @db.VarChar(100)
+  baudRate        Int?      @map("baud_rate")
+  dataBits        Int?      @map("data_bits")
+  stopBits        Int?      @map("stop_bits")
+  parity          String?   @db.VarChar(10) // NONE, EVEN, ODD
+  // OPC UA
+  endpointUrl     String?   @map("endpoint_url") @db.VarChar(500)
+  securityMode    String?   @map("security_mode") @db.VarChar(30) // None, Sign, SignAndEncrypt
+  securityPolicy  String?   @map("security_policy") @db.VarChar(50)
+  username        String?   @db.VarChar(100)
+  password        String?   @db.VarChar(200)
+  // Polling
+  pollIntervalMs  Int       @default(1000) @map("poll_interval_ms")
+  timeoutMs       Int       @default(5000) @map("timeout_ms")
+  retryCount      Int       @default(3) @map("retry_count")
+  // Status
+  status          String    @default("DISCONNECTED") @db.VarChar(20) // CONNECTED, DISCONNECTED, ERROR
+  lastError       String?   @map("last_error") @db.Text
+  lastConnectedAt DateTime? @map("last_connected_at") @db.Timestamptz()
+  // Project
+  projectId       String    @map("project_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tags            Tag[]
+
+  @@map("external_devices")
+}
+
 // ─── Tags & Testing ───────────────────────────────
 
 model Tag {
@@ -267,10 +311,20 @@ model Tag {
   group         String?  @db.VarChar(100) // folder/group name
   metadata      Json?    @db.JsonB
   projectId     String   @map("project_id") @db.Uuid
+  // External device mapping
+  deviceId      String?  @map("device_id") @db.Uuid
+  addressType   String?  @map("address_type") @db.VarChar(30) // COIL, DISCRETE_INPUT, HOLDING_REGISTER, INPUT_REGISTER, NODE_ID, etc.
+  address       String?  @db.VarChar(200)
+  byteOrder     String?  @map("byte_order") @db.VarChar(10) // BIG_ENDIAN, LITTLE_ENDIAN, MID_BIG, MID_LITTLE
+  wordCount     Int?     @map("word_count")
+  bitIndex      Int?     @map("bit_index")
+  scaleFactor   Float?   @map("scale_factor")
+  scaleOffset   Float?   @map("scale_offset")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  device        ExternalDevice?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@unique([projectId, name])
   @@map("tags")
