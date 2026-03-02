@@ -2329,8 +2329,14 @@ export default function MimicEditor() {
         >
           <svg
             ref={svgRef}
-            className="w-full h-full"
-            style={{ background: '#E5E7EB', cursor: drawingBus !== null ? 'crosshair' : undefined }}
+            style={{
+              background: '#E5E7EB',
+              cursor: drawingBus !== null ? 'crosshair' : undefined,
+              minWidth: `${Math.max(canvasW * zoom + pan.x + 200, 100)}px`,
+              minHeight: `${Math.max(canvasH * zoom + pan.y + 200, 100)}px`,
+              width: '100%',
+              height: '100%',
+            }}
             onMouseDown={handleSvgMouseDown}
             onClick={handleCanvasClick}
             onMouseMove={handleSvgMouseMove}
