@@ -268,41 +268,46 @@ export default function MimicViewer() {
     return () => clearInterval(timer);
   }, []);
 
-  // Client-side tag simulator — generates values when server is not connected
+  // Client-side tag simulator — fetches ALL project tags and simulates values
   useEffect(() => {
-    if (!projectId || !page) return;
+    if (!projectId) return;
     const store = useRealtimeStore.getState();
-    
-    // Collect all tag names from page elements
-    const tagNames = new Set<string>();
-    (page.elements as MimicElement[]).forEach(el => {
-      if (el.properties.tagBinding) tagNames.add(el.properties.tagBinding);
-      if (el.properties.targetTag) tagNames.add(el.properties.targetTag);
-      if (el.properties.tag1) tagNames.add(el.properties.tag1);
-      if (el.properties.tag2) tagNames.add(el.properties.tag2);
-      if (el.properties.watchTag) tagNames.add(el.properties.watchTag);
-      const bindings = el.properties.tagBindings as Record<string, string> | undefined;
-      if (bindings) Object.values(bindings).forEach(t => { if (t) tagNames.add(t); });
-    });
-
-    if (tagNames.size === 0) return;
-
-    // Fetch tag definitions from server (to get sim patterns)
     let tagDefs: Record<string, any> = {};
+    let allTagNames = new Set<string>();
+    let started = false;
+
+    // 1. Fetch ALL tags for this project
     api.get(`/tags?projectId=${projectId}`).then(({ data }) => {
       if (Array.isArray(data)) {
-        data.forEach((t: any) => { tagDefs[t.name] = t; });
+        data.forEach((t: any) => { 
+          tagDefs[t.name] = t; 
+          allTagNames.add(t.name);
+        });
       }
     }).catch(() => {
-      // Server not available — use defaults
+      // Server not available — will use element bindings only
+    }).finally(() => {
+      // 2. Also collect tag names from page elements (in case tags aren't in DB)
+      if (page) {
+        (page.elements as MimicElement[]).forEach(el => {
+          if (el.properties.tagBinding) allTagNames.add(el.properties.tagBinding);
+          if (el.properties.targetTag) allTagNames.add(el.properties.targetTag);
+          if (el.properties.tag1) allTagNames.add(el.properties.tag1);
+          if (el.properties.tag2) allTagNames.add(el.properties.tag2);
+          if (el.properties.watchTag) allTagNames.add(el.properties.watchTag);
+          const bindings = el.properties.tagBindings as Record<string, string> | undefined;
+          if (bindings) Object.values(bindings).forEach(t => { if (t) allTagNames.add(t); });
+        });
+      }
+      started = true;
     });
 
-    // Simulate values every second
+    // 3. Simulate values every second
     const simTimer = setInterval(() => {
-      const now = Date.now();
-      const t = now / 1000;
+      if (!started || allTagNames.size === 0) return;
+      const t = Date.now() / 1000;
 
-      tagNames.forEach(tagName => {
+      allTagNames.forEach(tagName => {
         const def = tagDefs[tagName];
         let value: number;
         
@@ -312,10 +317,15 @@ export default function MimicViewer() {
           const amp = def.simAmplitude ?? (max - min) / 2;
           const offset = def.simOffset ?? (min + max) / 2;
           const freq = def.simFrequency ?? 0.1;
-          const pattern = def.simPattern || 'sine';
+          const pattern = def.simPattern || 'rand';
 
           if (pattern === 'rand' || pattern === 'random') {
-            value = min + Math.random() * (max - min);
+            // For rand: generate smoothly varying random within range
+            const prev = store.getValue(tagName);
+            const prevVal = prev && typeof (prev as any).value === 'number' ? (prev as any).value : (min + max) / 2;
+            const step = (max - min) * 0.05; // 5% of range per tick
+            value = prevVal + (Math.random() - 0.5) * 2 * step;
+            value = Math.max(min, Math.min(max, value));
           } else if (pattern === 'sine') {
             value = offset + amp * Math.sin(2 * Math.PI * freq * t);
           } else if (pattern === 'ramp') {
@@ -327,8 +337,11 @@ export default function MimicViewer() {
           }
           value = Math.round(value * 100) / 100;
         } else {
-          // No definition — generate random value between 0-100
-          value = Math.round(Math.random() * 100 * 100) / 100;
+          // No definition — random walk 0-100
+          const prev = store.getValue(tagName);
+          const prevVal = prev && typeof (prev as any).value === 'number' ? (prev as any).value : 50;
+          value = Math.max(0, Math.min(100, prevVal + (Math.random() - 0.5) * 10));
+          value = Math.round(value * 100) / 100;
         }
 
         store.updateValue({ tag: tagName, value, timestamp: new Date().toISOString(), quality: 'GOOD' } as any);
@@ -942,6 +955,18 @@ export default function MimicViewer() {
           <button onClick={() => setViewZoom(z => Math.max(0.1, z / 1.2))} className="px-2 py-0.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded">−</button>
           <button onClick={() => { setViewZoom(1); setViewPan({ x: 0, y: 0 }); }} className="px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 rounded ml-1">Reset</button>
         </div>
+        {/* Floating Tag Values Panel */}
+        {showTagValues && Object.keys(values).length > 0 && (
+          <div className="absolute top-14 left-3 z-10 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-lg shadow-xl p-2 max-h-[50vh] overflow-y-auto min-w-[180px]">
+            <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 px-1">Live Tag Values</div>
+            {Object.entries(values).map(([tag, data]) => (
+              <div key={tag} className="flex items-center justify-between gap-3 px-1 py-0.5 hover:bg-slate-800 rounded">
+                <span className="text-[11px] text-slate-300 truncate">{tag}</span>
+                <span className="text-[11px] font-mono font-bold text-cyan-400">{typeof (data as any)?.value === 'number' ? (data as any).value.toFixed(2) : String((data as any)?.value ?? '---')}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {page ? (
           <svg
             viewBox={`0 0 ${page.width} ${page.height}`}
