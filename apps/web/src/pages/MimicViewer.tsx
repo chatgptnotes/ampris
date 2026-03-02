@@ -829,7 +829,7 @@ export default function MimicViewer() {
 
       {/* Canvas */}
       <div
-        className="flex-1 overflow-hidden relative"
+        className="flex-1 overflow-auto relative"
         onWheel={(e) => {
           e.preventDefault();
           const delta = e.deltaY > 0 ? 0.9 : 1.1;
