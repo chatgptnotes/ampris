@@ -1107,8 +1107,8 @@ export default function MimicEditor() {
       setBgColor(data.backgroundColor || '#FFFFFF');
       setPageName(data.name || '');
       setPageSettings(data.pageSettings || {
-        header: { show: false, logoUrl: '', title: '', bgColor: '#1E293B' },
-        footer: { show: false, customText: '', bgColor: '#1E293B' },
+        header: { show: true, logoUrl: '', title: '', bgColor: '#1E293B' },
+        footer: { show: true, customText: '', bgColor: '#1E293B' },
       });
       setHistory([els]);
       setHistoryIdx(0);
