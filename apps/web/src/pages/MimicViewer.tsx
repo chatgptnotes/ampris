@@ -268,6 +268,76 @@ export default function MimicViewer() {
     return () => clearInterval(timer);
   }, []);
 
+  // Client-side tag simulator — generates values when server is not connected
+  useEffect(() => {
+    if (!projectId || !page) return;
+    const store = useRealtimeStore.getState();
+    
+    // Collect all tag names from page elements
+    const tagNames = new Set<string>();
+    (page.elements as MimicElement[]).forEach(el => {
+      if (el.properties.tagBinding) tagNames.add(el.properties.tagBinding);
+      if (el.properties.targetTag) tagNames.add(el.properties.targetTag);
+      if (el.properties.tag1) tagNames.add(el.properties.tag1);
+      if (el.properties.tag2) tagNames.add(el.properties.tag2);
+      if (el.properties.watchTag) tagNames.add(el.properties.watchTag);
+      const bindings = el.properties.tagBindings as Record<string, string> | undefined;
+      if (bindings) Object.values(bindings).forEach(t => { if (t) tagNames.add(t); });
+    });
+
+    if (tagNames.size === 0) return;
+
+    // Fetch tag definitions from server (to get sim patterns)
+    let tagDefs: Record<string, any> = {};
+    api.get(`/tags?projectId=${projectId}`).then(({ data }) => {
+      if (Array.isArray(data)) {
+        data.forEach((t: any) => { tagDefs[t.name] = t; });
+      }
+    }).catch(() => {
+      // Server not available — use defaults
+    });
+
+    // Simulate values every second
+    const simTimer = setInterval(() => {
+      const now = Date.now();
+      const t = now / 1000;
+
+      tagNames.forEach(tagName => {
+        const def = tagDefs[tagName];
+        let value: number;
+        
+        if (def) {
+          const min = def.minValue ?? 0;
+          const max = def.maxValue ?? 100;
+          const amp = def.simAmplitude ?? (max - min) / 2;
+          const offset = def.simOffset ?? (min + max) / 2;
+          const freq = def.simFrequency ?? 0.1;
+          const pattern = def.simPattern || 'sine';
+
+          if (pattern === 'rand' || pattern === 'random') {
+            value = min + Math.random() * (max - min);
+          } else if (pattern === 'sine') {
+            value = offset + amp * Math.sin(2 * Math.PI * freq * t);
+          } else if (pattern === 'ramp') {
+            value = min + ((t * freq * (max - min)) % (max - min));
+          } else if (pattern === 'square') {
+            value = Math.sin(2 * Math.PI * freq * t) >= 0 ? max : min;
+          } else {
+            value = offset + amp * Math.sin(2 * Math.PI * freq * t);
+          }
+          value = Math.round(value * 100) / 100;
+        } else {
+          // No definition — generate random value between 0-100
+          value = Math.round(Math.random() * 100 * 100) / 100;
+        }
+
+        store.updateValue({ tag: tagName, value, timestamp: new Date().toISOString(), quality: 'GOOD' } as any);
+      });
+    }, 1000);
+
+    return () => clearInterval(simTimer);
+  }, [projectId, page]);
+
   // Evaluate animation rules
   const getAnimatedStyle = (el: MimicElement): Record<string, string> => {
     const style: Record<string, string> = {};
