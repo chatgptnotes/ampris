@@ -630,7 +630,16 @@ export default function MimicViewer() {
       <div className="flex-1 overflow-auto flex items-center justify-center p-4">
         {page ? (
           <svg
-            viewBox={`0 0 ${page.width} ${page.height}`}
+            viewBox={(() => {
+              const els = (page.elements as MimicElement[]) || [];
+              if (els.length === 0) return `0 0 ${page.width} ${page.height}`;
+              const PAD = 80;
+              const minX = Math.max(0, Math.min(...els.map(e => e.x)) - PAD);
+              const minY = Math.max(0, Math.min(...els.map(e => e.y)) - PAD);
+              const maxX = Math.min(page.width, Math.max(...els.map(e => e.x + e.width)) + PAD);
+              const maxY = Math.min(page.height, Math.max(...els.map(e => e.y + e.height)) + PAD);
+              return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
+            })()}
             className="max-w-full max-h-full shadow-lg rounded-lg"
             style={{ background: page.backgroundColor || '#FFFFFF' }}
             onClick={() => setSelectedEquipment(null)}
