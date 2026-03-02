@@ -3168,6 +3168,126 @@ export default function MimicEditor() {
                 </>
               )}
 
+              {/* Banner & Display properties */}
+              {['alarm-banner', 'alarm-list', 'trend-banner', 'status-banner', 'clock-display', 'value-display', 'bar-graph', 'gauge-display', 'comm-status-bar', 'event-ticker'].includes(selectedEl.type) && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Label</label>
+                    <input type="text" value={selectedEl.properties.label || ''}
+                      onChange={(e) => updateElementProps(selectedEl.id, { label: e.target.value })}
+                      placeholder="Display label..."
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">BG Color</label>
+                      <div className="flex gap-1">
+                        <input type="color" value={selectedEl.properties.bgColor || '#0F172A'}
+                          onChange={(e) => updateElementProps(selectedEl.id, { bgColor: e.target.value })}
+                          className="w-8 h-7 rounded border border-gray-200 cursor-pointer" />
+                        <input type="text" value={selectedEl.properties.bgColor || '#0F172A'}
+                          onChange={(e) => updateElementProps(selectedEl.id, { bgColor: e.target.value })}
+                          className="flex-1 px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white font-mono" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Text Color</label>
+                      <div className="flex gap-1">
+                        <input type="color" value={selectedEl.properties.textColor || '#22D3EE'}
+                          onChange={(e) => updateElementProps(selectedEl.id, { textColor: e.target.value })}
+                          className="w-8 h-7 rounded border border-gray-200 cursor-pointer" />
+                        <input type="text" value={selectedEl.properties.textColor || '#22D3EE'}
+                          onChange={(e) => updateElementProps(selectedEl.id, { textColor: e.target.value })}
+                          className="flex-1 px-1 py-1 text-[10px] border border-gray-200 rounded text-gray-900 bg-white font-mono" />
+                      </div>
+                    </div>
+                  </div>
+                  {['value-display', 'bar-graph', 'gauge-display'].includes(selectedEl.type) && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag Binding</label>
+                        <input type="text" value={selectedEl.properties.tagBinding || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tagBinding: e.target.value })}
+                          placeholder="e.g. Voltage_HV"
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Unit</label>
+                          <input type="text" value={selectedEl.properties.unit || ''}
+                            onChange={(e) => updateElementProps(selectedEl.id, { unit: e.target.value })}
+                            placeholder="kV, A, MW..."
+                            className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Decimals</label>
+                          <input type="number" min={0} max={6} value={selectedEl.properties.decimals ?? 1}
+                            onChange={(e) => updateElementProps(selectedEl.id, { decimals: parseInt(e.target.value) || 0 })}
+                            className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                        </div>
+                      </div>
+                      {['bar-graph', 'gauge-display'].includes(selectedEl.type) && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Min Value</label>
+                            <input type="number" value={selectedEl.properties.minValue ?? 0}
+                              onChange={(e) => updateElementProps(selectedEl.id, { minValue: parseFloat(e.target.value) || 0 })}
+                              className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Max Value</label>
+                            <input type="number" value={selectedEl.properties.maxValue ?? 100}
+                              onChange={(e) => updateElementProps(selectedEl.id, { maxValue: parseFloat(e.target.value) || 100 })}
+                              className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {['status-banner', 'comm-status-bar', 'event-ticker'].includes(selectedEl.type) && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Custom Text</label>
+                      <input type="text" value={selectedEl.properties.customText || ''}
+                        onChange={(e) => updateElementProps(selectedEl.id, { customText: e.target.value })}
+                        placeholder="Custom status text..."
+                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                    </div>
+                  )}
+                  {selectedEl.type === 'trend-banner' && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag 1 (Pen 1)</label>
+                        <input type="text" value={selectedEl.properties.tag1 || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tag1: e.target.value })}
+                          placeholder="e.g. Voltage_HV"
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag 2 (Pen 2)</label>
+                        <input type="text" value={selectedEl.properties.tag2 || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tag2: e.target.value })}
+                          placeholder="e.g. Current_R"
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Pen 1 Color</label>
+                          <input type="color" value={selectedEl.properties.pen1Color || '#22D3EE'}
+                            onChange={(e) => updateElementProps(selectedEl.id, { pen1Color: e.target.value })}
+                            className="w-full h-7 rounded border border-gray-200 cursor-pointer" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Pen 2 Color</label>
+                          <input type="color" value={selectedEl.properties.pen2Color || '#A78BFA'}
+                            onChange={(e) => updateElementProps(selectedEl.id, { pen2Color: e.target.value })}
+                            className="w-full h-7 rounded border border-gray-200 cursor-pointer" />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
               {/* Navigation properties */}
               {['page-link', 'back-button', 'home-button', 'page-change-button', 'popup-page'].includes(selectedEl.type) && (
                 <>
