@@ -5,6 +5,7 @@ import { connectDatabase, disconnectDatabase } from './config/database';
 import { realtimeService } from './services/realtime.service';
 import { alarmService } from './services/alarm.service';
 import { tagEngine } from './services/tag-engine.service';
+import { initML } from './ml';
 
 async function main(): Promise<void> {
   console.log('Starting GridVision SCADA Server...');
@@ -26,6 +27,9 @@ async function main(): Promise<void> {
 
   // Initialize tag engine (internal/simulated/calculated tags)
   await tagEngine.initialize();
+
+  // Initialize ML engine (load models or train if needed)
+  initML().catch(err => console.error('ML init error (non-fatal):', err));
 
   // Start HTTP server
   httpServer.listen(env.PORT, () => {
