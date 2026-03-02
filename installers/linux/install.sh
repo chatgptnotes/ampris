@@ -331,6 +331,31 @@ verify_health() {
     fi
 }
 
+# --- Create Desktop Shortcut ---
+create_desktop_shortcut() {
+    log_info "Creating desktop shortcut..."
+
+    cat > /usr/share/applications/gridvision.desktop << EOF
+[Desktop Entry]
+Name=GridVision SCADA
+Comment=SCADA Application for Smart Distribution Substations
+Exec=xdg-open http://localhost:${PORT}
+Icon=${INSTALL_DIR}/apps/web/public/logo.svg
+Terminal=false
+Type=Application
+Categories=Utility;Engineering;
+StartupWMClass=gridvision
+EOF
+
+    # Also copy to user desktop if it exists
+    if [ -d "$HOME/Desktop" ]; then
+        cp /usr/share/applications/gridvision.desktop "$HOME/Desktop/" 2>/dev/null
+        chmod +x "$HOME/Desktop/gridvision.desktop" 2>/dev/null
+    fi
+
+    log_success "Desktop shortcut created"
+}
+
 # --- Main ---
 main() {
     print_banner
@@ -354,6 +379,7 @@ main() {
     seed_database
 
     create_service
+    create_desktop_shortcut
 
     # Enable and start
     systemctl enable gridvision

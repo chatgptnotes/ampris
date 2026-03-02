@@ -12,6 +12,26 @@ win:
         - x64
   icon: assets/icon.ico
 
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: assets/icon.icns
+  category: public.app-category.utilities
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: assets/icon.png
+  category: Utility
+
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -22,3 +42,25 @@ nsis:
 files:
   - dist/**/*
   - package.json
+
+extraResources:
+  - from: ../web/dist
+    to: web-dist
+    filter:
+      - "**/*"
+  - from: ../server/dist
+    to: server/dist
+    filter:
+      - "**/*"
+  - from: ../server/package.json
+    to: server/package.json
+  - from: ../server/node_modules
+    to: server/node_modules
+    filter:
+      - "**/*"
+  - from: ../../prisma
+    to: server/prisma
+    filter:
+      - "schema.prisma"
+      - "migrations/**/*"
+      - "seed.ts"

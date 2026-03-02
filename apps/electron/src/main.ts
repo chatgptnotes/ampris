@@ -2,13 +2,26 @@ import { app, BrowserWindow, Menu, Tray, ipcMain, Notification, nativeImage, she
 import path from 'path';
 import fs from 'fs';
 import { registerIpcHandlers } from './ipc/handlers';
+import { startServer, stopServer, getServerPort } from './server-manager';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
 
 const isDev = process.env.NODE_ENV === 'development';
-const SERVER_URL = process.env.GRIDVISION_URL || 'http://localhost:5173';
+
+// In dev mode, load from Vite dev server; in production, load built files
+const SERVER_URL = isDev
+  ? (process.env.GRIDVISION_URL || 'http://localhost:5173')
+  : ''; // Not used in production — we load file:// directly
+
+function getWebAppPath(): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'web-dist', 'index.html');
+  }
+  // Dev/local build — try the built web app
+  return path.resolve(__dirname, '../../../web/dist/index.html');
+}
 
 // --- Window State Persistence ---
 const stateFile = path.join(app.getPath('userData'), 'window-state.json');
@@ -71,8 +84,18 @@ function createWindow(): void {
     mainWindow.maximize();
   }
 
-  // Load the app
-  mainWindow.loadURL(SERVER_URL);
+  // Load the app — in production, load from file://; in dev, from Vite server
+  if (isDev) {
+    mainWindow.loadURL(SERVER_URL);
+  } else {
+    const webPath = getWebAppPath();
+    if (fs.existsSync(webPath)) {
+      mainWindow.loadFile(webPath);
+    } else {
+      // Fallback to API server URL if built files not found
+      mainWindow.loadURL(`http://localhost:${getServerPort()}`);
+    }
+  }
 
   if (isDev) {
     mainWindow.webContents.openDevTools();
@@ -349,7 +372,23 @@ function setupIPC(): void {
 }
 
 // --- App Lifecycle ---
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Start embedded server before creating window
+  try {
+    const serverReady = await startServer();
+    if (serverReady) {
+      console.log(`[GridVision] Embedded server ready on port ${getServerPort()}`);
+    } else {
+      console.warn('[GridVision] Server did not respond to health check — continuing anyway');
+    }
+  } catch (err) {
+    console.error('[GridVision] Failed to start embedded server:', err);
+  }
+
+  // Set environment for renderer (API/WS URLs)
+  process.env.VITE_API_URL = `http://localhost:${getServerPort()}`;
+  process.env.VITE_WS_URL = `http://localhost:${getServerPort()}`;
+
   createWindow();
   createTray();
   setupIPC();
@@ -373,6 +412,7 @@ app.on('activate', () => {
 app.on('before-quit', () => {
   isQuitting = true;
   saveWindowState();
+  stopServer();
 });
 
 // Prevent multiple instances
