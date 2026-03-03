@@ -225,8 +225,8 @@ export default function MimicViewer() {
   const [showTagValues, setShowTagValues] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [pageSettings, setPageSettings] = useState<PageSettings>({
-    header: { show: false, logoUrl: '', title: '', bgColor: '#1E293B' },
-    footer: { show: false, customText: '', bgColor: '#1E293B' },
+    header: { show: true, logoUrl: '/gridvision-logo.jpg', title: 'GridVision SCADA', subtitle: '', bgColor: '#1E293B', textColor: '#FFFFFF', height: 50 },
+    footer: { show: true, customText: 'GridVision SCADA', bgColor: '#1E293B', textColor: '#FFFFFF', showAlarmBanner: true, showStatusBar: true },
   });
   const fullscreenRef = useRef<HTMLDivElement>(null);
 
@@ -243,7 +243,12 @@ export default function MimicViewer() {
     if (!projectId || !activePageId) return;
     api.get(`/projects/${projectId}/pages/${activePageId}`).then(({ data }) => {
       setPage(data);
-      if (data.pageSettings) setPageSettings(data.pageSettings);
+      if (data.pageSettings) {
+        setPageSettings(prev => ({
+          header: { ...prev.header, ...data.pageSettings.header },
+          footer: { ...prev.footer, ...data.pageSettings.footer },
+        }));
+      }
     });
   }, [projectId, activePageId]);
 
