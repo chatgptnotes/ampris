@@ -2,6 +2,12 @@
 export const config = { api: { bodyParser: true } };
 
 export default async function handler(req, res) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
   // Vercel rewrite passes original path as ?path=auth/login etc.
   const pathParam = req.query.path || '';
   const path = pathParam ? `/api/${pathParam}` : (req.url || '/');
