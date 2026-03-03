@@ -88,7 +88,7 @@ export default function CommandSequencer() {
       api.get('/tags', { params: { projectId } }),
     ]);
     setSequences(seqRes.data);
-    setExecutions(execRes.data);
+    setExecutions(execRes.data as Execution[]);
     setTags(tagRes.data);
   }, [projectId]);
 
@@ -151,7 +151,7 @@ export default function CommandSequencer() {
   const execute = async (seq: Sequence) => {
     if (!confirm(`Execute "${seq.name}"? This will run ${seq.steps.length} steps.`)) return;
     const { data } = await api.post(`/commands/${seq.id}/execute`);
-    setActiveExecution(data);
+    setActiveExecution(data as Execution);
     setTimeout(load, 2000);
   };
 

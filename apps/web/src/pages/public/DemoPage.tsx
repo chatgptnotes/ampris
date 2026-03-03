@@ -1,139 +1,161 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { DemoSimulationProvider } from '@/components/demo/DemoSimulationContext';
 import DemoSLDCanvas from '@/components/demo/DemoSLDCanvas';
 import DemoControlPanel from '@/components/demo/DemoControlPanel';
 import DemoAlarmPanel from '@/components/demo/DemoAlarmPanel';
-import { Monitor, MousePointerClick, Timer, AlertTriangle, TrendingUp, Bell, BarChart3, Activity } from 'lucide-react';
+import {
+  Activity, TrendingUp, Bell, BarChart3,
+  Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw,
+  Circle,
+} from 'lucide-react';
 
-// Import new page components
 import DemoTrendsPage from '@/components/demo/DemoTrendsPage';
 import DemoAlarmsPage from '@/components/demo/DemoAlarmsPage';
 import DemoAnalyticsPage from '@/components/demo/DemoAnalyticsPage';
 
-type DemoPageType = 'sld' | 'trends' | 'alarms' | 'analytics';
+type DemoTab = 'sld' | 'trends' | 'alarms' | 'analytics';
 
-const DEMO_PAGES = [
-  { id: 'sld', label: 'Substation SLD', icon: Activity },
-  { id: 'trends', label: 'Trends', icon: TrendingUp },
-  { id: 'alarms', label: 'Alarms', icon: Bell },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-] as const;
+const TABS = [
+  { id: 'sld' as const, label: 'Substation SLD', icon: Activity },
+  { id: 'trends' as const, label: 'Trends', icon: TrendingUp },
+  { id: 'alarms' as const, label: 'Alarms', icon: Bell },
+  { id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
+];
 
 export default function DemoPage() {
-  const [activePage, setActivePage] = useState<DemoPageType>('sld');
+  const [activeTab, setActiveTab] = useState<DemoTab>('sld');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  }, []);
 
   return (
     <DemoSimulationProvider>
-      <div className="bg-gray-50">
-        {/* Hero banner */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8 px-4">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-3 mb-2">
-              <Monitor className="w-7 h-7" />
-              <h1 className="text-2xl font-bold">Interactive SCADA Demo</h1>
+      <div className={`flex flex-col ${isFullscreen ? 'fixed inset-0 z-[9999] bg-white' : 'min-h-[calc(100vh-4rem)]'}`}>
+        {/* Top toolbar */}
+        <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            {/* Station name */}
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="font-semibold text-gray-900 text-sm">33/11kV Demo Substation</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">SIMULATION</span>
             </div>
-            <p className="text-blue-100 max-w-2xl">
-              Explore a fully simulated 33/11kV distribution substation with dynamic energization, 
-              real-time trends, alarm management, and analytics.
-            </p>
-            <div className="flex flex-wrap gap-4 mt-4 text-sm">
-              <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5">
-                <MousePointerClick className="w-4 h-4" />
-                Click breakers to toggle
-              </div>
-              <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5">
-                <Timer className="w-4 h-4" />
-                Readings update every 2s
-              </div>
-              <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5">
-                <AlertTriangle className="w-4 h-4" />
-                Random trips every ~15s
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Page Navigation */}
-        <div className="bg-white border-b">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex gap-1">
-              {DEMO_PAGES.map((page) => {
-                const IconComponent = page.icon;
-                const isActive = activePage === page.id;
+            {/* Separator */}
+            <div className="h-5 w-px bg-gray-200" />
+
+            {/* Tabs */}
+            <div className="flex gap-0.5">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
                 return (
                   <button
-                    key={page.id}
-                    onClick={() => setActivePage(page.id as DemoPageType)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                       isActive
-                        ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <IconComponent className="w-4 h-4" />
-                    {page.label}
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
                   </button>
                 );
               })}
             </div>
           </div>
+
+          <div className="flex items-center gap-2">
+            {/* Status indicators */}
+            <div className="hidden sm:flex items-center gap-3 mr-3 text-xs text-gray-500">
+              <span className="flex items-center gap-1">
+                <Circle className="w-2 h-2 fill-red-500 text-red-500" />
+                Energized
+              </span>
+              <span className="flex items-center gap-1">
+                <Circle className="w-2 h-2 fill-green-500 text-green-500" />
+                De-energized
+              </span>
+            </div>
+
+            {/* Fullscreen toggle */}
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
-        {/* Page Content */}
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {activePage === 'sld' && (
-            <>
-              <div 
-                className="relative flex bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden" 
-                style={{ 
-                  height: '70vh', 
-                  minHeight: 500, 
-                  touchAction: 'manipulation',
-                  overscrollBehavior: 'contain'
-                }}
-              >
-                <div className="flex-1 relative">
-                  <DemoSLDCanvas />
-                  <DemoAlarmPanel />
+        {/* Main content area */}
+        <div className="flex-1 bg-gray-50 overflow-hidden">
+          {activeTab === 'sld' && (
+            <div className="h-full flex">
+              {/* SLD Canvas - takes full space */}
+              <div className="flex-1 relative">
+                <DemoSLDCanvas />
+                <DemoAlarmPanel />
+
+                {/* Zoom hints overlay */}
+                <div className="absolute bottom-3 left-3 flex items-center gap-2 text-[10px] text-gray-400 bg-white/80 backdrop-blur rounded-md px-2 py-1 border border-gray-200">
+                  <span>Scroll to zoom</span>
+                  <span className="text-gray-300">|</span>
+                  <span>Drag to pan</span>
+                  <span className="text-gray-300">|</span>
+                  <span>Click breakers to toggle</span>
                 </div>
-                <DemoControlPanel />
               </div>
 
-              {/* Legend */}
-              <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <LegendItem color="#DC2626" label="33kV Energized (Red)" />
-                <LegendItem color="#16A34A" label="11kV Energized (Green)" />
-                <LegendItem color="#94A3B8" label="De-energized (Gray)" />
-                <LegendItem color="#DC2626" filled label="CB Closed" />
-              </div>
-
-              <p className="mt-6 text-center text-sm text-gray-500">
-                <span className="font-medium">SLD Controls:</span> Mouse wheel over SLD to zoom | Alt + Drag to pan | Click breakers to toggle | 
-                <span className="font-medium">Visual:</span> Bus colors change based on energization state | This demo runs entirely in your browser
-              </p>
-            </>
+              {/* Control Panel sidebar */}
+              <DemoControlPanel />
+            </div>
           )}
-          
-          {activePage === 'trends' && <DemoTrendsPage />}
-          {activePage === 'alarms' && <DemoAlarmsPage />}
-          {activePage === 'analytics' && <DemoAnalyticsPage />}
+
+          {activeTab === 'trends' && (
+            <div className="h-full overflow-auto p-4">
+              <DemoTrendsPage />
+            </div>
+          )}
+
+          {activeTab === 'alarms' && (
+            <div className="h-full overflow-auto p-4">
+              <DemoAlarmsPage />
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div className="h-full overflow-auto p-4">
+              <DemoAnalyticsPage />
+            </div>
+          )}
+        </div>
+
+        {/* Bottom status bar */}
+        <div className="bg-gray-900 text-gray-400 px-4 py-1.5 flex items-center justify-between text-[11px] shrink-0">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              System Online
+            </span>
+            <span>Refresh: 2s</span>
+            <span>Protocol: IEC 61850 (Simulated)</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span>GridVision SCADA v2.0</span>
+            <span className="text-gray-500">drmhope.com | A Bettroi Product</span>
+          </div>
         </div>
       </div>
     </DemoSimulationProvider>
-  );
-}
-
-function LegendItem({ color, label, filled }: { color: string; label: string; filled?: boolean }) {
-  return (
-    <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2">
-      <div
-        className="w-4 h-4 rounded"
-        style={{
-          backgroundColor: filled !== false ? color : 'transparent',
-          border: `2px solid ${color}`,
-        }}
-      />
-      <span className="text-sm text-gray-700">{label}</span>
-    </div>
   );
 }

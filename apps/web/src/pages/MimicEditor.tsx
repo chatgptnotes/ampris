@@ -2061,11 +2061,11 @@ export default function MimicEditor() {
           </g>
         ) : el.type === 'custom-component' && el.properties.svgCode ? (
           <foreignObject width={el.width} height={el.height}>
-            <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: el.width, height: el.height, pointerEvents: 'none' }} dangerouslySetInnerHTML={{ __html: el.properties.svgCode }} />
+            <div style={{ width: el.width, height: el.height, pointerEvents: 'none' }} dangerouslySetInnerHTML={{ __html: el.properties.svgCode }} />
           </foreignObject>
         ) : SYMBOL_MAP[el.type] ? (
           <foreignObject width={el.width} height={el.height}>
-            <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: el.width, height: el.height, pointerEvents: 'none' }}>
+            <div style={{ width: el.width, height: el.height, pointerEvents: 'none' }}>
               {React.createElement(SYMBOL_MAP[el.type], {
                 width: el.width,
                 height: el.height,

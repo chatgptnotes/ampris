@@ -706,12 +706,12 @@ export default function MimicViewer() {
           </g>
         ) : el.type === 'custom-component' && el.properties.svgCode ? (
           <foreignObject width={el.width} height={el.height}>
-            <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: el.width, height: el.height }} dangerouslySetInnerHTML={{ __html: el.properties.svgCode }} />
+            <div style={{ width: el.width, height: el.height }} dangerouslySetInnerHTML={{ __html: el.properties.svgCode }} />
           </foreignObject>
         ) : SYMBOL_MAP[el.type] ? (
           <g>
             <foreignObject width={el.width} height={el.height}>
-              <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: el.width, height: el.height }}>
+              <div style={{ width: el.width, height: el.height }}>
                 {React.createElement(SYMBOL_MAP[el.type], {
                   width: el.width,
                   height: el.height,

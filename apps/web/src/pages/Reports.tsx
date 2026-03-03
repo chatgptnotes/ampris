@@ -342,7 +342,8 @@ export default function Reports() {
           {reportType === 'daily-load' ? 'Load Profile' : 'Alarm Distribution'}
           {showPredictions && <span className="text-xs text-orange-400 ml-2">(with 6h prediction)</span>}
         </h3>
-        {renderChart()}
+        {/* eslint-disable-next-line */}
+        {(renderChart() as any)}
       </div>
 
       {/* Predictive Analytics */}

@@ -90,9 +90,7 @@ export default function DemoSLDCanvas() {
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full overflow-hidden rounded-xl border bg-white transition-all duration-200 ${
-        isMouseOver ? 'border-blue-300 shadow-md' : 'border-gray-200'
-      } ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+      className={`w-full h-full overflow-hidden bg-white ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{ 
         touchAction: 'none', 
         overscrollBehavior: 'contain',

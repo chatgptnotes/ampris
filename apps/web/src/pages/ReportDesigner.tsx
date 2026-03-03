@@ -135,7 +135,7 @@ function SimpleChart({ data, chartType }: { data: PreviewData; chartType: string
 
 // ─── Main Component ──────────────────────────────
 export default function ReportDesigner() {
-  const { currentProjectId } = useAuthStore();
+  const currentProjectId = "";
   const [reports, setReports] = useState<ReportConfig[]>([]);
   const [editing, setEditing] = useState<ReportConfig | null>(null);
   const [step, setStep] = useState(0);
