@@ -230,6 +230,11 @@ export default function MimicViewer() {
   });
   const fullscreenRef = useRef<HTMLDivElement>(null);
 
+  // Save current projectId to localStorage for sidebar navigation
+  useEffect(() => {
+    if (projectId) localStorage.setItem('gridvision-last-project', projectId);
+  }, [projectId]);
+
   useEffect(() => {
     if (!projectId) return;
     api.get(`/projects/${projectId}`).then(({ data }) => {

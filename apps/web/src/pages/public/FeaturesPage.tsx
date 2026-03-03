@@ -141,6 +141,16 @@ export default function FeaturesPage() {
           </p>
         </div>
 
+        {/* CTA */}
+        <div className="flex justify-center gap-4 mb-8">
+          <a href="/demo" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
+            Try Live Demo
+          </a>
+          <a href="/login" className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition-colors">
+            Login / Sign Up
+          </a>
+        </div>
+
         {/* Categories */}
         <div className="space-y-16">
           {categories.map((category) => (

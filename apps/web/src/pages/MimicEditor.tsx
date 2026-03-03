@@ -1150,6 +1150,11 @@ export default function MimicEditor() {
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
 
+  // Save current projectId to localStorage for sidebar navigation
+  useEffect(() => {
+    if (projectId) localStorage.setItem('gridvision-last-project', projectId);
+  }, [projectId]);
+
   // Load project and page data
   useEffect(() => {
     if (!projectId) return;

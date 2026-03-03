@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { loginApi } from '@/services/auth';
 import { api } from '@/services/api';
-import { Zap, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
@@ -122,7 +122,7 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
-            <Zap className="w-10 h-10 text-scada-accent" />
+            <img src="/gridvision-logo.jpg" alt="GridVision" className="w-12 h-12 rounded-lg object-cover" />
             <div>
               <h1 className="text-3xl font-bold">
                 <span className="text-scada-accent">Grid</span>

@@ -147,6 +147,10 @@ export default function ContactPage() {
                     <Send className="w-4 h-4" />
                     Send Message
                   </button>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Demo mode — for direct inquiries, email{' '}
+                    <a href="mailto:sales@gridvision.dev" className="text-blue-500 underline">sales@gridvision.dev</a>
+                  </p>
                 </form>
               )}
             </div>

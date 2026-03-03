@@ -24,9 +24,27 @@ export default function DocumentationPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Documentation</h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-lg mb-6">
             Complete installation and setup guide for GridVision SCADA.
           </p>
+          <div className="flex flex-wrap gap-4">
+            <a
+              href="/docs/GridVision-Quick-Start-Guide.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              📘 Quick Start Guide (28 Chapters)
+            </a>
+            <a
+              href="/docs/GridVision-User-Guide.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium"
+            >
+              📖 User Guide
+            </a>
+          </div>
         </div>
 
         <div className="flex gap-10">

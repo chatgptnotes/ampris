@@ -85,6 +85,7 @@ export default function ProjectHub() {
       setNewDesc('');
       setCreationMode('blank');
       setSelectedTemplate('');
+      localStorage.setItem('gridvision-last-project', data.id);
       navigate(`/app/projects/${data.id}/edit`);
     } catch {
       // ignore
@@ -170,7 +171,7 @@ export default function ProjectHub() {
               <div
                 key={project.id}
                 className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow cursor-pointer group"
-                onClick={() => navigate(`/app/projects/${project.id}`)}
+                onClick={() => { localStorage.setItem('gridvision-last-project', project.id); navigate(`/app/projects/${project.id}`); }}
               >
                 {/* Thumbnail placeholder */}
                 <div className="h-32 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 flex items-center justify-center">

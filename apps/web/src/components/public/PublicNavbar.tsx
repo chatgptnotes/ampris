@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { Zap, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
 
@@ -21,7 +21,7 @@ export default function PublicNavbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <Zap className="w-8 h-8 text-blue-600" />
+            <img src="/gridvision-logo.jpg" alt="GridVision" className="h-9 w-9 rounded object-cover" />
             <span className="text-xl font-bold">
               <span className="text-blue-600">Grid</span>
               <span className="text-gray-900">Vision</span>
