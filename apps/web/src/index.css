@@ -7,6 +7,12 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #FFFFFF;
+  color: #1E293B;
+}
+
+/* Dark theme for SCADA app area only */
+.scada-dark {
   background-color: #0F172A;
   color: #E2E8F0;
 }
@@ -18,16 +24,25 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1E293B;
+  background: #F1F5F9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #94A3B8;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #64748B;
+}
+
+/* Dark scrollbar for SCADA app */
+.scada-dark ::-webkit-scrollbar-track {
+  background: #1E293B;
+}
+
+.scada-dark ::-webkit-scrollbar-thumb {
+  background: #475569;
 }
 
 /* SCADA-specific animations */
@@ -49,26 +64,7 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Demo SLD light theme overrides */
-.demo-light-theme text {
-  fill: #334155;
-}
-
-.demo-light-theme .fill-gray-400 {
-  fill: #475569;
-}
-
-.demo-light-theme .fill-gray-500 {
-  fill: #64748B;
-}
-
-.demo-light-theme .fill-gray-300 {
-  fill: #334155;
-}
-
-.demo-light-theme .fill-white {
-  fill: #1E293B;
-}
+/* Demo SLD uses light backgrounds natively - no overrides needed */
 
 /* Counter animation for stats */
 @keyframes count-up {
