@@ -4,6 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
+        gridvision: {
+          navy: '#1B3054',
+          teal: '#2DB8C4',
+          'teal-light': '#E6F7F8',
+          'navy-light': '#2A4570',
+        },
         scada: {
           bg: '#0F172A',
           panel: '#1E293B',

@@ -20,11 +20,11 @@ export default function PublicNavbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/gridvision-logo.jpg" alt="GridVision" className="h-9 w-9 rounded object-cover" />
-            <span className="text-xl font-bold">
-              <span className="text-blue-600">Grid</span>
-              <span className="text-gray-900">Vision</span>
+          <Link to="/" className="flex items-center gap-3">
+            <img src="/gridvision-logo.jpg" alt="GridVision" className="h-12 w-12 rounded object-cover" />
+            <span className="text-2xl font-bold">
+              <span className="text-[#1B3054]">Grid</span>
+              <span className="text-[#2DB8C4]">Vision</span>
             </span>
           </Link>
 
@@ -39,7 +39,7 @@ export default function PublicNavbar() {
                   clsx(
                     'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isActive
-                      ? 'text-blue-600 bg-blue-50'
+                      ? 'text-[#2DB8C4] bg-gridvision-teal-light border-b-2 border-[#2DB8C4]'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
                   )
                 }
@@ -53,13 +53,13 @@ export default function PublicNavbar() {
           <div className="hidden md:flex items-center gap-3">
             <Link
               to="/generate"
-              className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[#1B3054] border border-[#1B3054] rounded-lg hover:bg-[#1B3054] hover:text-white transition-colors"
             >
               SLD Generator
             </Link>
             <Link
               to="/login"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#2DB8C4] rounded-lg hover:bg-[#259DA8] transition-colors"
             >
               Login
             </Link>
@@ -87,7 +87,7 @@ export default function PublicNavbar() {
               className={({ isActive }) =>
                 clsx(
                   'block px-3 py-2 rounded-lg text-sm font-medium',
-                  isActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-100',
+                  isActive ? 'text-[#2DB8C4] bg-gridvision-teal-light' : 'text-gray-600 hover:bg-gray-100',
                 )
               }
             >
@@ -98,14 +98,14 @@ export default function PublicNavbar() {
             <Link
               to="/generate"
               onClick={() => setMobileOpen(false)}
-              className="flex-1 text-center px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg"
+              className="flex-1 text-center px-4 py-2 text-sm font-medium text-[#1B3054] border border-[#1B3054] rounded-lg"
             >
               SLD Generator
             </Link>
             <Link
               to="/login"
               onClick={() => setMobileOpen(false)}
-              className="flex-1 text-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg"
+              className="flex-1 text-center px-4 py-2 text-sm font-medium text-white bg-[#2DB8C4] rounded-lg"
             >
               Login
             </Link>

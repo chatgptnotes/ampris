@@ -8,19 +8,37 @@ import {
   Activity, TrendingUp, Bell, BarChart3,
   Maximize2, Minimize2, Circle, Clock, Radio, Zap,
   Home, Layers, Download, BookOpen, Mail, LogIn, ChevronLeft, ChevronRight,
+  FileText, Cpu, Tag, ScrollText, Brain, Paintbrush, Settings,
+  Joystick,
 } from 'lucide-react';
 
 import DemoTrendsPage from '@/components/demo/DemoTrendsPage';
 import DemoAlarmsPage from '@/components/demo/DemoAlarmsPage';
 import DemoAnalyticsPage from '@/components/demo/DemoAnalyticsPage';
+import DemoReportsPage from '@/components/demo/DemoReportsPage';
+import DemoDeviceManagerPage from '@/components/demo/DemoDeviceManagerPage';
+import DemoTagManagerPage from '@/components/demo/DemoTagManagerPage';
+import DemoEventLogPage from '@/components/demo/DemoEventLogPage';
+import DemoAIOpsPage from '@/components/demo/DemoAIOpsPage';
+import DemoControlPanelPage from '@/components/demo/DemoControlPanelPage';
+import DemoMimicEditorPage from '@/components/demo/DemoMimicEditorPage';
+import DemoSettingsPage from '@/components/demo/DemoSettingsPage';
 
-type DemoTab = 'sld' | 'trends' | 'alarms' | 'analytics';
+type DemoTab = 'sld' | 'trends' | 'alarms' | 'analytics' | 'reports' | 'devices' | 'tags' | 'events' | 'ai-ops' | 'control' | 'mimic' | 'settings';
 
 const TABS = [
-  { id: 'sld' as const, label: 'Substation SLD', icon: Activity },
+  { id: 'sld' as const, label: 'SLD', icon: Activity },
   { id: 'trends' as const, label: 'Trends', icon: TrendingUp },
   { id: 'alarms' as const, label: 'Alarms', icon: Bell },
   { id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
+  { id: 'reports' as const, label: 'Reports', icon: FileText },
+  { id: 'devices' as const, label: 'Devices', icon: Cpu },
+  { id: 'tags' as const, label: 'Tags', icon: Tag },
+  { id: 'events' as const, label: 'Events', icon: ScrollText },
+  { id: 'ai-ops' as const, label: 'AI Ops', icon: Brain },
+  { id: 'control' as const, label: 'Control', icon: Joystick },
+  { id: 'mimic' as const, label: 'Mimic Editor', icon: Paintbrush },
+  { id: 'settings' as const, label: 'Settings', icon: Settings },
 ];
 
 export default function DemoPage() {
@@ -107,8 +125,8 @@ export default function DemoPage() {
 
           <div className="h-5 w-px bg-gray-200 hidden sm:block" />
 
-          {/* Tabs */}
-          <div className="flex gap-0.5">
+          {/* Tabs - scrollable */}
+          <div className="flex gap-0.5 overflow-x-auto max-w-[600px] scrollbar-hide">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -207,7 +225,6 @@ export default function DemoPage() {
           <div className="flex-1 relative">
             <DemoSLDCanvas />
             <DemoAlarmPanel />
-            {/* Zoom hints */}
             <div className="absolute bottom-3 left-3 flex items-center gap-2 text-[10px] text-gray-400 bg-white/90 backdrop-blur rounded-md px-2 py-1 border border-gray-200 shadow-sm">
               <span>Scroll to zoom</span>
               <span className="text-gray-300">|</span>
@@ -222,19 +239,37 @@ export default function DemoPage() {
         </div>
       )}
       {activeTab === 'trends' && (
-        <div className="flex-1 overflow-auto p-4">
-          <DemoTrendsPage />
-        </div>
+        <div className="flex-1 overflow-auto p-4"><DemoTrendsPage /></div>
       )}
       {activeTab === 'alarms' && (
-        <div className="flex-1 overflow-auto p-4">
-          <DemoAlarmsPage />
-        </div>
+        <div className="flex-1 overflow-auto p-4"><DemoAlarmsPage /></div>
       )}
       {activeTab === 'analytics' && (
-        <div className="flex-1 overflow-auto p-4">
-          <DemoAnalyticsPage />
-        </div>
+        <div className="flex-1 overflow-auto p-4"><DemoAnalyticsPage /></div>
+      )}
+      {activeTab === 'reports' && (
+        <div className="flex-1 overflow-auto p-4"><DemoReportsPage /></div>
+      )}
+      {activeTab === 'devices' && (
+        <div className="flex-1 overflow-auto p-4"><DemoDeviceManagerPage /></div>
+      )}
+      {activeTab === 'tags' && (
+        <div className="flex-1 overflow-auto p-4"><DemoTagManagerPage /></div>
+      )}
+      {activeTab === 'events' && (
+        <div className="flex-1 overflow-auto p-4"><DemoEventLogPage /></div>
+      )}
+      {activeTab === 'ai-ops' && (
+        <div className="flex-1 overflow-auto p-4"><DemoAIOpsPage /></div>
+      )}
+      {activeTab === 'control' && (
+        <div className="flex-1 overflow-auto p-4"><DemoControlPanelPage /></div>
+      )}
+      {activeTab === 'mimic' && (
+        <div className="flex-1 overflow-auto p-4"><DemoMimicEditorPage /></div>
+      )}
+      {activeTab === 'settings' && (
+        <div className="flex-1 overflow-auto p-4"><DemoSettingsPage /></div>
       )}
     </>
   );
