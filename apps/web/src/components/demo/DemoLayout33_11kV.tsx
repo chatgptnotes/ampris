@@ -53,7 +53,7 @@ export default function DemoLayout33_11kV() {
       <DemoIsolator x={300} y={bus33Y - 50} tag="INC1_ISO" label="ISO" />
 
       {/* Connection from INC1_ISO to INC1_CB */}
-      <ConnectionLine x1={300} y1={bus33Y - 42} x2={300} y2={bus33Y - 38} energized={energizationState.connectionLines['33kV_incomer']} voltageLevel={33} />
+      <ConnectionLine x1={300} y1={bus33Y - 42} x2={300} y2={bus33Y - 38} energized={energizationState.connectionLines['INC1_ISO_to_CB']} voltageLevel={33} />
 
       {/* 33kV Incomer CB */}
       <DemoCircuitBreaker x={300} y={bus33Y - 30} tag="INC1_CB" label="INC1" />
@@ -116,7 +116,7 @@ export default function DemoLayout33_11kV() {
       <ConnectionLine x1={300} y1={bus33Y} x2={300} y2={bus33Y + 12} energized={energizationState.connectionLines['bus33_to_TR1_HV_ISO']} voltageLevel={33} />
       <DemoIsolator x={300} y={bus33Y + 20} tag="TR1_HV_ISO" label="ISO" />
       {/* TR1_HV_ISO to TR1_HV_CB */}
-      <ConnectionLine x1={300} y1={bus33Y + 28} x2={300} y2={bus33Y + 35} energized={energizationState.connectionLines['bus33_to_TR1_HV_ISO']} voltageLevel={33} />
+      <ConnectionLine x1={300} y1={bus33Y + 28} x2={300} y2={bus33Y + 35} energized={energizationState.connectionLines['TR1_HV_ISO_to_CB']} voltageLevel={33} />
       <DemoCircuitBreaker x={300} y={bus33Y + 45} tag="TR1_HV_CB" label="TR1 HV" />
       {/* TR1_HV_CB to transformer HV side */}
       <ConnectionLine x1={300} y1={bus33Y + 55} x2={300} y2={bus33Y + 80} energized={energizationState.connectionLines['TR1_HV_CB_to_transformer']} voltageLevel={33} />
@@ -134,7 +134,7 @@ export default function DemoLayout33_11kV() {
       <ConnectionLine x1={300} y1={bus33Y + 120} x2={300} y2={bus33Y + 132} energized={energizationState.connectionLines['TR1_transformer_to_LV_ISO']} voltageLevel={11} />
       <DemoIsolator x={300} y={bus33Y + 140} tag="TR1_LV_ISO" label="ISO" />
       {/* TR1_LV_ISO to TR1_LV_CB */}
-      <ConnectionLine x1={300} y1={bus33Y + 148} x2={300} y2={bus33Y + 155} energized={energizationState.connectionLines['TR1_transformer_to_LV_ISO']} voltageLevel={11} />
+      <ConnectionLine x1={300} y1={bus33Y + 148} x2={300} y2={bus33Y + 155} energized={energizationState.connectionLines['TR1_LV_ISO_to_CB']} voltageLevel={11} />
       <DemoCircuitBreaker x={300} y={bus33Y + 165} tag="TR1_LV_CB" label="TR1 LV" />
       {/* TR1_LV_CB to 11kV Bus */}
       <ConnectionLine x1={300} y1={bus33Y + 175} x2={300} y2={bus11Y} energized={energizationState.connectionLines['TR1_LV_CB_to_bus']} voltageLevel={11} />
@@ -144,7 +144,7 @@ export default function DemoLayout33_11kV() {
       <ConnectionLine x1={700} y1={bus33Y} x2={700} y2={bus33Y + 12} energized={energizationState.connectionLines['bus33_to_TR2_HV_ISO']} voltageLevel={33} />
       <DemoIsolator x={700} y={bus33Y + 20} tag="TR2_HV_ISO" label="ISO" />
       {/* TR2_HV_ISO to TR2_HV_CB */}
-      <ConnectionLine x1={700} y1={bus33Y + 28} x2={700} y2={bus33Y + 35} energized={energizationState.connectionLines['bus33_to_TR2_HV_ISO']} voltageLevel={33} />
+      <ConnectionLine x1={700} y1={bus33Y + 28} x2={700} y2={bus33Y + 35} energized={energizationState.connectionLines['TR2_HV_ISO_to_CB']} voltageLevel={33} />
       <DemoCircuitBreaker x={700} y={bus33Y + 45} tag="TR2_HV_CB" label="TR2 HV" />
       {/* TR2_HV_CB to transformer HV side */}
       <ConnectionLine x1={700} y1={bus33Y + 55} x2={700} y2={bus33Y + 80} energized={energizationState.connectionLines['TR2_HV_CB_to_transformer']} voltageLevel={33} />
@@ -162,7 +162,7 @@ export default function DemoLayout33_11kV() {
       <ConnectionLine x1={700} y1={bus33Y + 120} x2={700} y2={bus33Y + 132} energized={energizationState.connectionLines['TR2_transformer_to_LV_ISO']} voltageLevel={11} />
       <DemoIsolator x={700} y={bus33Y + 140} tag="TR2_LV_ISO" label="ISO" />
       {/* TR2_LV_ISO to TR2_LV_CB */}
-      <ConnectionLine x1={700} y1={bus33Y + 148} x2={700} y2={bus33Y + 155} energized={energizationState.connectionLines['TR2_transformer_to_LV_ISO']} voltageLevel={11} />
+      <ConnectionLine x1={700} y1={bus33Y + 148} x2={700} y2={bus33Y + 155} energized={energizationState.connectionLines['TR2_LV_ISO_to_CB']} voltageLevel={11} />
       <DemoCircuitBreaker x={700} y={bus33Y + 165} tag="TR2_LV_CB" label="TR2 LV" />
       {/* TR2_LV_CB to 11kV Bus */}
       <ConnectionLine x1={700} y1={bus33Y + 175} x2={700} y2={bus11Y} energized={energizationState.connectionLines['TR2_LV_CB_to_bus']} voltageLevel={11} />

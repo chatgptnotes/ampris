@@ -87,7 +87,7 @@ export function useSimulation(): SimulationState {
   const cbStatesRef = useRef(cbStates);
   cbStatesRef.current = cbStates;
 
-  // Calculate energization state based on circuit breaker positions
+  // Calculate energization state based on circuit breaker and isolator positions
   const energizationState = React.useMemo<EnergizationState>(() => {
     // 33kV Bus Section 1: Energized if INC1_CB is CLOSED
     const bus33_1 = cbStates.INC1_CB === 'CLOSED';
@@ -113,26 +113,36 @@ export function useSimulation(): SimulationState {
       feeders[fdrTag] = busEnergized && cbStates[fdrTag] === 'CLOSED';
     }
     
-    // Connection lines energization
+    // Connection lines energization - must also consider isolator states
     const connectionLines: Record<string, boolean> = {
       // 33kV incomer line (always red - it's the grid source)
       '33kV_incomer': true,
+      // Line from INC1_ISO to INC1_CB - consider isolator state
+      'INC1_ISO_to_CB': isolatorStates.INC1_ISO === true,
       // Line from INC1_CB to 33kV Bus
       'INC1_CB_to_bus': cbStates.INC1_CB === 'CLOSED',
       // Line from 33kV Bus to TR1_HV_ISO
       'bus33_to_TR1_HV_ISO': bus33_1,
+      // Line from TR1_HV_ISO to TR1_HV_CB - consider isolator state  
+      'TR1_HV_ISO_to_CB': bus33_1 && isolatorStates.TR1_HV_ISO === true,
       // Line from TR1_HV_CB to transformer HV
-      'TR1_HV_CB_to_transformer': bus33_1 && cbStates.TR1_HV_CB === 'CLOSED',
+      'TR1_HV_CB_to_transformer': bus33_1 && isolatorStates.TR1_HV_ISO === true && cbStates.TR1_HV_CB === 'CLOSED',
       // Line from transformer LV to TR1_LV_ISO  
-      'TR1_transformer_to_LV_ISO': bus33_1 && cbStates.TR1_HV_CB === 'CLOSED' && cbStates.TR1_LV_CB === 'CLOSED',
+      'TR1_transformer_to_LV_ISO': bus33_1 && isolatorStates.TR1_HV_ISO === true && cbStates.TR1_HV_CB === 'CLOSED',
+      // Line from TR1_LV_ISO to TR1_LV_CB - consider isolator state
+      'TR1_LV_ISO_to_CB': bus33_1 && isolatorStates.TR1_HV_ISO === true && cbStates.TR1_HV_CB === 'CLOSED' && isolatorStates.TR1_LV_ISO === true,
       // Line from TR1_LV_CB to 11kV Bus
       'TR1_LV_CB_to_bus': bus11_1,
       // Line from 33kV Bus to TR2_HV_ISO
       'bus33_to_TR2_HV_ISO': bus33_2,
+      // Line from TR2_HV_ISO to TR2_HV_CB - consider isolator state
+      'TR2_HV_ISO_to_CB': bus33_2 && isolatorStates.TR2_HV_ISO === true,
       // Line from TR2_HV_CB to transformer HV
-      'TR2_HV_CB_to_transformer': bus33_2 && cbStates.TR2_HV_CB === 'CLOSED',
+      'TR2_HV_CB_to_transformer': bus33_2 && isolatorStates.TR2_HV_ISO === true && cbStates.TR2_HV_CB === 'CLOSED',
       // Line from transformer LV to TR2_LV_ISO
-      'TR2_transformer_to_LV_ISO': bus33_2 && cbStates.TR2_HV_CB === 'CLOSED' && cbStates.TR2_LV_CB === 'CLOSED',
+      'TR2_transformer_to_LV_ISO': bus33_2 && isolatorStates.TR2_HV_ISO === true && cbStates.TR2_HV_CB === 'CLOSED',
+      // Line from TR2_LV_ISO to TR2_LV_CB - consider isolator state
+      'TR2_LV_ISO_to_CB': bus33_2 && isolatorStates.TR2_HV_ISO === true && cbStates.TR2_HV_CB === 'CLOSED' && isolatorStates.TR2_LV_ISO === true,
       // Line from TR2_LV_CB to 11kV Bus  
       'TR2_LV_CB_to_bus': bus11_2_via_tr2,
       // 33kV bus coupler lines
@@ -158,7 +168,7 @@ export function useSimulation(): SimulationState {
       feeders,
       connectionLines,
     };
-  }, [cbStates]);
+  }, [cbStates, isolatorStates]);
 
   // Initialize and update measurements every 2 seconds
   useEffect(() => {
@@ -174,13 +184,12 @@ export function useSimulation(): SimulationState {
       const bus11_2_via_coupler = bus11_1 && currentCBStates.BC_CB === 'CLOSED';
       const bus11_2 = bus11_2_via_tr2 || bus11_2_via_coupler;
       
-      // 33kV incoming measurements - only if INC1_CB is CLOSED
+      // 33kV incoming measurements - voltage exists upstream even when CB open, but current/power are 0 when open
+      m['INC1_V'] = randomBetween(32.5, 33.5); // Voltage always present (grid source)
       if (currentCBStates.INC1_CB === 'CLOSED') {
-        m['INC1_V'] = randomBetween(32.5, 33.5);
         m['INC1_I'] = randomBetween(120, 180);
         m['INC1_P'] = randomBetween(5.5, 7.5);
       } else {
-        m['INC1_V'] = 0;
         m['INC1_I'] = 0;
         m['INC1_P'] = 0;
       }
@@ -198,7 +207,7 @@ export function useSimulation(): SimulationState {
         m['TR1_P'] = 0;
         // Oil temperature decays slowly toward ambient when de-energized
         const currentTemp = measurements['TR1_OIL_TEMP'] || 25;
-        m['TR1_OIL_TEMP'] = Math.max(25, currentTemp - 0.5); // Decay by 0.5°C per measurement cycle
+        m['TR1_OIL_TEMP'] = Math.max(25, currentTemp - (currentTemp - 25) * 0.1); // Decay toward 25°C ambient
       }
 
       // TR1 LV voltage - only if full TR1 path is complete
@@ -221,7 +230,7 @@ export function useSimulation(): SimulationState {
         m['TR2_P'] = 0;
         // Oil temperature decays slowly toward ambient when de-energized
         const currentTemp = measurements['TR2_OIL_TEMP'] || 25;
-        m['TR2_OIL_TEMP'] = Math.max(25, currentTemp - 0.5); // Decay by 0.5°C per measurement cycle
+        m['TR2_OIL_TEMP'] = Math.max(25, currentTemp - (currentTemp - 25) * 0.1); // Decay toward 25°C ambient
       }
 
       // TR2 LV voltage - only if full TR2 path is complete
