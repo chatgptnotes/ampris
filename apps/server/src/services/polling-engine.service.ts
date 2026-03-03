@@ -69,7 +69,7 @@ class PollingEngineService {
     await prisma.externalDevice.update({
       where: { id: deviceId },
       data: { status: 'CONNECTED', lastConnectedAt: new Date() },
-    }).catch(() => {});
+    }).catch((err: any) => { console.warn("[PollingEngine] async operation failed:", err.message); });
   }
 
   async stopDevice(deviceId: string): Promise<void> {
@@ -86,7 +86,7 @@ class PollingEngineService {
     await prisma.externalDevice.update({
       where: { id: deviceId },
       data: { status: 'DISCONNECTED' },
-    }).catch(() => {});
+    }).catch((err: any) => { console.warn("[PollingEngine] async operation failed:", err.message); });
   }
 
   async startAll(projectId: string): Promise<void> {

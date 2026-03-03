@@ -248,7 +248,7 @@ class AlarmEngineService {
     try {
       const io = realtimeService.getIO();
       io.emit(event, data);
-    } catch {}
+    } catch (err: any) { console.warn("[AlarmEngine] WS emit failed:", err.message); }
   }
 
   shutdown(): void {

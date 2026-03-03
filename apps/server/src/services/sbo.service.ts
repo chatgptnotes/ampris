@@ -37,7 +37,7 @@ class SBOService {
       try {
         const io = realtimeService.getIO();
         io.emit('sbo:timeout', { tagName, userId });
-      } catch {}
+      } catch (err: any) { console.error("[Sbo] operation failed:", err.message); }
     }, timeout);
 
     this.selections.set(tagName, {
@@ -51,7 +51,7 @@ class SBOService {
     try {
       const io = realtimeService.getIO();
       io.emit('sbo:selected', { tagName, value, userId, timeout: config.selectTimeout });
-    } catch {}
+    } catch (err: any) { console.error("[Sbo] operation failed:", err.message); }
 
     return { success: true, message: `Tag selected. Operate within ${config.selectTimeout}s.` };
   }
@@ -70,7 +70,7 @@ class SBOService {
     try {
       const io = realtimeService.getIO();
       io.emit('sbo:operated', { tagName, value: sel.pendingValue, userId });
-    } catch {}
+    } catch (err: any) { console.error("[Sbo] operation failed:", err.message); }
 
     return { success: true, message: 'Operation executed successfully' };
   }
@@ -85,7 +85,7 @@ class SBOService {
     try {
       const io = realtimeService.getIO();
       io.emit('sbo:cancelled', { tagName, userId });
-    } catch {}
+    } catch (err: any) { console.error("[Sbo] operation failed:", err.message); }
 
     return { success: true, message: 'Selection cancelled' };
   }

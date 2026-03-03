@@ -51,7 +51,7 @@ class RedundancyService {
       await prisma.redundancyConfig.update({
         where: { projectId: this.projectId },
         data: { lastHeartbeat: new Date() },
-      }).catch(() => {});
+      }).catch((err: any) => { console.warn("[Redundancy] async operation failed:", err.message); });
 
       try {
         realtimeService.getIO().emit('redundancy:heartbeat', {
@@ -60,7 +60,7 @@ class RedundancyService {
           latencyMs: simulatedLatency,
           timestamp: new Date(),
         });
-      } catch {}
+      } catch (err: any) { console.error("[Redundancy] operation failed:", err.message); }
     } else {
       // Check if partner is down long enough for failover
       const lastHb = this.partnerStatus.lastHeartbeat;
@@ -80,7 +80,7 @@ class RedundancyService {
     await prisma.redundancyConfig.update({
       where: { projectId: this.projectId },
       data: { lastSync: new Date() },
-    }).catch(() => {});
+    }).catch((err: any) => { console.warn("[Redundancy] async operation failed:", err.message); });
   }
 
   async triggerFailover(reason: string): Promise<void> {
@@ -92,7 +92,7 @@ class RedundancyService {
     await prisma.redundancyConfig.update({
       where: { projectId: this.projectId },
       data: { status: 'active', role: 'PRIMARY' },
-    }).catch(() => {});
+    }).catch((err: any) => { console.warn("[Redundancy] async operation failed:", err.message); });
 
     await prisma.failoverEvent.create({
       data: {
@@ -103,7 +103,7 @@ class RedundancyService {
         details: { previousState, timestamp: new Date() },
         projectId: this.projectId,
       },
-    }).catch(() => {});
+    }).catch((err: any) => { console.warn("[Redundancy] async operation failed:", err.message); });
 
     try {
       realtimeService.getIO().emit('redundancy:failover', {
@@ -112,7 +112,7 @@ class RedundancyService {
         reason,
         timestamp: new Date(),
       });
-    } catch {}
+    } catch (err: any) { console.error("[Redundancy] operation failed:", err.message); }
 
     console.log(`[Redundancy] Failover: ${previousState} → active (${reason})`);
   }
@@ -144,7 +144,7 @@ class RedundancyService {
         reason: 'Manual promotion',
         timestamp: new Date(),
       });
-    } catch {}
+    } catch (err: any) { console.error("[Redundancy] operation failed:", err.message); }
   }
 
   async demote(projectId: string): Promise<void> {
@@ -174,7 +174,7 @@ class RedundancyService {
         reason: 'Manual demotion',
         timestamp: new Date(),
       });
-    } catch {}
+    } catch (err: any) { console.error("[Redundancy] operation failed:", err.message); }
   }
 
   async testFailover(projectId: string): Promise<void> {

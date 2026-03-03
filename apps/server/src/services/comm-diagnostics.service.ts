@@ -87,7 +87,7 @@ class CommDiagnosticsService {
           errorDetail: frame.errorDetail,
           projectId,
         },
-      }).catch(() => {});
+      }).catch((err: any) => { console.warn("[CommDiagnostics] async operation failed:", err.message); });
     }
   }
 
@@ -193,7 +193,7 @@ class CommDiagnosticsService {
           periodStart: stats.periodStart,
           periodEnd: new Date(),
         },
-      }).catch(() => {});
+      }).catch((err: any) => { console.warn("[CommDiagnostics] async operation failed:", err.message); });
     }
   }
 
@@ -201,7 +201,7 @@ class CommDiagnosticsService {
     const cutoff = new Date(Date.now() - 7 * 86400_000);
     await prisma.commLog.deleteMany({
       where: { createdAt: { lt: cutoff } },
-    }).catch(() => {});
+    }).catch((err: any) => { console.warn("[CommDiagnostics] async operation failed:", err.message); });
   }
 
   shutdown(): void {

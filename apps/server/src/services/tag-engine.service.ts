@@ -117,9 +117,9 @@ class TagEngineService {
         if (value !== undefined) {
           this.setTagValue(tag.name, value, false);
         }
-      } catch {
-        // Skip failed formula evaluations
-      }
+      } catch (err: any) {
+      console.warn("[TagEngine] operation failed:", err.message);
+    }
     }
   }
 
@@ -150,8 +150,8 @@ class TagEngineService {
       if (typeof result === 'number' && isFinite(result)) {
         return Math.round(result * 1000) / 1000;
       }
-    } catch {
-      // Invalid formula
+    } catch (err: any) {
+      console.warn("[TagEngine] operation failed:", err.message);
     }
     return undefined;
   }
@@ -163,7 +163,7 @@ class TagEngineService {
       if (!result.allowed) {
         return { success: false, error: 'Blocked by interlock', blockedBy: result.blockedBy };
       }
-    } catch {}
+    } catch (err: any) { console.error("[TagEngine] operation failed:", err.message); }
     this.setTagValue(tagName, value);
     return { success: true };
   }
@@ -182,8 +182,8 @@ class TagEngineService {
     try {
       const io = realtimeService.getIO();
       io.emit('tag:valueChanged', { tag: tagName, value, timestamp: tv.timestamp });
-    } catch {
-      // IO not ready yet
+    } catch (err: any) {
+      console.warn("[TagEngine] operation failed:", err.message);
     }
 
     // Persist to DB asynchronously
@@ -191,7 +191,7 @@ class TagEngineService {
       prisma.tag.updateMany({
         where: { name: tagName },
         data: { currentValue: String(value) },
-      }).catch(() => {});
+      }).catch((err: any) => { console.warn("[TagEngine] async operation failed:", err.message); });
     }
   }
 

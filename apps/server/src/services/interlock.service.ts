@@ -87,7 +87,7 @@ class InterlockService {
           conditions: results as any,
           projectId: interlock.projectId,
         },
-      }).catch(() => {});
+      }).catch((err: any) => { console.warn("[Interlock] async operation failed:", err.message); });
     }
 
     const allowed = blockedBy.length === 0;
@@ -96,7 +96,7 @@ class InterlockService {
       try {
         const io = realtimeService.getIO();
         io.emit('interlock:blocked', { tagName, value, blockedBy: blockedBy.map(b => ({ id: b.id, name: b.name, conditions: b.conditionResults })) });
-      } catch {}
+      } catch (err: any) { console.error("[Interlock] operation failed:", err.message); }
     }
 
     return { allowed, blockedBy, conditionResults: allConditionResults };

@@ -74,7 +74,7 @@ export class RealtimeService {
           try {
             const { tagEngine } = require('./tag-engine.service');
             tagEngine.setTagValue(data.tagName, data.value);
-          } catch { /* tag engine not ready */ }
+          } catch (err: any) { console.warn('[Realtime] tag engine not ready:', err.message); }
         }
       });
 
@@ -86,7 +86,7 @@ export class RealtimeService {
           if (typeof callback === 'function') {
             callback(tv ? { tag: tagName, value: tv.value, timestamp: tv.timestamp } : null);
           }
-        } catch { /* tag engine not ready */ }
+        } catch (err: any) { console.warn('[Realtime] tag engine not ready:', err.message); }
       });
 
       // Heartbeat pong

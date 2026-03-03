@@ -60,7 +60,7 @@ class HistorianCompressionService {
           clearInterval(checkInterval);
           console.log('[HistorianCompression] Listening to tag value changes');
         }
-      } catch {}
+      } catch (err: any) { console.warn("[HistorianCompression] IO init retry failed:", err.message); }
     }, 2000);
   }
 
@@ -188,6 +188,7 @@ class HistorianCompressionService {
         },
       });
     } catch (err) {
+      console.error("[HistorianCompression] storePoint failed:", (err as any).message);
       // Silently fail — don't break polling
     }
   }
@@ -230,7 +231,7 @@ class HistorianCompressionService {
           tagName: config.tagName,
           timestamp: { lt: cutoff },
         },
-      }).catch(() => {});
+      }).catch((err: any) => { console.warn("[HistorianCompression] cleanup deleteMany failed:", err.message); });
     }
   }
 

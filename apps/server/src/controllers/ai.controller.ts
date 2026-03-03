@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { realLoadForecast, realAnomalyDetection, realPowerQuality, realPredictiveMaintenance } from "../services/ai-inference.service";
 import { getModels, getAnomalyModel, getLoadData, isInitialized } from '../ml';
 import { forecast, predictMovingAverage, predictRegression } from '../ml/load-forecaster';
 import { detectAnomalies, equipmentHealthScore } from '../ml/anomaly-detector';
@@ -55,6 +56,11 @@ function buildFuturePoints(hoursAhead: number) {
 
 export async function getLoadForecast(req: Request, res: Response): Promise<void> {
   try {
+  // Try real DB-driven inference first
+  try {
+    const realResult = await realLoadForecast(parseInt(req.query.hours as string) || 24);
+    if (realResult) { res.json(realResult); return; }
+  } catch (err: any) { console.warn("[AI] Real load forecast unavailable:", err.message); }
     if (!isInitialized()) { res.status(503).json({ error: 'ML models initializing, please wait...' }); return; }
 
     const range = String(req.query.range || '24h');
@@ -205,6 +211,11 @@ export async function getEquipmentHealth(_req: Request, res: Response): Promise<
 
 export async function getAnomalies(req: Request, res: Response): Promise<void> {
   try {
+  // Try real DB-driven anomaly detection first
+  try {
+    const realResult = await realAnomalyDetection();
+    if (realResult) { res.json(realResult); return; }
+  } catch (err: any) { console.warn('[AI] Real anomaly detection unavailable:', err.message); }
     if (!isInitialized()) { res.status(503).json({ error: 'ML models initializing' }); return; }
 
     const severityFilter = req.query.severity ? String(req.query.severity).split(',') : null;
@@ -234,6 +245,11 @@ export async function getAlarmAnalysis(_req: Request, res: Response): Promise<vo
 
 export async function getMaintenanceTasks(_req: Request, res: Response): Promise<void> {
   try {
+  // Try real DB-driven predictive maintenance first
+  try {
+    const realResult = await realPredictiveMaintenance();
+    if (realResult) { res.json(realResult); return; }
+  } catch (err: any) { console.warn('[AI] Real predictive maintenance unavailable:', err.message); }
     if (!isInitialized()) { res.status(503).json({ error: 'ML models initializing' }); return; }
 
     const anomalyModel = getAnomalyModel();
@@ -267,6 +283,11 @@ export async function getCostAnalysis(_req: Request, res: Response): Promise<voi
 
 export async function getPowerQuality(req: Request, res: Response): Promise<void> {
   try {
+  // Try real DB-driven power quality first
+  try {
+    const realResult = await realPowerQuality();
+    if (realResult) { res.json(realResult); return; }
+  } catch (err: any) { console.warn('[AI] Real power quality unavailable:', err.message); }
     if (!isInitialized()) { res.status(503).json({ error: 'ML models initializing' }); return; }
 
     const hours = parseInt(String(req.query.hours || '24'));

@@ -44,8 +44,8 @@ export class HistorianService {
         value,
         quality,
       );
-    } catch {
-      // DB may not be available — ring buffer still works
+    } catch (err: any) {
+      console.warn("[Historian] operation failed:", err.message);
     }
   }
 
@@ -80,8 +80,8 @@ export class HistorianService {
         state,
         quality,
       );
-    } catch {
-      // silently continue
+    } catch (err: any) {
+      console.warn("[Historian] operation failed:", err.message);
     }
   }
 
@@ -94,8 +94,8 @@ export class HistorianService {
         newState,
         cause || null,
       );
-    } catch {
-      // silently continue
+    } catch (err: any) {
+      console.warn("[Historian] operation failed:", err.message);
     }
   }
 

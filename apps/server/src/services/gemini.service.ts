@@ -107,8 +107,8 @@ export async function getOrGenerateInfographic(forceRegenerate = false): Promise
         mimeType: meta.mimeType || 'image/png',
         cached: true,
       };
-    } catch {
-      // Cache corrupted, regenerate
+    } catch (err: any) {
+      console.warn("[Gemini] operation failed:", err.message);
     }
   }
 

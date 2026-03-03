@@ -283,6 +283,34 @@ function formatRelativeTime(iso: string): string {
 
 export default function ConnectionManager() {
   const [connections, setConnections] = useState<ProtocolConnection[]>(INITIAL_CONNECTIONS);
+
+  // Fetch real connection data from API on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchConnections() {
+      try {
+        const mod = await import("@/services/api");
+        const { data } = await mod.api.get("/diagnostics/summary");
+        if (!cancelled && data?.devices?.length) {
+          const mapped = data.devices.map((d: any) => ({
+            id: d.deviceId || d.id,
+            name: d.deviceName || d.name,
+            protocol: (d.protocol || "simulator").toLowerCase().replace("_", "-"),
+            host: d.host || d.ipAddress || "unknown",
+            port: d.port || 502,
+            status: (d.status || "disconnected").toLowerCase(),
+            tagsCount: d.tagCount || 0,
+            lastDataReceived: d.lastPoll || null,
+            uptimeSeconds: d.uptime || 0,
+            logs: [],
+          }));
+          setConnections(mapped);
+        }
+      } catch { /* API unavailable, keep mock data */ }
+    }
+    fetchConnections();
+    return () => { cancelled = true; };
+  }, []);
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
   const [, setTick] = useState(0);

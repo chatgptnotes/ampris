@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Activity,
   Zap,
@@ -21,6 +21,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { api } from '@/services/api';
 
 const TIME_RANGES = [
   { label: '24H', hours: 24 },
@@ -29,7 +30,7 @@ const TIME_RANGES = [
   { label: '90D', hours: 2160 },
 ];
 
-// Generate demo analytics data
+// Fallback demo data generator (used when API unavailable)
 function generateDemoData(hours: number) {
   const points = Math.min(hours, 48);
   const interval = hours / points;
@@ -69,16 +70,41 @@ function generateSubstationComparison() {
 
 export default function Analytics() {
   const [timeRange, setTimeRange] = useState(24);
+  const [data, setData] = useState<any[]>([]);
+  const [alarmTrend, setAlarmTrend] = useState<any[]>([]);
+  const [substationComparison, setSubstationComparison] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const data = useMemo(() => generateDemoData(timeRange), [timeRange]);
-  const alarmTrend = useMemo(() => generateAlarmTrend(timeRange), [timeRange]);
-  const substationComparison = useMemo(() => generateSubstationComparison(), []);
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchAnalytics() {
+      setLoading(true);
+      try {
+        const { data: resp } = await api.get('/analytics', { params: { hours: timeRange } });
+        if (!cancelled && resp) {
+          setData(resp.loadTrend || generateDemoData(timeRange));
+          setAlarmTrend(resp.alarmTrend || generateAlarmTrend(timeRange));
+          setSubstationComparison(resp.substationComparison || generateSubstationComparison());
+        }
+      } catch {
+        if (!cancelled) {
+          setData(generateDemoData(timeRange));
+          setAlarmTrend(generateAlarmTrend(timeRange));
+          setSubstationComparison(generateSubstationComparison());
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchAnalytics();
+    return () => { cancelled = true; };
+  }, [timeRange]);
 
-  const avgLoad = useMemo(() => Math.round(data.reduce((s, d) => s + d.load, 0) / data.length), [data]);
-  const peakDemand = useMemo(() => Math.max(...data.map((d) => d.peakDemand)), [data]);
-  const avgPF = useMemo(() => +(data.reduce((s, d) => s + d.powerFactor, 0) / data.length).toFixed(2), [data]);
+  const avgLoad = useMemo(() => data.length ? Math.round(data.reduce((s, d) => s + (d.load || 0), 0) / data.length) : 0, [data]);
+  const peakDemand = useMemo(() => data.length ? Math.max(...data.map((d) => d.peakDemand || 0)) : 0, [data]);
+  const avgPF = useMemo(() => data.length ? +(data.reduce((s, d) => s + (d.powerFactor || 0), 0) / data.length).toFixed(2) : 0, [data]);
   const avgEfficiency = useMemo(
-    () => +(data.reduce((s, d) => s + d.efficiency, 0) / data.length).toFixed(1),
+    () => data.length ? +(data.reduce((s, d) => s + (d.efficiency || 0), 0) / data.length).toFixed(1) : 0,
     [data]
   );
 
@@ -109,57 +135,30 @@ export default function Analytics() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          icon={Zap}
-          label="Average Load"
-          value={`${avgLoad} MW`}
-          change={+3.2}
-          color="text-scada-accent"
-        />
-        <KPICard
-          icon={TrendingUp}
-          label="Peak Demand"
-          value={`${peakDemand} MW`}
-          change={+1.8}
-          color="text-scada-warning"
-        />
-        <KPICard
-          icon={Gauge}
-          label="Avg Power Factor"
-          value={String(avgPF)}
-          change={-0.5}
-          color="text-scada-success"
-        />
-        <KPICard
-          icon={BarChart3}
-          label="System Efficiency"
-          value={`${avgEfficiency}%`}
-          change={+0.3}
-          color="text-purple-400"
-        />
+        <KPICard icon={Zap} label="Average Load" value={`${avgLoad} MW`} change={+3.2} color="text-scada-accent" />
+        <KPICard icon={TrendingUp} label="Peak Demand" value={`${peakDemand} MW`} change={+1.8} color="text-scada-warning" />
+        <KPICard icon={Gauge} label="Avg Power Factor" value={String(avgPF)} change={-0.5} color="text-scada-success" />
+        <KPICard icon={BarChart3} label="System Efficiency" value={`${avgEfficiency}%`} change={+0.3} color="text-purple-400" />
       </div>
 
       {/* Load Trend Chart */}
       <div className="bg-scada-panel border border-scada-border rounded-lg p-4">
         <h3 className="text-sm font-medium mb-3">Load & Peak Demand Trend</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-            <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} />
-            <YAxis stroke="#94a3b8" fontSize={11} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#1E293B',
-                border: '1px solid #334155',
-                borderRadius: 8,
-                color: '#E2E8F0',
-              }}
-            />
-            <Legend />
-            <Area type="monotone" dataKey="load" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.15} name="Avg Load (MW)" />
-            <Area type="monotone" dataKey="peakDemand" stroke="#EAB308" fill="#EAB308" fillOpacity={0.1} name="Peak Demand (MW)" />
-          </AreaChart>
-        </ResponsiveContainer>
+        {loading ? (
+          <div className="h-[280px] flex items-center justify-center text-gray-500">Loading...</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} />
+              <YAxis stroke="#94a3b8" fontSize={11} />
+              <Tooltip contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #334155', borderRadius: 8, color: '#E2E8F0' }} />
+              <Legend />
+              <Area type="monotone" dataKey="load" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.15} name="Avg Load (MW)" />
+              <Area type="monotone" dataKey="peakDemand" stroke="#EAB308" fill="#EAB308" fillOpacity={0.1} name="Peak Demand (MW)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -171,14 +170,7 @@ export default function Analytics() {
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="period" stroke="#94a3b8" fontSize={11} />
               <YAxis stroke="#94a3b8" fontSize={11} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1E293B',
-                  border: '1px solid #334155',
-                  borderRadius: 8,
-                  color: '#E2E8F0',
-                }}
-              />
+              <Tooltip contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #334155', borderRadius: 8, color: '#E2E8F0' }} />
               <Legend />
               <Bar dataKey="critical" stackId="a" fill="#DC2626" name="Critical" />
               <Bar dataKey="major" stackId="a" fill="#F97316" name="Major" />
@@ -197,14 +189,7 @@ export default function Analytics() {
               <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} />
               <YAxis yAxisId="pf" domain={[0.7, 1]} stroke="#16A34A" fontSize={11} />
               <YAxis yAxisId="eff" orientation="right" domain={[85, 100]} stroke="#8B5CF6" fontSize={11} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1E293B',
-                  border: '1px solid #334155',
-                  borderRadius: 8,
-                  color: '#E2E8F0',
-                }}
-              />
+              <Tooltip contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #334155', borderRadius: 8, color: '#E2E8F0' }} />
               <Legend />
               <Line yAxisId="pf" type="monotone" dataKey="powerFactor" stroke="#16A34A" strokeWidth={2} dot={false} name="Power Factor" />
               <Line yAxisId="eff" type="monotone" dataKey="efficiency" stroke="#8B5CF6" strokeWidth={2} dot={false} name="Efficiency (%)" />
