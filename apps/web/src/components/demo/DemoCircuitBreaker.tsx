@@ -65,8 +65,9 @@ export default function DemoCircuitBreaker({ x, y, tag, label }: Props) {
         />
       )}
 
-      <line x1={x} y1={y - size / 2} x2={x} y2={y - size / 2 - 10} stroke="#94A3B8" strokeWidth={2} />
-      <line x1={x} y1={y + size / 2} x2={x} y2={y + size / 2 + 10} stroke="#94A3B8" strokeWidth={2} />
+      {/* Shortened connection stubs - let ConnectionLine handle coloring */}
+      <line x1={x} y1={y - size / 2} x2={x} y2={y - size / 2 - 3} stroke="#94A3B8" strokeWidth={2} />
+      <line x1={x} y1={y + size / 2} x2={x} y2={y + size / 2 + 3} stroke="#94A3B8" strokeWidth={2} />
 
       {label && (
         <text x={x + size / 2 + 5} y={y + 4} className="text-[8px]" fill="#475569">

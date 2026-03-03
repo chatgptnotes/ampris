@@ -115,18 +115,39 @@ export function useSimulation(): SimulationState {
     
     // Connection lines energization
     const connectionLines: Record<string, boolean> = {
-      // 33kV incomer line
-      '33kV_incomer': cbStates.INC1_CB === 'CLOSED',
-      // 33kV bus coupler line
-      'BSC_line': cbStates.BSC_CB === 'CLOSED',
-      // TR1 connections
-      'TR1_HV_line': bus33_1 && cbStates.TR1_HV_CB === 'CLOSED',
-      'TR1_LV_line': bus11_1,
-      // TR2 connections  
-      'TR2_HV_line': bus33_2 && cbStates.TR2_HV_CB === 'CLOSED',
-      'TR2_LV_line': bus11_2_via_tr2,
-      // 11kV bus coupler line
-      'BC_line': cbStates.BC_CB === 'CLOSED',
+      // 33kV incomer line (always red - it's the grid source)
+      '33kV_incomer': true,
+      // Line from INC1_CB to 33kV Bus
+      'INC1_CB_to_bus': cbStates.INC1_CB === 'CLOSED',
+      // Line from 33kV Bus to TR1_HV_ISO
+      'bus33_to_TR1_HV_ISO': bus33_1,
+      // Line from TR1_HV_CB to transformer HV
+      'TR1_HV_CB_to_transformer': bus33_1 && cbStates.TR1_HV_CB === 'CLOSED',
+      // Line from transformer LV to TR1_LV_ISO  
+      'TR1_transformer_to_LV_ISO': bus33_1 && cbStates.TR1_HV_CB === 'CLOSED' && cbStates.TR1_LV_CB === 'CLOSED',
+      // Line from TR1_LV_CB to 11kV Bus
+      'TR1_LV_CB_to_bus': bus11_1,
+      // Line from 33kV Bus to TR2_HV_ISO
+      'bus33_to_TR2_HV_ISO': bus33_2,
+      // Line from TR2_HV_CB to transformer HV
+      'TR2_HV_CB_to_transformer': bus33_2 && cbStates.TR2_HV_CB === 'CLOSED',
+      // Line from transformer LV to TR2_LV_ISO
+      'TR2_transformer_to_LV_ISO': bus33_2 && cbStates.TR2_HV_CB === 'CLOSED' && cbStates.TR2_LV_CB === 'CLOSED',
+      // Line from TR2_LV_CB to 11kV Bus  
+      'TR2_LV_CB_to_bus': bus11_2_via_tr2,
+      // 33kV bus coupler lines
+      'BSC_line_left': bus33_1,
+      'BSC_line_right': bus33_2,
+      // 11kV bus coupler lines
+      'BC_line_left': bus11_1,
+      'BC_line_right': bus11_2,
+      // Individual feeder lines
+      'FDR01_line': feeders['FDR01_CB'],
+      'FDR02_line': feeders['FDR02_CB'],
+      'FDR03_line': feeders['FDR03_CB'],
+      'FDR04_line': feeders['FDR04_CB'],
+      'FDR05_line': feeders['FDR05_CB'],
+      'FDR06_line': feeders['FDR06_CB'],
     };
     
     return {

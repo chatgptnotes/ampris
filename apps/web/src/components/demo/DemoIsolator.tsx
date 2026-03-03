@@ -20,8 +20,9 @@ export default function DemoIsolator({ x, y, tag, label }: Props) {
       }}
       className="cursor-pointer"
     >
-      <line x1={x} y1={y - 15} x2={x} y2={y - 5} stroke="#94A3B8" strokeWidth={2} />
-      <line x1={x} y1={y + 15} x2={x} y2={y + 5} stroke="#94A3B8" strokeWidth={2} />
+      {/* Shortened connection stubs - let ConnectionLine handle coloring */}
+      <line x1={x} y1={y - 8} x2={x} y2={y - 5} stroke="#94A3B8" strokeWidth={2} />
+      <line x1={x} y1={y + 8} x2={x} y2={y + 5} stroke="#94A3B8" strokeWidth={2} />
 
       {isClosed ? (
         <>
