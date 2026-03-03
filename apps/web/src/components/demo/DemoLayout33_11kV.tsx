@@ -10,16 +10,15 @@ import DemoAlarmBadge from './DemoAlarmBadge';
 import { useSimulationContext } from './DemoSimulationContext';
 
 // Define colors for energization states
-const ENERGIZED_33KV_COLOR = '#DC2626'; // Red
-const ENERGIZED_11KV_COLOR = '#16A34A'; // Green  
-const DE_ENERGIZED_COLOR = '#94A3B8'; // Gray
+const ENERGIZED_COLOR = '#DC2626'; // Red - ALL energized equipment
+const DE_ENERGIZED_COLOR = '#16A34A'; // Green - ALL de-energized equipment
 
 // Component for colored connection lines
 function ConnectionLine({ x1, y1, x2, y2, energized, voltageLevel }: {
   x1: number; y1: number; x2: number; y2: number; energized: boolean; voltageLevel: 33 | 11;
 }) {
   const color = energized 
-    ? (voltageLevel === 33 ? ENERGIZED_33KV_COLOR : ENERGIZED_11KV_COLOR)
+    ? ENERGIZED_COLOR
     : DE_ENERGIZED_COLOR;
   
   return <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={2} />;
@@ -76,7 +75,7 @@ export default function DemoLayout33_11kV() {
         width={340} 
         voltageKv={33} 
         label="33kV Bus Section 1" 
-        color={energizationState['33kV_Bus_Section_1'] ? ENERGIZED_33KV_COLOR : DE_ENERGIZED_COLOR}
+        color={energizationState['33kV_Bus_Section_1'] ? ENERGIZED_COLOR : DE_ENERGIZED_COLOR}
       />
 
       {/* 33kV Bus Section Coupler Connection Lines */}
@@ -108,7 +107,7 @@ export default function DemoLayout33_11kV() {
         width={340} 
         voltageKv={33} 
         label="33kV Bus Section 2"
-        color={energizationState['33kV_Bus_Section_2'] ? ENERGIZED_33KV_COLOR : DE_ENERGIZED_COLOR}
+        color={energizationState['33kV_Bus_Section_2'] ? ENERGIZED_COLOR : DE_ENERGIZED_COLOR}
       />
 
       {/* ==== Transformer 1 ==== */}
@@ -178,7 +177,7 @@ export default function DemoLayout33_11kV() {
         width={360} 
         voltageKv={11} 
         label="11kV Bus Section 1" 
-        color={energizationState['11kV_Bus_Section_1'] ? ENERGIZED_11KV_COLOR : DE_ENERGIZED_COLOR}
+        color={energizationState['11kV_Bus_Section_1'] ? ENERGIZED_COLOR : DE_ENERGIZED_COLOR}
       />
 
       {/* 11kV Bus Section Coupler Connection Lines */}
@@ -210,7 +209,7 @@ export default function DemoLayout33_11kV() {
         width={360} 
         voltageKv={11} 
         label="11kV Bus Section 2" 
-        color={energizationState['11kV_Bus_Section_2'] ? ENERGIZED_11KV_COLOR : DE_ENERGIZED_COLOR}
+        color={energizationState['11kV_Bus_Section_2'] ? ENERGIZED_COLOR : DE_ENERGIZED_COLOR}
       />
 
       {/* 11kV Bus voltage */}

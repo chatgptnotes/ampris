@@ -29,10 +29,10 @@ export default function DemoSLDCanvas() {
         e.stopPropagation();
         e.stopImmediatePropagation();
         
-        // Apply zoom with smooth scaling
-        const zoomSpeed = 0.001;
+        // Apply zoom with responsive scaling
+        const zoomSpeed = 0.003;
         const deltaZoom = -e.deltaY * zoomSpeed;
-        setZoom((prev) => Math.max(0.4, Math.min(2.5, prev + deltaZoom)));
+        setZoom((prev) => Math.max(0.3, Math.min(4, prev + deltaZoom)));
         
         // Return false to ensure no further propagation
         return false;
@@ -60,7 +60,7 @@ export default function DemoSLDCanvas() {
   }, [isMouseOver]);
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.altKey)) {
+    if (e.button === 0 || e.button === 1) {
       setIsPanning(true);
       lastPos.current = { x: e.clientX, y: e.clientY };
     }
