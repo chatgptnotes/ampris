@@ -3,9 +3,11 @@ import { DemoSimulationProvider } from '@/components/demo/DemoSimulationContext'
 import DemoSLDCanvas from '@/components/demo/DemoSLDCanvas';
 import DemoControlPanel from '@/components/demo/DemoControlPanel';
 import DemoAlarmPanel from '@/components/demo/DemoAlarmPanel';
+import { Link } from 'react-router-dom';
 import {
   Activity, TrendingUp, Bell, BarChart3,
   Maximize2, Minimize2, Circle, Clock, Radio, Zap,
+  Home, Layers, Download, BookOpen, Mail, LogIn,
 } from 'lucide-react';
 
 import DemoTrendsPage from '@/components/demo/DemoTrendsPage';
@@ -47,16 +49,42 @@ export default function DemoPage() {
     <div className={`bg-white border-b border-gray-200 shrink-0 ${isFullscreen ? '' : 'sticky top-16 z-40'}`}>
       <div className={`${isFullscreen ? 'px-4' : 'max-w-[1600px] mx-auto px-4'} py-2 flex items-center justify-between`}>
         <div className="flex items-center gap-4">
-          {/* Logo in fullscreen */}
+          {/* Full nav in fullscreen */}
           {isFullscreen && (
             <>
-              <div className="flex items-center gap-2">
+              <Link to="/" className="flex items-center gap-2" onClick={() => document.exitFullscreen().catch(() => {})}>
                 <Zap className="w-5 h-5 text-blue-600" />
                 <span className="font-bold text-sm">
                   <span className="text-blue-600">Grid</span>
                   <span className="text-gray-900">Vision</span>
                 </span>
-              </div>
+              </Link>
+              <div className="h-5 w-px bg-gray-200" />
+              <nav className="hidden md:flex items-center gap-1">
+                {[
+                  { to: '/', label: 'Home', icon: Home },
+                  { to: '/features', label: 'Features', icon: Layers },
+                  { to: '/downloads', label: 'Downloads', icon: Download },
+                  { to: '/docs', label: 'Docs', icon: BookOpen },
+                  { to: '/contact', label: 'Contact', icon: Mail },
+                ].map((link) => (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    onClick={() => document.exitFullscreen().catch(() => {})}
+                    className="px-2 py-1 text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                <Link
+                  to="/login"
+                  onClick={() => document.exitFullscreen().catch(() => {})}
+                  className="ml-1 px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Login
+                </Link>
+              </nav>
               <div className="h-5 w-px bg-gray-200" />
             </>
           )}
