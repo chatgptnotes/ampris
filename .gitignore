@@ -10,3 +10,5 @@ coverage/
 Thumbs.db
 *.tsbuildinfo
 .vercel
+# Electron build output
+apps/electron/release/

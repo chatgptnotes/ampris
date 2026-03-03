@@ -27,13 +27,13 @@ import {
   HardDriveDownload,
   Terminal,
   MousePointerClick,
-  ShieldCheck,
   Radio,
   Database,
   ChevronDown,
   ChevronRight,
   Lock,
-  RefreshCw,
+  Copy,
+  KeyRound,
   Wifi,
   ClipboardList,
 } from 'lucide-react';
@@ -98,7 +98,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: '/app/projects/_/commands', icon: Terminal, label: 'Commands', requiresProject: true },
       { path: '/app/projects/_/interlocks', icon: Lock, label: 'Interlocks', requiresProject: true },
       { path: '/app/projects/_/sbo', icon: MousePointerClick, label: 'SBO', requiresProject: true },
-      { path: '/app/projects/_/authority', icon: ShieldCheck, label: 'Authority', requiresProject: true },
+      { path: '/app/projects/_/authority', icon: KeyRound, label: 'Authority', requiresProject: true },
     ],
   },
   {
@@ -107,7 +107,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: '/app/projects/_/polling', icon: Radio, label: 'Polling', requiresProject: true },
       { path: '/app/projects/_/historian', icon: Database, label: 'Historian', requiresProject: true },
-      { path: '/app/projects/_/redundancy', icon: RefreshCw, label: 'Redundancy', requiresProject: true },
+      { path: '/app/projects/_/redundancy', icon: Copy, label: 'Redundancy', requiresProject: true },
       { path: '/app/projects/_/diagnostics', icon: Wifi, label: 'Comm Diag', requiresProject: true },
     ],
   },
