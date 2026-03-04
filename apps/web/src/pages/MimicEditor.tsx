@@ -942,7 +942,6 @@ const SYMBOL_CATEGORIES = [
     ],
   },
   {
-  {
     name: 'Electrical Loads',
     symbols: [
       { type: 'GenericLoad', label: 'Generic Load', w: 60, h: 60 },
