@@ -3417,12 +3417,15 @@ export default function MimicEditor() {
                       <option value="setValue">Set Value</option>
                       <option value="toggle">Toggle</option>
                       <option value="increment">Increment</option>
+                      <option value="pagegoto">Page Goto</option>
+                      <option value="page_back">Page Back</option>
+                      <option value="page_home">Page Home</option>
                       <option value="script">Script</option>
                     </select>
                   </div>
-                  {selectedEl.properties.controlAction !== 'script' && selectedEl.properties.controlAction !== 'toggle' && (
+                  {selectedEl.properties.controlAction !== 'script' && selectedEl.properties.controlAction !== 'toggle' && selectedEl.properties.controlAction !== 'page_back' && selectedEl.properties.controlAction !== 'page_home' && (
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Value to Set</label>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">{selectedEl.properties.controlAction === 'pagegoto' ? 'Page Name' : 'Value to Set'}</label>
                       <input
                         type="text"
                         value={selectedEl.properties.controlValue || ''}
@@ -3438,7 +3441,7 @@ export default function MimicEditor() {
                         value={selectedEl.properties.controlScript || ''}
                         onChange={(e) => updateElementProps(selectedEl.id, { controlScript: e.target.value })}
                         rows={3}
-                        placeholder='setTag("CB1.status", !getTag("CB1.status"))'
+                        placeholder='pagegoto("Page 2"); // or page_back(); page_home();'
                         className="w-full px-2 py-1 text-xs font-mono border border-gray-200 rounded text-gray-900 bg-white"
                       />
                     </div>

@@ -512,7 +512,35 @@ export default function MimicViewer() {
         const inc = parseFloat(el.properties.controlValue || '1') || 1;
         await api.post('/tags/by-name/set-value', { tagName: tag, value: current + inc });
       } else if (action === 'script') {
-        await api.post('/tags/execute-script', { code: el.properties.controlScript || '' });
+        // Provide pagegoto and page_back functions in script context
+        const scriptCode = el.properties.controlScript || '';
+        if (scriptCode.includes('pagegoto') || scriptCode.includes('page_back')) {
+          // Execute locally with page navigation functions
+          const pagegoto = (pageName: string) => {
+            const targetPage = project?.mimicPages?.find((p: any) => p.name === pageName || p.id === pageName);
+            if (targetPage) setActivePageId(targetPage.id);
+            else console.warn('Page not found:', pageName);
+          };
+          const page_back = () => window.history.back();
+          const page_home = () => {
+            const home = project?.mimicPages?.find((p: any) => p.isHomePage) || project?.mimicPages?.[0];
+            if (home) setActivePageId(home.id);
+          };
+          try { new Function('pagegoto', 'page_back', 'page_home', scriptCode)(pagegoto, page_back, page_home); }
+          catch (e) { console.error('Script error:', e); }
+        } else {
+          await api.post('/tags/execute-script', { code: scriptCode });
+        }
+      } else if (action === 'pagegoto') {
+        const targetPageName = el.properties.controlValue || '';
+        const targetPage = project?.mimicPages?.find((p: any) => p.name === targetPageName || p.id === targetPageName);
+        if (targetPage) setActivePageId(targetPage.id);
+        else console.warn('Page not found:', targetPageName);
+      } else if (action === 'page_back') {
+        window.history.back();
+      } else if (action === 'page_home') {
+        const home = project?.mimicPages?.find((p: any) => p.isHomePage) || project?.mimicPages?.[0];
+        if (home) setActivePageId(home.id);
       } else {
         // setValue
         const v = el.properties.controlValue;
