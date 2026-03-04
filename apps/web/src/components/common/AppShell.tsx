@@ -20,6 +20,9 @@ export default function AppShell() {
           <Outlet />
         </main>
       </div>
+      <footer className="text-center text-xs text-gray-400 py-4 border-t border-gray-200 dark:border-gray-700">
+        <a href="https://drmhope.com" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">drmhope.com</a> | A Bettroi Product
+      </footer>
       <AlarmStatusBar />
       <AlarmBanner />
       <SessionTimeoutWarning />
