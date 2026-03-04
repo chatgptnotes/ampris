@@ -3338,8 +3338,8 @@ export default function MimicEditor() {
                 </div>
               )}
 
-              {/* Legacy tag binding — for types NOT in TAG_TEMPLATES */}
-              {!(selectedEl.type in TAG_TEMPLATES) && selectedEl.type !== 'text' && selectedEl.type !== 'shape' && !selectedEl.type.startsWith('ctrl-') && !['page-link', 'back-button', 'home-button'].includes(selectedEl.type) && (
+              {/* Tag binding — for types NOT in TAG_TEMPLATES */}
+              {!(selectedEl.type in TAG_TEMPLATES) && (
                 <div className="relative">
                   <label className="block text-xs font-medium text-gray-500 mb-1">Tag Binding</label>
                   <div className="relative">
@@ -3426,8 +3426,8 @@ export default function MimicEditor() {
                 </>
               )}
 
-              {/* Conditional Color — available for ALL symbol types */}
-              {selectedEl.type !== 'text' && selectedEl.type !== 'shape' && !selectedEl.type.startsWith('ctrl-') && !['page-link', 'back-button', 'home-button'].includes(selectedEl.type) && (
+              {/* Conditional Color — available for ALL component types */}
+              {(
                 <div className="pt-2 border-t border-gray-100">
                   <label className="block text-xs font-semibold text-gray-600 mb-2">Conditional Color</label>
                   <div className="text-[10px] text-gray-400 mb-1">Change color based on tag value</div>

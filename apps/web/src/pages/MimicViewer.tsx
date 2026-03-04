@@ -603,7 +603,7 @@ export default function MimicViewer() {
             x={0}
             y={el.properties.fontSize || 14}
             fontSize={el.properties.fontSize || 14}
-            fill={animated.color || el.properties.color || '#000'}
+            fill={conditionalColor || animated.color || el.properties.color || '#000'}
             fontFamily="sans-serif"
           >
             {el.properties.text || 'Text'}
@@ -615,22 +615,22 @@ export default function MimicViewer() {
               cy={el.height / 2}
               rx={el.width / 2}
               ry={el.height / 2}
-              fill={animated.fill || el.properties.fill || '#E5E7EB'}
-              stroke={animated.stroke || el.properties.stroke || '#6B7280'}
+              fill={conditionalColor || animated.fill || el.properties.fill || '#E5E7EB'}
+              stroke={conditionalColor || animated.stroke || el.properties.stroke || '#6B7280'}
               strokeWidth={el.properties.strokeWidth || 2}
             />
           ) : el.properties.shapeType === 'line' ? (
             <line
               x1={0} y1={0} x2={el.width} y2={el.height}
-              stroke={animated.stroke || el.properties.stroke || '#374151'}
+              stroke={conditionalColor || animated.stroke || el.properties.stroke || '#374151'}
               strokeWidth={el.properties.strokeWidth || 2}
             />
           ) : (
             <rect
               width={el.width}
               height={el.height}
-              fill={animated.fill || el.properties.fill || '#E5E7EB'}
-              stroke={animated.stroke || el.properties.stroke || '#6B7280'}
+              fill={conditionalColor || animated.fill || el.properties.fill || '#E5E7EB'}
+              stroke={conditionalColor || animated.stroke || el.properties.stroke || '#6B7280'}
               strokeWidth={el.properties.strokeWidth || 2}
               rx={4}
             />
@@ -653,7 +653,7 @@ export default function MimicViewer() {
                     onMouseLeave={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; }}
                     style={{
                       width: '90%', height: '75%', borderRadius: 6,
-                      background: `linear-gradient(180deg, ${el.properties.buttonColor || '#6B7280'}, ${el.properties.buttonColor ? el.properties.buttonColor + 'CC' : '#4B5563'})`,
+                      background: `linear-gradient(180deg, ${conditionalColor || el.properties.buttonColor || '#6B7280'}, ${(conditionalColor || el.properties.buttonColor) ? (conditionalColor || el.properties.buttonColor) + 'CC' : '#4B5563'})`,
                       boxShadow: '0 4px 6px rgba(0,0,0,0.4), 0 2px 0 rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
                       border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', userSelect: 'none' as any, transition: 'all 0.1s ease',
@@ -762,7 +762,7 @@ export default function MimicViewer() {
             <rect
               width={el.width}
               height={el.height}
-              fill={el.properties.buttonColor || '#3B82F6'}
+              fill={conditionalColor || el.properties.buttonColor || '#3B82F6'}
               stroke="#1E3A5F"
               strokeWidth={1.5}
               rx={6}
@@ -803,7 +803,7 @@ export default function MimicViewer() {
             <rect
               width={el.width}
               height={el.height}
-              fill={el.properties.buttonColor || '#3B82F6'}
+              fill={conditionalColor || el.properties.buttonColor || '#3B82F6'}
               stroke="#1E40AF"
               strokeWidth={1.5}
               rx={6}
