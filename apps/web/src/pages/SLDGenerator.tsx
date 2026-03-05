@@ -86,7 +86,17 @@ export default function SLDGenerator() {
       } else {
         const message = err instanceof Error ? err.message : 'SLD generation failed';
         // Extract server error message from axios response if available
-        const serverMessage = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+        const serverData = (err as { response?: { data?: unknown } })?.response?.data;
+        const serverMessage =
+          typeof serverData === 'string'
+            ? serverData
+            : serverData && typeof serverData === 'object'
+            ? (serverData as Record<string, unknown>).error
+              ? String((serverData as Record<string, unknown>).error)
+              : (serverData as Record<string, unknown>).message
+              ? String((serverData as Record<string, unknown>).message)
+              : JSON.stringify(serverData)
+            : null;
         setError(serverMessage || message);
       }
     } finally {

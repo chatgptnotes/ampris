@@ -75,7 +75,9 @@ export default function SLDPreview({ file, layout, isGenerating, error, onRegene
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">Generation Failed</h3>
-              <p className="text-sm text-red-300 mt-1">{error}</p>
+              <p className="text-sm text-red-300 mt-1">
+                {typeof error === 'string' ? error : JSON.stringify(error)}
+              </p>
             </div>
           </div>
           {onRegenerate && (
