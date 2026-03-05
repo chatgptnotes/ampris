@@ -6,9 +6,9 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'
 
 export async function generateSLD(req: Request, res: Response): Promise<void> {
   try {
-    if (!env.ANTHROPIC_API_KEY) {
+    if (!env.ANTHROPIC_API_KEY && !env.ANTHROPIC_OAUTH_TOKEN) {
       res.status(503).json({
-        error: 'SLD generation service is not configured. Set ANTHROPIC_API_KEY in your .env file.',
+        error: 'SLD generation service is not configured. Set ANTHROPIC_API_KEY or ANTHROPIC_OAUTH_TOKEN in your .env file.',
       });
       return;
     }

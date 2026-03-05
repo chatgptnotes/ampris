@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { env } from '../config/environment';
@@ -157,11 +157,16 @@ export async function generateSLDFromImage(
   imageBuffer: Buffer,
   mimeType: string,
 ): Promise<SLDLayout> {
-  if (!env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not configured. Set it in your .env file.');
+  const apiKey = env.ANTHROPIC_API_KEY;
+  const oauthToken = env.ANTHROPIC_OAUTH_TOKEN;
+
+  if (!apiKey && !oauthToken) {
+    throw new Error('Anthropic credentials not configured. Set ANTHROPIC_API_KEY or ANTHROPIC_OAUTH_TOKEN in your .env file.');
   }
 
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  const client = apiKey
+    ? new Anthropic({ apiKey })
+    : new Anthropic({ authToken: oauthToken });
 
   const base64Image = imageBuffer.toString('base64');
 

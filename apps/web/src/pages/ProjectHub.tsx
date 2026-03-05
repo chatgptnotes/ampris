@@ -79,6 +79,9 @@ export default function ProjectHub() {
         await api.post(`/projects/${data.id}/pages`, { name: tpl?.name || 'Overview' });
       } else if (creationMode === 'blank') {
         await api.post(`/projects/${data.id}/pages`, { name: 'Overview' });
+      } else if (creationMode === 'ai') {
+        // Always create a default page so MimicEditor doesn't crash
+        await api.post(`/projects/${data.id}/pages`, { name: 'Overview' });
       }
       setShowNewModal(false);
       setNewName('');

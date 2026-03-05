@@ -1233,9 +1233,14 @@ export default function MimicEditor() {
       setGridSize(data.gridSize || 5);
       setBgColor(data.backgroundColor || '#FFFFFF');
       setPageName(data.name || '');
-      setPageSettings(data.pageSettings || {
+      const defaultPageSettings = {
         header: { show: true, logoUrl: '', title: '', subtitle: '', bgColor: '#0F172A', textColor: '#FFFFFF', height: 50 },
         footer: { show: true, customText: '', bgColor: '#0F172A', textColor: '#FFFFFF', height: 60, widgets: [{ id: 'w1', type: 'alarm-banner' as FooterWidgetType, label: 'Alarm Banner', height: 28 }, { id: 'w2', type: 'status-bar' as FooterWidgetType, label: 'Status Bar', height: 22 }] },
+      };
+      const ps = data.pageSettings || {};
+      setPageSettings({
+        header: { ...defaultPageSettings.header, ...(ps.header || {}) },
+        footer: { ...defaultPageSettings.footer, ...(ps.footer || {}) },
       });
       setHistory([els]);
       setHistoryIdx(0);
