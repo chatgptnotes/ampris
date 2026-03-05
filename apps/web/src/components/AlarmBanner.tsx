@@ -39,7 +39,8 @@ export default function AlarmBanner() {
   const fetchAlarms = useCallback(async () => {
     try {
       const { data } = await api.get('/project-alarms/active');
-      setAlarms(data);
+      if (!Array.isArray(data)) return;
+      setAlarms(Array.isArray(data) ? data : []);
     } catch {}
   }, []);
 
