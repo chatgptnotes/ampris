@@ -52,6 +52,9 @@ export default function ProjectHub() {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [aiFile, setAiFile] = useState<File | null>(null);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
 
@@ -74,14 +77,46 @@ export default function ProjectHub() {
     try {
       const { data } = await api.post('/projects', { name: newName, description: newDesc || undefined });
       if (creationMode === 'template' && selectedTemplate) {
-        // Create a default page with template name
         const tpl = TEMPLATES.find((t) => t.id === selectedTemplate);
         await api.post(`/projects/${data.id}/pages`, { name: tpl?.name || 'Overview' });
       } else if (creationMode === 'blank') {
         await api.post(`/projects/${data.id}/pages`, { name: 'Overview' });
       } else if (creationMode === 'ai') {
-        // Always create a default page so MimicEditor doesn't crash
-        await api.post(`/projects/${data.id}/pages`, { name: 'Overview' });
+        // Create default page first
+        const pageRes = await api.post(`/projects/${data.id}/pages`, { name: 'AI Generated SLD' });
+        const pageId = pageRes.data.id;
+
+        // If file uploaded, send to SLD generation API
+        if (aiFile) {
+          try {
+            setAiGenerating(true);
+            setAiError(null);
+            const formData = new FormData();
+            formData.append('file', aiFile);
+            const sldRes = await api.post('/sld/generate', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+              timeout: 90000,
+            });
+            const layout = sldRes.data.layout;
+            if (layout && layout.elements) {
+              // Save the generated layout into the page
+              await api.put(`/projects/${data.id}/pages/${pageId}`, {
+                name: layout.name || 'AI Generated SLD',
+                elements: layout.elements.map((el: any) => ({
+                  ...el,
+                  elementType: el.type,
+                })),
+                connections: layout.connections || [],
+                backgroundColor: '#FFFFFF',
+              });
+            }
+          } catch (err: any) {
+            const msg = err?.response?.data?.error || err?.message || 'AI generation failed';
+            setAiError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+          } finally {
+            setAiGenerating(false);
+          }
+        }
       }
       setShowNewModal(false);
       setNewName('');
@@ -325,13 +360,18 @@ export default function ProjectHub() {
               {creationMode === 'ai' && (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                   <Upload className="w-10 h-10 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm font-medium text-gray-600">Upload SLD Image or PDF</p>
+                  <p className="text-sm font-medium text-gray-600">Upload SLD Image</p>
                   <p className="text-xs text-gray-400 mt-1">AI will analyze and generate mimic pages automatically</p>
                   <input
                     type="file"
-                    accept="image/*,.pdf"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={(e) => { setAiFile(e.target.files?.[0] || null); setAiError(null); }}
                     className="mt-3 text-sm text-gray-500 file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
+                  {aiFile && <p className="text-xs text-green-600 mt-2">Selected: {aiFile.name}</p>}
+                  {aiGenerating && <p className="text-xs text-blue-600 mt-2 animate-pulse">Analyzing SLD with AI... this may take 30-60 seconds</p>}
+                  {aiError && <p className="text-xs text-red-500 mt-2">{aiError}</p>}
+                  <p className="text-xs text-gray-400 mt-2">Tip: If no file selected, an empty page will be created</p>
                 </div>
               )}
             </div>
@@ -345,10 +385,10 @@ export default function ProjectHub() {
               </button>
               <button
                 onClick={handleCreate}
-                disabled={!newName.trim() || creating}
+                disabled={!newName.trim() || creating || aiGenerating}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                {creating ? 'Creating...' : 'Create Project'}
+                {aiGenerating ? 'Generating SLD...' : creating ? 'Creating...' : 'Create Project'}
               </button>
             </div>
           </div>

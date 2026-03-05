@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { env } from '../config/environment';
@@ -157,48 +157,32 @@ export async function generateSLDFromImage(
   imageBuffer: Buffer,
   mimeType: string,
 ): Promise<SLDLayout> {
-  const apiKey = env.ANTHROPIC_API_KEY;
-  const oauthToken = env.ANTHROPIC_OAUTH_TOKEN;
-
-  if (!apiKey && !oauthToken) {
-    throw new Error('Anthropic credentials not configured. Set ANTHROPIC_API_KEY or ANTHROPIC_OAUTH_TOKEN in your .env file.');
+  if (!env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not configured. Set it in your .env file.');
   }
 
-  const client = apiKey
-    ? new Anthropic({ apiKey })
-    : new Anthropic({ authToken: oauthToken });
-
+  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
   const base64Image = imageBuffer.toString('base64');
+  const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-  const response = await client.messages.create({
-    model: 'claude-opus-4-5',
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',
     max_tokens: 8192,
-    system: SYSTEM_PROMPT,
     messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
       {
         role: 'user',
         content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-              data: base64Image,
-            },
-          },
-          {
-            type: 'text',
-            text: 'Analyze this Single Line Diagram image and return the JSON representation. Identify all equipment, connections, voltage levels, and labels visible in the diagram.',
-          },
+          { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
+          { type: 'text', text: 'This is an electrical engineering Single Line Diagram (SLD) showing power substation equipment such as circuit breakers, transformers, bus bars, and feeders. Analyze this SLD technical drawing and return the JSON representation. Identify all electrical equipment symbols, connections, voltage levels, and labels visible in the diagram.' },
         ],
       },
     ],
   });
 
-  const textBlock = response.content.find((block) => block.type === 'text');
-  const textContent = textBlock?.type === 'text' ? textBlock.text : null;
+  const textContent = response.choices[0]?.message?.content;
   if (!textContent) {
-    throw new Error('No text response received from Claude');
+    throw new Error('No text response received from OpenAI');
   }
 
   const jsonStr = extractJSON(textContent);
@@ -207,13 +191,13 @@ export async function generateSLDFromImage(
   try {
     parsed = JSON.parse(jsonStr);
   } catch {
-    throw new Error(`Failed to parse Claude response as JSON: ${jsonStr.substring(0, 200)}...`);
+    throw new Error(`Failed to parse OpenAI response as JSON: ${jsonStr.substring(0, 200)}...`);
   }
 
-  const result = SLDLayoutSchema.safeParse(parsed);
-  if (!result.success) {
-    throw new Error(`Response does not match SLDLayout schema: ${result.error.message}`);
+  const validation = SLDLayoutSchema.safeParse(parsed);
+  if (!validation.success) {
+    throw new Error(`Response does not match SLDLayout schema: ${validation.error.message}`);
   }
 
-  return ensureUUIDs(result.data);
+  return ensureUUIDs(validation.data);
 }
