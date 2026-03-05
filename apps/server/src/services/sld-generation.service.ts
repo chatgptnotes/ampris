@@ -3,92 +3,104 @@ import { v4 as uuidv4 } from 'uuid';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Maps AI type names to GridVision's actual symbol types
+// Maps AI type names to GridVision's actual symbol types + sizes
 const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
-  CIRCUIT_BREAKER:       { type: 'CB',                  w: 60,  h: 60  },
-  ISOLATOR:              { type: 'Isolator',             w: 60,  h: 40  },
-  EARTH_SWITCH:          { type: 'EarthSwitch',          w: 50,  h: 50  },
-  POWER_TRANSFORMER:     { type: 'Transformer',          w: 80,  h: 100 },
-  CURRENT_TRANSFORMER:   { type: 'CT',                   w: 50,  h: 40  },
-  POTENTIAL_TRANSFORMER: { type: 'PT',                   w: 50,  h: 40  },
-  BUS_BAR:               { type: 'BusBar',               w: 300, h: 10  },
-  FEEDER_LINE:           { type: 'Feeder',               w: 60,  h: 80  },
-  LIGHTNING_ARRESTER:    { type: 'LightningArrester',    w: 40,  h: 60  },
-  CAPACITOR_BANK:        { type: 'CapacitorBank',        w: 60,  h: 60  },
-  VACUUM_CB:             { type: 'VacuumCB',             w: 60,  h: 60  },
-  SF6_CB:                { type: 'SF6CB',                w: 60,  h: 60  },
-  OVERHEAD_LINE:         { type: 'OverheadLine',         w: 120, h: 30  },
-  CABLE:                 { type: 'Cable',                w: 100, h: 10  },
-  GENERATOR:             { type: 'Generator',            w: 70,  h: 70  },
-  MOTOR:                 { type: 'Motor',                w: 70,  h: 70  },
-  METER:                 { type: 'Meter',                w: 60,  h: 60  },
+  CIRCUIT_BREAKER:       { type: 'CB',               w: 40,  h: 40  },
+  VACUUM_CB:             { type: 'VacuumCB',          w: 40,  h: 40  },
+  SF6_CB:                { type: 'SF6CB',             w: 40,  h: 40  },
+  ISOLATOR:              { type: 'Isolator',          w: 40,  h: 25  },
+  EARTH_SWITCH:          { type: 'EarthSwitch',       w: 30,  h: 30  },
+  POWER_TRANSFORMER:     { type: 'Transformer',       w: 70,  h: 90  },
+  CURRENT_TRANSFORMER:   { type: 'CT',                w: 35,  h: 25  },
+  POTENTIAL_TRANSFORMER: { type: 'PT',                w: 35,  h: 25  },
+  BUS_BAR:               { type: 'BusBar',            w: 800, h: 8   },
+  FEEDER:                { type: 'Feeder',            w: 40,  h: 60  },
+  FEEDER_LINE:           { type: 'Feeder',            w: 40,  h: 60  },
+  LIGHTNING_ARRESTER:    { type: 'LightningArrester', w: 30,  h: 50  },
+  CAPACITOR_BANK:        { type: 'CapacitorBank',     w: 50,  h: 50  },
+  CABLE:                 { type: 'Cable',             w: 80,  h: 8   },
+  OVERHEAD_LINE:         { type: 'OverheadLine',      w: 100, h: 20  },
+  METER:                 { type: 'Meter',             w: 40,  h: 40  },
+  CT:                    { type: 'CT',                w: 35,  h: 25  },
+  PT:                    { type: 'PT',                w: 35,  h: 25  },
 };
 
 function normalizeType(t: string): { type: string; w: number; h: number } {
   const u = (t || '').toUpperCase().replace(/[-\s]/g, '_');
   if (TYPE_MAP[u]) return TYPE_MAP[u];
-  // Partial match
-  for (const [k, v] of Object.entries(TYPE_MAP)) {
-    if (u.includes(k) || k.includes(u)) return v;
-  }
-  // Keyword match
-  if (u.includes('BREAKER') || u.includes('CB')) return TYPE_MAP.CIRCUIT_BREAKER;
-  if (u.includes('TRANSFORM') || u.includes('XFMR')) return TYPE_MAP.POWER_TRANSFORMER;
+  if (u.includes('BREAKER') || u.includes('CB') || u.includes('VCB') || u.includes('ACB')) return TYPE_MAP.CIRCUIT_BREAKER;
+  if (u.includes('TRANSFORM') || u.includes('XFMR') || u.includes('AVR')) return TYPE_MAP.POWER_TRANSFORMER;
   if (u.includes('BUS')) return TYPE_MAP.BUS_BAR;
-  if (u.includes('FEEDER') || u.includes('LINE') || u.includes('CABLE')) return TYPE_MAP.FEEDER_LINE;
-  if (u.includes('ISOLAT')) return TYPE_MAP.ISOLATOR;
+  if (u.includes('FEEDER') || u.includes('OUTGOING')) return TYPE_MAP.FEEDER;
+  if (u.includes('ISOLAT') || u.includes('DISCONN')) return TYPE_MAP.ISOLATOR;
   if (u.includes('EARTH') || u.includes('GROUND')) return TYPE_MAP.EARTH_SWITCH;
-  return TYPE_MAP.FEEDER_LINE;
+  if (u.includes('CT') || u.includes('CURRENT_T')) return TYPE_MAP.CT;
+  if (u.includes('PT') || u.includes('POTENTIAL') || u.includes('VT')) return TYPE_MAP.PT;
+  if (u.includes('ARRESTER') || u.includes('SURGE')) return TYPE_MAP.LIGHTNING_ARRESTER;
+  return TYPE_MAP.FEEDER;
 }
 
 export async function generateSLDFromImage(imageBuffer: Buffer, mimeType: string) {
   const base64Image = imageBuffer.toString('base64');
   const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-  const userPrompt = `Analyze this electrical Single Line Diagram (SLD) and extract all components.
+  const userPrompt = `You are analyzing an electrical Single Line Diagram (SLD). Extract the complete topology and layout.
 
-Return a JSON object with this EXACT structure — a proper SLD layout with busbars at top, components below:
-
+Return JSON with this structure:
 {
-  "name": "Substation name from diagram",
-  "elements": [
+  "name": "substation name",
+  "voltage_levels": ["33kV", "11kV"],
+  "busbars": [
+    { "id": "bb1", "label": "33kV Busbar", "voltage": 33, "x_pct": 50, "y_pct": 15 },
+    { "id": "bb2", "label": "11kV Busbar", "voltage": 11, "x_pct": 50, "y_pct": 35 }
+  ],
+  "components": [
     {
-      "type": "BUS_BAR",
-      "label": "11kV Main Busbar",
-      "row": 0,
-      "col": 0,
-      "span": 8
-    },
-    {
+      "id": "t1",
       "type": "POWER_TRANSFORMER",
       "label": "TR-1 10MVA 33/11kV",
-      "row": 1,
-      "col": 0
+      "x_pct": 20,
+      "y_pct": 25,
+      "connected_to": ["bb1", "bb2"]
     },
     {
+      "id": "cb1",
       "type": "CIRCUIT_BREAKER",
       "label": "VCB-1",
-      "row": 2,
-      "col": 0
+      "x_pct": 30,
+      "y_pct": 45,
+      "connected_to": ["bb2", "f1"]
+    },
+    {
+      "id": "f1",
+      "type": "FEEDER",
+      "label": "Feeder-1 FBC",
+      "x_pct": 30,
+      "y_pct": 60,
+      "connected_to": ["cb1"]
     }
+  ],
+  "connections": [
+    { "from": "bb1", "to": "t1" },
+    { "from": "t1", "to": "bb2" },
+    { "from": "bb2", "to": "cb1" },
+    { "from": "cb1", "to": "f1" }
   ]
 }
 
 Rules:
-- row=0: main busbars (horizontal, full width)
-- row=1: primary equipment connected to busbar (transformers, incoming feeders)
-- row=2: circuit breakers / isolators below transformers
-- row=3: outgoing feeders
-- col: column position (0=leftmost)
-- span: for busbars, how many columns it spans (omit for other elements)
-- type must be one of: BUS_BAR, POWER_TRANSFORMER, CIRCUIT_BREAKER, ISOLATOR, EARTH_SWITCH, CURRENT_TRANSFORMER, POTENTIAL_TRANSFORMER, FEEDER_LINE, LIGHTNING_ARRESTER, CAPACITOR_BANK
-- Include ALL visible components with their exact labels
+- x_pct and y_pct are percentage positions (0-100) representing WHERE each component appears in the original diagram
+- Match positions to the actual diagram layout as closely as possible
+- busbars are horizontal lines spanning the diagram width
+- List ALL components visible: every transformer, breaker, feeder, CT, PT, arrester
+- connections list every wire/line between components
+- type must be: BUS_BAR, POWER_TRANSFORMER, CIRCUIT_BREAKER, ISOLATOR, EARTH_SWITCH, CT, PT, FEEDER, FEEDER_LINE, LIGHTNING_ARRESTER, CAPACITOR_BANK, OVERHEAD_LINE, CABLE
 
-Return ONLY the JSON, no markdown.`;
+Return ONLY valid JSON, no markdown.`;
 
   const response = await client.chat.completions.create({
     model: 'gpt-4o',
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [{
       role: 'user',
       content: [
@@ -99,142 +111,98 @@ Return ONLY the JSON, no markdown.`;
   });
 
   const textContent = response.choices[0]?.message?.content || '';
-  console.log('[SLD] OpenAI response length:', textContent.length);
+  console.log('[SLD] Response length:', textContent.length);
 
   let jsonStr = textContent.trim();
-  const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (fenceMatch) jsonStr = fenceMatch[1].trim();
-  const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-  if (jsonMatch) jsonStr = jsonMatch[0];
+  const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fence) jsonStr = fence[1].trim();
+  const jMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (jMatch) jsonStr = jMatch[0];
 
   let parsed: any;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch {
-    throw new Error('Failed to parse OpenAI response as JSON: ' + textContent.substring(0, 200));
-  }
+  try { parsed = JSON.parse(jsonStr); }
+  catch { throw new Error('Failed to parse AI response: ' + textContent.substring(0, 200)); }
 
-  const rawElements: any[] = parsed.elements || [];
-  if (rawElements.length === 0) throw new Error('No elements detected in diagram');
-
-  // Layout constants
-  const COL_W = 160;   // pixels per column
-  const ROW_H = 140;   // pixels per row
-  const MARGIN_X = 80;
-  const MARGIN_Y = 60;
-  const CANVAS_W = 1920;
-  const CANVAS_H = 1080;
-
-  // Count max cols
-  const maxCol = Math.max(...rawElements.filter(e => e.type !== 'BUS_BAR').map(e => e.col ?? 0));
-  const totalCols = Math.max(maxCol + 1, 6);
+  // Canvas size
+  const CW = 1920, CH = 1080;
+  const MARGIN_X = 80, MARGIN_Y = 80;
+  const USABLE_W = CW - MARGIN_X * 2;
+  const USABLE_H = CH - MARGIN_Y * 2;
 
   const elements: any[] = [];
   const connections: any[] = [];
+  const idMap = new Map<string, string>(); // AI id -> element uuid
 
-  // Place elements on grid
-  for (const raw of rawElements) {
-    const sym = normalizeType(raw.type);
-    const col = raw.col ?? 0;
-    const row = raw.row ?? 1;
-    const span = raw.span ?? 1;
-
-    let x: number, y: number, w: number, h: number;
-
-    if (raw.type === 'BUS_BAR' || sym.type === 'BusBar') {
-      // Busbar spans full width
-      w = span > 1 ? span * COL_W : totalCols * COL_W;
-      h = 12;
-      x = MARGIN_X;
-      y = MARGIN_Y + row * ROW_H;
-    } else {
-      w = sym.w;
-      h = sym.h;
-      x = MARGIN_X + col * COL_W + Math.round((COL_W - w) / 2);
-      y = MARGIN_Y + row * ROW_H + Math.round((ROW_H - h) / 2);
-    }
-
-    const id = uuidv4();
+  // Place busbars
+  const busbars: any[] = parsed.busbars || [];
+  for (const bb of busbars) {
+    const sym = TYPE_MAP.BUS_BAR;
+    const uid = uuidv4();
+    idMap.set(bb.id, uid);
+    const cx = MARGIN_X + (bb.x_pct / 100) * USABLE_W;
+    const y  = MARGIN_Y + (bb.y_pct / 100) * USABLE_H;
+    const w  = USABLE_W * 0.9;
     elements.push({
-      id,
-      type: sym.type,
-      x,
-      y,
-      width: w,
-      height: h,
-      rotation: 0,
-      zIndex: row,
-      properties: {
-        tagBindings: {},
-        label: raw.label || '',
-        showLabel: true,
-        labelPosition: sym.type === 'BusBar' ? 'top' : 'bottom',
-      },
-      _col: col,
-      _row: row,
-      _type: raw.type,
+      id: uid, type: sym.type,
+      x: Math.round(MARGIN_X + USABLE_W * 0.05), y: Math.round(y),
+      width: Math.round(w), height: sym.h,
+      rotation: 0, zIndex: 1,
+      properties: { tagBindings: {}, label: bb.label || '', showLabel: true, labelPosition: 'top', voltageLevel: bb.voltage || 11 },
     });
   }
 
-  // Helper: center-bottom point of an element
-  function bottomCenter(el: any) { return { x: el.x + el.width / 2, y: el.y + el.height }; }
-  function topCenter(el: any)    { return { x: el.x + el.width / 2, y: el.y }; }
-
-  function makeConn(fromEl: any, toEl: any, color = '#374151') {
-    const from = bottomCenter(fromEl);
-    const to   = topCenter(toEl);
-    const midY = (from.y + to.y) / 2;
-    return {
-      id: uuidv4(),
-      fromId: fromEl.id,
-      toId: toEl.id,
-      points: [from, { x: from.x, y: midY }, { x: to.x, y: midY }, to],
-      color,
-      thickness: 2,
-    };
+  // Place components
+  const comps: any[] = parsed.components || [];
+  for (const comp of comps) {
+    const sym = normalizeType(comp.type);
+    const uid = uuidv4();
+    idMap.set(comp.id, uid);
+    const cx = MARGIN_X + (comp.x_pct / 100) * USABLE_W;
+    const cy = MARGIN_Y + (comp.y_pct / 100) * USABLE_H;
+    elements.push({
+      id: uid, type: sym.type,
+      x: Math.round(cx - sym.w / 2), y: Math.round(cy - sym.h / 2),
+      width: sym.w, height: sym.h,
+      rotation: 0, zIndex: 2,
+      properties: { tagBindings: {}, label: comp.label || '', showLabel: true, labelPosition: 'bottom' },
+    });
   }
 
-  const busbars = elements.filter(e => e.elementType === 'BusBar');
-  const others  = elements.filter(e => e.elementType !== 'BusBar');
+  // Build connections from AI connection list
+  const aiConns: any[] = parsed.connections || [];
+  for (const c of aiConns) {
+    const fromUid = idMap.get(c.from);
+    const toUid   = idMap.get(c.to);
+    if (!fromUid || !toUid) continue;
+    const fromEl = elements.find(e => e.id === fromUid);
+    const toEl   = elements.find(e => e.id === toUid);
+    if (!fromEl || !toEl) continue;
 
-  // Busbar → equipment directly below (same column)
-  for (const busbar of busbars) {
-    const busRow = busbar._row;
-    const below  = others.filter(e => e._row === busRow + 1);
-    for (const el of below) {
-      const fromPt = { x: el.x + el.width / 2, y: busbar.y + busbar.height };
-      const toPt   = topCenter(el);
-      connections.push({
-        id: uuidv4(), fromId: busbar.id, toId: el.id,
-        points: [fromPt, toPt], color: '#374151', thickness: 2,
-      });
-    }
+    // Compute wire points
+    const fx = fromEl.x + fromEl.width  / 2;
+    const fy = fromEl.y + fromEl.height;
+    const tx = toEl.x   + toEl.width    / 2;
+    const ty = toEl.y;
+    const midY = (fy + ty) / 2;
+
+    // If same x, straight line; else L-shape
+    const pts = fx === tx
+      ? [{ x: fx, y: fy }, { x: tx, y: ty }]
+      : [{ x: fx, y: fy }, { x: fx, y: midY }, { x: tx, y: midY }, { x: tx, y: ty }];
+
+    connections.push({
+      id: uuidv4(), fromId: fromUid, toId: toUid,
+      points: pts, color: '#374151', thickness: 2,
+    });
   }
 
-  // Within-column: row N → row N+1
-  for (let c = 0; c <= maxCol; c++) {
-    const colEls = others.filter(e => e._col === c).sort((a: any, b: any) => a._row - b._row);
-    for (let i = 0; i < colEls.length - 1; i++) {
-      connections.push(makeConn(colEls[i], colEls[i + 1]));
-    }
-  }
-
-  // Clean up internal props
-  for (const el of elements) {
-    delete el._col;
-    delete el._row;
-    delete el._type;
-  }
-
-  console.log(`[SLD] Schema validation passed — elements: ${elements.length}`);
+  console.log(`[SLD] Generated: ${elements.length} elements, ${connections.length} connections`);
+  if (elements.length === 0) throw new Error('No elements detected in diagram');
 
   return {
-    id: uuidv4(),
-    substationId: uuidv4(),
+    id: uuidv4(), substationId: uuidv4(),
     name: parsed.name || 'AI Generated SLD',
-    width: CANVAS_W,
-    height: CANVAS_H,
-    elements,
-    connections,
+    width: CW, height: CH,
+    elements, connections,
   };
 }
