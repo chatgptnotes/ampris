@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { env } from '../config/environment';
@@ -157,31 +157,28 @@ export async function generateSLDFromImage(
   imageBuffer: Buffer,
   mimeType: string,
 ): Promise<SLDLayout> {
-  if (!env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not configured. Set it in your .env file.');
+  if (!env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY is not configured. Set it in your .env file.');
   }
 
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
   const base64Image = imageBuffer.toString('base64');
-  const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-  const response = await client.chat.completions.create({
-    model: env.OPENAI_MODEL,
+  const response = await client.messages.create({
+    model: 'claude-opus-4-5',
     max_tokens: 8192,
+    system: SYSTEM_PROMPT,
     messages: [
-      {
-        role: 'system',
-        content: SYSTEM_PROMPT,
-      },
       {
         role: 'user',
         content: [
           {
-            type: 'image_url',
-            image_url: {
-              url: dataUrl,
-              detail: 'high',
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+              data: base64Image,
             },
           },
           {
@@ -193,9 +190,10 @@ export async function generateSLDFromImage(
     ],
   });
 
-  const textContent = response.choices[0]?.message?.content;
+  const textBlock = response.content.find((block) => block.type === 'text');
+  const textContent = textBlock?.type === 'text' ? textBlock.text : null;
   if (!textContent) {
-    throw new Error('No text response received from OpenAI');
+    throw new Error('No text response received from Claude');
   }
 
   const jsonStr = extractJSON(textContent);
@@ -204,7 +202,7 @@ export async function generateSLDFromImage(
   try {
     parsed = JSON.parse(jsonStr);
   } catch {
-    throw new Error(`Failed to parse response as JSON: ${jsonStr.substring(0, 200)}...`);
+    throw new Error(`Failed to parse Claude response as JSON: ${jsonStr.substring(0, 200)}...`);
   }
 
   const result = SLDLayoutSchema.safeParse(parsed);
