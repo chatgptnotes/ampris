@@ -10,6 +10,7 @@ interface AlarmState {
   addAlarm: (alarm: ActiveAlarm) => void;
   removeAlarm: (id: string) => void;
   updateAlarm: (id: string, updates: Partial<ActiveAlarm>) => void;
+  acknowledgeAlarm: (id: string) => void;
   setSummary: (summary: AlarmSummary) => void;
   toggleSound: () => void;
 }
@@ -41,6 +42,17 @@ export const useAlarmStore = create<AlarmState>()((set) => ({
       activeAlarms: state.activeAlarms.map((a) =>
         a.id === id ? { ...a, ...updates } : a,
       ),
+    })),
+
+  acknowledgeAlarm: (id) =>
+    set((state) => ({
+      activeAlarms: state.activeAlarms.map((a) =>
+        a.id === id ? { ...a, state: 'ACKNOWLEDGED', ackedAt: new Date() } : a,
+      ),
+      summary: {
+        ...state.summary,
+        unacknowledged: Math.max(0, state.summary.unacknowledged - 1),
+      },
     })),
 
   setSummary: (summary) => set({ summary }),
