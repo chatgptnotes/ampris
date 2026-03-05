@@ -42,8 +42,23 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
+const allowedOrigins = [
+  env.CORS_ORIGIN,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://gridvision.vercel.app',
+  'https://gridvision.in',
+  'https://www.gridvision.in',
+];
 app.use(cors({
-  origin: env.CORS_ORIGIN,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.some(o => origin === o || origin.endsWith('.gridvision.in') || origin.endsWith('.vercel.app'))) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 app.use(cookieParser());
