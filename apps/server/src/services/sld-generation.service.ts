@@ -1,236 +1,236 @@
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
-import { z } from 'zod';
-import { env } from '../config/environment';
 
-// Zod schemas matching the SLDLayout interface
-const VALID_TYPES = [
-  'CIRCUIT_BREAKER', 'ISOLATOR', 'EARTH_SWITCH', 'POWER_TRANSFORMER',
-  'CURRENT_TRANSFORMER', 'POTENTIAL_TRANSFORMER', 'BUS_BAR',
-  'FEEDER_LINE', 'LIGHTNING_ARRESTER', 'CAPACITOR_BANK',
-] as const;
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Map common OpenAI variations to valid types
-function normalizeElementType(type: string): typeof VALID_TYPES[number] {
-  const t = type.toUpperCase().replace(/[-\s]/g, '_');
-  if (VALID_TYPES.includes(t as any)) return t as typeof VALID_TYPES[number];
-  if (t.includes('BREAKER') || t.includes('CB')) return 'CIRCUIT_BREAKER';
-  if (t.includes('TRANSFORMER') || t.includes('XFMR') || t.includes('TX')) return 'POWER_TRANSFORMER';
-  if (t.includes('BUS') || t.includes('BUSBAR')) return 'BUS_BAR';
-  if (t.includes('ISOLATOR') || t.includes('DISCONNECT')) return 'ISOLATOR';
-  if (t.includes('EARTH') || t.includes('GROUND')) return 'EARTH_SWITCH';
-  if (t.includes('CT') || t.includes('CURRENT')) return 'CURRENT_TRANSFORMER';
-  if (t.includes('PT') || t.includes('POTENTIAL') || t.includes('VT')) return 'POTENTIAL_TRANSFORMER';
-  if (t.includes('FEEDER') || t.includes('LINE') || t.includes('CABLE')) return 'FEEDER_LINE';
-  if (t.includes('ARRESTER') || t.includes('LIGHTNING') || t.includes('SURGE')) return 'LIGHTNING_ARRESTER';
-  if (t.includes('CAPACITOR') || t.includes('CAP')) return 'CAPACITOR_BANK';
-  return 'FEEDER_LINE'; // default fallback
+// Maps AI type names to GridVision's actual symbol types
+const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
+  CIRCUIT_BREAKER:       { type: 'CB',                  w: 60,  h: 60  },
+  ISOLATOR:              { type: 'Isolator',             w: 60,  h: 40  },
+  EARTH_SWITCH:          { type: 'EarthSwitch',          w: 50,  h: 50  },
+  POWER_TRANSFORMER:     { type: 'Transformer',          w: 80,  h: 100 },
+  CURRENT_TRANSFORMER:   { type: 'CT',                   w: 50,  h: 40  },
+  POTENTIAL_TRANSFORMER: { type: 'PT',                   w: 50,  h: 40  },
+  BUS_BAR:               { type: 'BusBar',               w: 300, h: 10  },
+  FEEDER_LINE:           { type: 'Feeder',               w: 60,  h: 80  },
+  LIGHTNING_ARRESTER:    { type: 'LightningArrester',    w: 40,  h: 60  },
+  CAPACITOR_BANK:        { type: 'CapacitorBank',        w: 60,  h: 60  },
+  VACUUM_CB:             { type: 'VacuumCB',             w: 60,  h: 60  },
+  SF6_CB:                { type: 'SF6CB',                w: 60,  h: 60  },
+  OVERHEAD_LINE:         { type: 'OverheadLine',         w: 120, h: 30  },
+  CABLE:                 { type: 'Cable',                w: 100, h: 10  },
+  GENERATOR:             { type: 'Generator',            w: 70,  h: 70  },
+  MOTOR:                 { type: 'Motor',                w: 70,  h: 70  },
+  METER:                 { type: 'Meter',                w: 60,  h: 60  },
+};
+
+function normalizeType(t: string): { type: string; w: number; h: number } {
+  const u = (t || '').toUpperCase().replace(/[-\s]/g, '_');
+  if (TYPE_MAP[u]) return TYPE_MAP[u];
+  // Partial match
+  for (const [k, v] of Object.entries(TYPE_MAP)) {
+    if (u.includes(k) || k.includes(u)) return v;
+  }
+  // Keyword match
+  if (u.includes('BREAKER') || u.includes('CB')) return TYPE_MAP.CIRCUIT_BREAKER;
+  if (u.includes('TRANSFORM') || u.includes('XFMR')) return TYPE_MAP.POWER_TRANSFORMER;
+  if (u.includes('BUS')) return TYPE_MAP.BUS_BAR;
+  if (u.includes('FEEDER') || u.includes('LINE') || u.includes('CABLE')) return TYPE_MAP.FEEDER_LINE;
+  if (u.includes('ISOLAT')) return TYPE_MAP.ISOLATOR;
+  if (u.includes('EARTH') || u.includes('GROUND')) return TYPE_MAP.EARTH_SWITCH;
+  return TYPE_MAP.FEEDER_LINE;
 }
 
-const SLDElementSchema = z.object({
-  id: z.string(),
-  equipmentId: z.string().optional().default(() => uuidv4()),
-  type: z.string().transform(normalizeElementType),
-  x: z.number(),
-  y: z.number(),
-  rotation: z.number().optional().default(0),
-  label: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
+export async function generateSLDFromImage(imageBuffer: Buffer, mimeType: string) {
+  const base64Image = imageBuffer.toString('base64');
+  const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-const SLDConnectionSchema = z.object({
-  id: z.string(),
-  fromElementId: z.string(),
-  fromPoint: z.string().optional().default('bottom'),
-  toElementId: z.string(),
-  toPoint: z.string().optional().default('top'),
-  voltageLevel: z.number().optional().default(11),
-});
+  const userPrompt = `Analyze this electrical Single Line Diagram (SLD) and extract all components.
 
-const SLDLayoutSchema = z.object({
-  id: z.string().optional().default(() => uuidv4()),
-  substationId: z.string().optional().default(() => uuidv4()),
-  name: z.string().optional().default('AI Generated SLD'),
-  width: z.number().optional().default(1200),
-  height: z.number().optional().default(800),
-  elements: z.array(SLDElementSchema),
-  connections: z.array(SLDConnectionSchema).optional().default([]),
-});
-
-type SLDLayout = z.infer<typeof SLDLayoutSchema>;
-
-const SYSTEM_PROMPT = `You are an expert electrical engineer specializing in Single Line Diagrams (SLDs) for power substations. You analyze images of hand-drawn, scanned, or digital SLD diagrams and produce a structured JSON representation.
-
-You MUST return ONLY valid JSON matching this exact schema (no markdown, no explanation, just JSON):
+Return a JSON object with this EXACT structure — a proper SLD layout with busbars at top, components below:
 
 {
-  "id": "string (UUID)",
-  "substationId": "string (UUID)",
-  "name": "string (descriptive name for the substation)",
-  "width": 1200,
-  "height": 800,
+  "name": "Substation name from diagram",
   "elements": [
     {
-      "id": "string (UUID)",
-      "equipmentId": "string (UUID)",
-      "type": "EQUIPMENT_TYPE",
-      "x": number,
-      "y": number,
-      "rotation": 0,
-      "label": "string (tag/name visible on diagram)",
-      "metadata": { ... }
-    }
-  ],
-  "connections": [
+      "type": "BUS_BAR",
+      "label": "11kV Main Busbar",
+      "row": 0,
+      "col": 0,
+      "span": 8
+    },
     {
-      "id": "string (UUID)",
-      "fromElementId": "string (element id)",
-      "fromPoint": "top|bottom|left|right",
-      "toElementId": "string (element id)",
-      "toPoint": "top|bottom|left|right",
-      "voltageLevel": number
+      "type": "POWER_TRANSFORMER",
+      "label": "TR-1 10MVA 33/11kV",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "type": "CIRCUIT_BREAKER",
+      "label": "VCB-1",
+      "row": 2,
+      "col": 0
     }
   ]
 }
 
-EQUIPMENT TYPES (use these exact strings):
-- CIRCUIT_BREAKER: Square with X symbol, used for switching/protection. Label like "CB1", "INC1", "BSC"
-- ISOLATOR: Blade switch symbol, used for isolation. Label like "ISO1", "DS1"
-- EARTH_SWITCH: Switch to ground symbol. Label like "ES1"
-- POWER_TRANSFORMER: Two overlapping circles, steps voltage up/down. Label like "TR-1", "T1". Metadata: { "hvVoltage": 33, "lvVoltage": 11, "mva": 8 }
-- CURRENT_TRANSFORMER: Small circle on conductor. Label like "CT1"
-- POTENTIAL_TRANSFORMER: Small circle with connection. Label like "PT1"
-- BUS_BAR: Thick horizontal line carrying power. Label like "33kV Bus 1", "11kV Bus". Metadata: { "busWidth": 300, "voltageKv": 33 }
-- FEEDER_LINE: Outgoing line with arrow, delivers power to loads. Label like "F1", "Feeder 1"
-- LIGHTNING_ARRESTER: Zigzag symbol to ground. Label like "LA1"
-- CAPACITOR_BANK: Two parallel plates symbol. Label like "CAP1"
+Rules:
+- row=0: main busbars (horizontal, full width)
+- row=1: primary equipment connected to busbar (transformers, incoming feeders)
+- row=2: circuit breakers / isolators below transformers
+- row=3: outgoing feeders
+- col: column position (0=leftmost)
+- span: for busbars, how many columns it spans (omit for other elements)
+- type must be one of: BUS_BAR, POWER_TRANSFORMER, CIRCUIT_BREAKER, ISOLATOR, EARTH_SWITCH, CURRENT_TRANSFORMER, POTENTIAL_TRANSFORMER, FEEDER_LINE, LIGHTNING_ARRESTER, CAPACITOR_BANK
+- Include ALL visible components with their exact labels
 
-COORDINATE SYSTEM:
-- Canvas is 1200 x 800 pixels
-- Place HV (higher voltage) bus bars in the top portion (y: 100-150)
-- Place LV (lower voltage) bus bars in the lower portion (y: 400-450)
-- Place transformers between the bus bars (y: 200-350)
-- Place feeders below the LV bus (y: 450-600)
-- Spread elements horizontally with adequate spacing (min 80px between elements)
-- Bus bars should span horizontally (typical width 300-600px in metadata.busWidth)
-
-VOLTAGE LEVELS:
-- 132kV: Extra High Voltage (use voltageLevel: 132)
-- 33kV: High Voltage (use voltageLevel: 33)
-- 11kV: Medium Voltage (use voltageLevel: 11)
-- Detect voltage levels from labels, symbols, and context in the diagram
-
-CONNECTION RULES:
-- Connect elements that are electrically linked in the diagram
-- fromPoint/toPoint indicate which side of the element the connection attaches to (top, bottom, left, right)
-- Set voltageLevel based on the voltage zone the connection is in
-- Bus bar connections typically use "top" or "bottom" points
-- Transformer HV side connects from "top", LV side from "bottom"
-
-Generate unique UUIDs for all id fields. Analyze the image carefully and produce accurate, complete JSON.`;
-
-function extractJSON(text: string): string {
-  // Try to extract JSON from markdown code fences
-  const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-  if (fenceMatch) {
-    return fenceMatch[1].trim();
-  }
-  // Try to find raw JSON object
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    return jsonMatch[0].trim();
-  }
-  return text.trim();
-}
-
-function ensureUUIDs(layout: SLDLayout): SLDLayout {
-  const idMap = new Map<string, string>();
-
-  const ensureId = (original: string): string => {
-    if (!idMap.has(original)) {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(original);
-      idMap.set(original, isUUID ? original : uuidv4());
-    }
-    return idMap.get(original)!;
-  };
-
-  return {
-    ...layout,
-    id: ensureId(layout.id),
-    substationId: ensureId(layout.substationId),
-    elements: layout.elements.map((el) => ({
-      ...el,
-      id: ensureId(el.id),
-      equipmentId: ensureId(el.equipmentId),
-    })),
-    connections: layout.connections.map((conn) => ({
-      ...conn,
-      id: ensureId(conn.id),
-      fromElementId: ensureId(conn.fromElementId),
-      toElementId: ensureId(conn.toElementId),
-    })),
-  };
-}
-
-export async function generateSLDFromImage(
-  imageBuffer: Buffer,
-  mimeType: string,
-): Promise<SLDLayout> {
-  if (!env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not configured. Set it in your .env file.');
-  }
-
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-  const base64Image = imageBuffer.toString('base64');
-  const dataUrl = `data:${mimeType};base64,${base64Image}`;
-
-  const userPrompt = `Please analyze this engineering schematic diagram and identify all the components visible in it.
-
-For each component you can see (transformers, circuit breakers, switches, busbars, feeders, cables, meters, etc.), extract:
-- A unique id (generate a UUID like "550e8400-e29b-41d4-a716-446655440000")
-- The component type - map to one of: CIRCUIT_BREAKER, ISOLATOR, EARTH_SWITCH, POWER_TRANSFORMER, CURRENT_TRANSFORMER, POTENTIAL_TRANSFORMER, BUS_BAR, FEEDER_LINE, LIGHTNING_ARRESTER, CAPACITOR_BANK
-- Its label or name as visible in the diagram
-- Its approximate x,y position in pixels (treat the diagram as 1200x800 canvas)
-- rotation: 0
-
-Return ONLY a JSON object with no markdown, no explanation, in this exact format:
-{"id":"uuid","substationId":"uuid","name":"substation name from diagram","width":1200,"height":800,"elements":[{"id":"uuid","equipmentId":"uuid","type":"CIRCUIT_BREAKER","x":100,"y":200,"rotation":0,"label":"CB1"}],"connections":[]}`;
+Return ONLY the JSON, no markdown.`;
 
   const response = await client.chat.completions.create({
     model: 'gpt-4o',
-    max_tokens: 8192,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
-          { type: 'text', text: userPrompt },
-        ],
-      },
-    ],
+    max_tokens: 4096,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
+        { type: 'text', text: userPrompt },
+      ],
+    }],
   });
 
-  const textContent = response.choices[0]?.message?.content;
-  if (!textContent) {
-    throw new Error('No text response received from OpenAI');
-  }
+  const textContent = response.choices[0]?.message?.content || '';
+  console.log('[SLD] OpenAI response length:', textContent.length);
 
-  const jsonStr = extractJSON(textContent);
+  let jsonStr = textContent.trim();
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fenceMatch) jsonStr = fenceMatch[1].trim();
+  const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (jsonMatch) jsonStr = jsonMatch[0];
 
-  let parsed: unknown;
+  let parsed: any;
   try {
     parsed = JSON.parse(jsonStr);
   } catch {
-    throw new Error(`Failed to parse OpenAI response as JSON: ${jsonStr.substring(0, 200)}...`);
+    throw new Error('Failed to parse OpenAI response as JSON: ' + textContent.substring(0, 200));
   }
 
-  const validation = SLDLayoutSchema.safeParse(parsed);
-  if (!validation.success) {
-    console.error('[SLD] Schema validation failed:', validation.error.message);
-    console.error('[SLD] Parsed JSON was:', JSON.stringify(parsed).substring(0, 500));
-    throw new Error(`Schema validation failed: ${validation.error.message}`);
-  }
-  console.log('[SLD] Schema validation passed — elements:', validation.data.elements.length);
+  const rawElements: any[] = parsed.elements || [];
+  if (rawElements.length === 0) throw new Error('No elements detected in diagram');
 
-  return ensureUUIDs(validation.data);
+  // Layout constants
+  const COL_W = 160;   // pixels per column
+  const ROW_H = 140;   // pixels per row
+  const MARGIN_X = 80;
+  const MARGIN_Y = 60;
+  const CANVAS_W = 1920;
+  const CANVAS_H = 1080;
+
+  // Count max cols
+  const maxCol = Math.max(...rawElements.filter(e => e.type !== 'BUS_BAR').map(e => e.col ?? 0));
+  const totalCols = Math.max(maxCol + 1, 6);
+
+  const elements: any[] = [];
+  const connections: any[] = [];
+
+  // Place elements on grid
+  for (const raw of rawElements) {
+    const sym = normalizeType(raw.type);
+    const col = raw.col ?? 0;
+    const row = raw.row ?? 1;
+    const span = raw.span ?? 1;
+
+    let x: number, y: number, w: number, h: number;
+
+    if (raw.type === 'BUS_BAR' || sym.type === 'BusBar') {
+      // Busbar spans full width
+      w = span > 1 ? span * COL_W : totalCols * COL_W;
+      h = 12;
+      x = MARGIN_X;
+      y = MARGIN_Y + row * ROW_H;
+    } else {
+      w = sym.w;
+      h = sym.h;
+      x = MARGIN_X + col * COL_W + Math.round((COL_W - w) / 2);
+      y = MARGIN_Y + row * ROW_H + Math.round((ROW_H - h) / 2);
+    }
+
+    const id = uuidv4();
+    elements.push({
+      id,
+      elementType: sym.type,
+      x,
+      y,
+      width: w,
+      height: h,
+      rotation: 0,
+      zIndex: row,
+      properties: {
+        tagBindings: {},
+        label: raw.label || '',
+        showLabel: true,
+        labelPosition: sym.type === 'BusBar' ? 'top' : 'bottom',
+      },
+      _col: col,
+      _row: row,
+      _type: raw.type,
+    });
+  }
+
+  // Auto-connect: connect busbars to equipment in next row at same column
+  const busbars = elements.filter(e => e.elementType === 'BusBar');
+  const others = elements.filter(e => e.elementType !== 'BusBar');
+
+  for (const busbar of busbars) {
+    const busRow = busbar._row;
+    // Find elements in row busRow+1
+    const below = others.filter(e => e._row === busRow + 1);
+    for (const el of below) {
+      connections.push({
+        id: uuidv4(),
+        fromElementId: busbar.id,
+        fromPoint: 'bottom',
+        toElementId: el.id,
+        toPoint: 'top',
+        voltageLevel: 11,
+        style: 'solid',
+        color: '#ef4444',
+      });
+    }
+  }
+
+  // Connect within column: row1 -> row2 -> row3
+  for (let col = 0; col <= maxCol; col++) {
+    const colEls = others.filter(e => e._col === col).sort((a, b) => a._row - b._row);
+    for (let i = 0; i < colEls.length - 1; i++) {
+      connections.push({
+        id: uuidv4(),
+        fromElementId: colEls[i].id,
+        fromPoint: 'bottom',
+        toElementId: colEls[i + 1].id,
+        toPoint: 'top',
+        voltageLevel: 11,
+        style: 'solid',
+        color: '#ef4444',
+      });
+    }
+  }
+
+  // Clean up internal props
+  for (const el of elements) {
+    delete el._col;
+    delete el._row;
+    delete el._type;
+  }
+
+  console.log(`[SLD] Schema validation passed — elements: ${elements.length}`);
+
+  return {
+    id: uuidv4(),
+    substationId: uuidv4(),
+    name: parsed.name || 'AI Generated SLD',
+    width: CANVAS_W,
+    height: CANVAS_H,
+    elements,
+    connections,
+  };
 }
