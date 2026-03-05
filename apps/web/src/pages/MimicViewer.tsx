@@ -230,6 +230,8 @@ export default function MimicViewer() {
   });
   const fullscreenRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  // Rolling history buffer for sparklines: tag -> last 60 {v,t} entries
+  const tagHistoryRef = useRef<Record<string, { v: number; t: number }[]>>({});
 
   // Save current projectId to localStorage for sidebar navigation
   useEffect(() => {
@@ -463,6 +465,20 @@ export default function MimicViewer() {
     } catch (err) { console.error('SBO cancel failed:', err); }
   }, []);
 
+  // Collect tag history for sparklines
+  useEffect(() => {
+    const now = Date.now();
+    Object.entries(values).forEach(([tag, data]: [string, any]) => {
+      const v = typeof data?.value === 'number' ? data.value : parseFloat(String(data?.value ?? ''));
+      if (isNaN(v)) return;
+      const hist = tagHistoryRef.current[tag] || [];
+      const last = hist[hist.length - 1];
+      if (!last || last.v !== v || now - last.t > 5000) {
+        tagHistoryRef.current[tag] = [...hist, { v, t: now }].slice(-60);
+      }
+    });
+  }, [values]);
+
   // Non-passive wheel listener for zoom-only (prevents page scroll)
   useEffect(() => {
     const el = canvasContainerRef.current;
@@ -660,7 +676,59 @@ export default function MimicViewer() {
               rx={4}
             />
           )
-        ) : el.type === 'value-display' ? (
+        ) : el.type === 'trend-banner' ? (() => {
+          const tag = el.properties.tagBinding || el.properties.targetTag || '';
+          const hist = tagHistoryRef.current[tag] || [];
+          const label = el.properties.label || tag || 'Trend';
+          const curVal = tag ? tv(tag) : undefined;
+          const bg = el.properties.bgColor || '#0f172a';
+          const lc = el.properties.lineColor || '#22d3ee';
+          const w = el.width, h = el.height;
+          const px = 8, py = 6, lh = 14;
+          const cw = w - px * 2, ch = h - py * 2 - lh;
+          let path = '', pathFill = '', minV = 0, maxV = 1;
+          if (hist.length >= 2) {
+            const vals = hist.map((p: {v:number;t:number}) => p.v);
+            minV = Math.min(...vals); maxV = Math.max(...vals);
+            const rng = maxV - minV || 1;
+            const pts = hist.map((p: {v:number;t:number}, i: number) => {
+              const x = px + (i / (hist.length - 1)) * cw;
+              const y = py + lh + ch - ((p.v - minV) / rng) * ch;
+              return { x, y };
+            });
+            path = pts.map((p: {x:number;y:number}, i: number) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+            const last = pts[pts.length - 1];
+            pathFill = path + ' L' + (px + cw).toFixed(1) + ',' + (py + lh + ch).toFixed(1) + ' L' + px + ',' + (py + lh + ch).toFixed(1) + ' Z';
+          }
+          return (
+            <g>
+              <rect width={w} height={h} fill={bg} rx={4} opacity={0.95} />
+              {[0.25, 0.5, 0.75].map((f: number) => (
+                <line key={f} x1={px} y1={py + lh + ch * (1 - f)} x2={w - px} y2={py + lh + ch * (1 - f)} stroke="rgba(255,255,255,0.07)" strokeWidth={0.5} />
+              ))}
+              {hist.length >= 2 && <path d={pathFill} fill={lc + '22'} />}
+              {hist.length >= 2 && <path d={path} fill="none" stroke={lc} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />}
+              {hist.length < 2 && (
+                <text x={w / 2} y={h / 2 + 4} textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.3)" fontFamily="monospace">
+                  {tag ? 'Waiting for data...' : 'No tag bound'}
+                </text>
+              )}
+              <text x={px} y={py + 10} fontSize={9} fill="rgba(255,255,255,0.55)" fontFamily="monospace" fontWeight="bold">{label}</text>
+              {curVal !== undefined && (
+                <text x={w - px} y={py + 10} textAnchor="end" fontSize={9} fill={lc} fontFamily="monospace" fontWeight="bold">
+                  {typeof curVal === 'number' ? (curVal as number).toFixed(2) : String(curVal)}
+                </text>
+              )}
+              {hist.length >= 2 && (
+                <text x={px} y={h - 2} fontSize={7} fill="rgba(255,255,255,0.3)" fontFamily="monospace">{minV.toFixed(1)}</text>
+              )}
+              {hist.length >= 2 && (
+                <text x={w - px} y={h - 2} textAnchor="end" fontSize={7} fill="rgba(255,255,255,0.3)" fontFamily="monospace">{maxV.toFixed(1)}</text>
+              )}
+            </g>
+          );
+        })()
+        : el.type === 'value-display' ? (
           <g>
             <rect width={el.width} height={el.height} fill="#F0F9FF" stroke="#3B82F6" strokeWidth={1} rx={4} />
             <text x={el.width / 2} y={el.height / 2 + 5} textAnchor="middle" fontSize={12} fill="#1E40AF" fontFamily="monospace">
