@@ -677,54 +677,95 @@ export default function MimicViewer() {
             />
           )
         ) : el.type === 'trend-banner' ? (() => {
-          const tag = el.properties.tagBinding || el.properties.targetTag || '';
-          const hist = tagHistoryRef.current[tag] || [];
-          const label = el.properties.label || tag || 'Trend';
-          const curVal = tag ? tv(tag) : undefined;
+          // Multi-tag sparkline: support tag1..tag4 (fallback to tagBinding for single-tag legacy)
           const bg = el.properties.bgColor || '#0f172a';
-          const lc = el.properties.lineColor || '#22d3ee';
           const w = el.width, h = el.height;
-          const px = 8, py = 6, lh = 14;
-          const cw = w - px * 2, ch = h - py * 2 - lh;
-          let path = '', pathFill = '', minV = 0, maxV = 1;
-          if (hist.length >= 2) {
-            const vals = hist.map((p: {v:number;t:number}) => p.v);
-            minV = Math.min(...vals); maxV = Math.max(...vals);
-            const rng = maxV - minV || 1;
-            const pts = hist.map((p: {v:number;t:number}, i: number) => {
+          const LEGEND_H = 14;
+          const px = 8, py = 4;
+          const chartH = h - py * 2 - LEGEND_H;
+          const cw = w - px * 2;
+
+          const pens: Array<{ tag: string; color: string }> = [
+            { tag: el.properties.tag1 || el.properties.tagBinding || el.properties.targetTag || '', color: el.properties.pen1Color || '#22d3ee' },
+            { tag: el.properties.tag2 || '', color: el.properties.pen2Color || '#a78bfa' },
+            { tag: el.properties.tag3 || '', color: el.properties.pen3Color || '#4ade80' },
+            { tag: el.properties.tag4 || '', color: el.properties.pen4Color || '#fb923c' },
+          ].filter(p => p.tag.trim() !== '');
+
+          // Compute global min/max across all pens
+          const allVals: number[] = [];
+          pens.forEach(p => { (tagHistoryRef.current[p.tag] || []).forEach((pt: {v:number;t:number}) => allVals.push(pt.v)); });
+          const gMin = allVals.length ? Math.min(...allVals) : 0;
+          const gMax = allVals.length ? Math.max(...allVals) : 1;
+          const gRange = gMax - gMin || 1;
+
+          const buildPath = (hist: {v:number;t:number}[]) => {
+            if (hist.length < 2) return '';
+            return hist.map((p: {v:number;t:number}, i: number) => {
               const x = px + (i / (hist.length - 1)) * cw;
-              const y = py + lh + ch - ((p.v - minV) / rng) * ch;
-              return { x, y };
-            });
-            path = pts.map((p: {x:number;y:number}, i: number) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
-            const last = pts[pts.length - 1];
-            pathFill = path + ' L' + (px + cw).toFixed(1) + ',' + (py + lh + ch).toFixed(1) + ' L' + px + ',' + (py + lh + ch).toFixed(1) + ' Z';
-          }
+              const y = py + chartH - ((p.v - gMin) / gRange) * chartH;
+              return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+            }).join(' ');
+          };
+
+          const hasAnyData = pens.some(p => (tagHistoryRef.current[p.tag] || []).length >= 2);
+
           return (
             <g>
-              <rect width={w} height={h} fill={bg} rx={4} opacity={0.95} />
+              <rect width={w} height={h} fill={bg} rx={4} opacity={0.96} />
+              {/* Grid lines */}
               {[0.25, 0.5, 0.75].map((f: number) => (
-                <line key={f} x1={px} y1={py + lh + ch * (1 - f)} x2={w - px} y2={py + lh + ch * (1 - f)} stroke="rgba(255,255,255,0.07)" strokeWidth={0.5} />
+                <line key={f} x1={px} y1={py + chartH * (1 - f)} x2={w - px} y2={py + chartH * (1 - f)} stroke="rgba(255,255,255,0.07)" strokeWidth={0.5} strokeDasharray="3,3" />
               ))}
-              {hist.length >= 2 && <path d={pathFill} fill={lc + '22'} />}
-              {hist.length >= 2 && <path d={path} fill="none" stroke={lc} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />}
-              {hist.length < 2 && (
-                <text x={w / 2} y={h / 2 + 4} textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.3)" fontFamily="monospace">
-                  {tag ? 'Waiting for data...' : 'No tag bound'}
+              {/* No data */}
+              {!hasAnyData && (
+                <text x={w / 2} y={h / 2 - LEGEND_H / 2} textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.3)" fontFamily="monospace">
+                  {pens.length === 0 ? 'No tags bound' : 'Waiting for data...'}
                 </text>
               )}
-              <text x={px} y={py + 10} fontSize={9} fill="rgba(255,255,255,0.55)" fontFamily="monospace" fontWeight="bold">{label}</text>
-              {curVal !== undefined && (
-                <text x={w - px} y={py + 10} textAnchor="end" fontSize={9} fill={lc} fontFamily="monospace" fontWeight="bold">
-                  {typeof curVal === 'number' ? (curVal as number).toFixed(2) : String(curVal)}
-                </text>
+              {/* Sparklines */}
+              {pens.map((pen, pi) => {
+                const hist = tagHistoryRef.current[pen.tag] || [];
+                const path = buildPath(hist);
+                if (!path) return null;
+                const fillPath = path + ' L' + (px + cw).toFixed(1) + ',' + (py + chartH).toFixed(1) + ' L' + px + ',' + (py + chartH).toFixed(1) + ' Z';
+                return (
+                  <g key={pi}>
+                    {pi === 0 && <path d={fillPath} fill={pen.color + '18'} />}
+                    <path d={path} fill="none" stroke={pen.color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+                    {/* Current value dot */}
+                    {hist.length >= 1 && (() => {
+                      const last = hist[hist.length - 1];
+                      const lx = px + cw;
+                      const ly = py + chartH - ((last.v - gMin) / gRange) * chartH;
+                      return <circle cx={lx} cy={ly} r={2.5} fill={pen.color} />;
+                    })()}
+                  </g>
+                );
+              })}
+              {/* Min / Max axis labels */}
+              {hasAnyData && (
+                <>
+                  <text x={px} y={py + 8} fontSize={7} fill="rgba(255,255,255,0.3)" fontFamily="monospace">{gMax.toFixed(1)}</text>
+                  <text x={px} y={py + chartH} fontSize={7} fill="rgba(255,255,255,0.3)" fontFamily="monospace">{gMin.toFixed(1)}</text>
+                </>
               )}
-              {hist.length >= 2 && (
-                <text x={px} y={h - 2} fontSize={7} fill="rgba(255,255,255,0.3)" fontFamily="monospace">{minV.toFixed(1)}</text>
-              )}
-              {hist.length >= 2 && (
-                <text x={w - px} y={h - 2} textAnchor="end" fontSize={7} fill="rgba(255,255,255,0.3)" fontFamily="monospace">{maxV.toFixed(1)}</text>
-              )}
+              {/* Legend bar at bottom */}
+              <rect x={0} y={h - LEGEND_H} width={w} height={LEGEND_H} fill="rgba(0,0,0,0.35)" rx={0} />
+              {pens.map((pen, pi) => {
+                const curVal = tv(pen.tag);
+                const label = pen.tag.length > 10 ? pen.tag.slice(0, 10) + '…' : pen.tag;
+                const segW = w / pens.length;
+                const sx = pi * segW + 6;
+                return (
+                  <g key={pi}>
+                    <rect x={sx} y={h - LEGEND_H + 3} width={8} height={4} fill={pen.color} rx={1} />
+                    <text x={sx + 10} y={h - 3} fontSize={7.5} fill={pen.color} fontFamily="monospace" fontWeight="bold">
+                      {label}{curVal !== undefined ? ': ' + (typeof curVal === 'number' ? (curVal as number).toFixed(1) : curVal) : ''}
+                    </text>
+                  </g>
+                );
+              })}
             </g>
           );
         })()

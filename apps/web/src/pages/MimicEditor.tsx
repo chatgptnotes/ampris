@@ -3857,6 +3857,20 @@ export default function MimicEditor() {
                           placeholder="e.g. Current_R"
                           className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
                       </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag 3 (Pen 3)</label>
+                        <input type="text" value={selectedEl.properties.tag3 || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tag3: e.target.value })}
+                          placeholder="e.g. Power_kW"
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag 4 (Pen 4)</label>
+                        <input type="text" value={selectedEl.properties.tag4 || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tag4: e.target.value })}
+                          placeholder="e.g. Temp_C"
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">Pen 1 Color</label>
@@ -3868,6 +3882,18 @@ export default function MimicEditor() {
                           <label className="block text-xs font-medium text-gray-500 mb-1">Pen 2 Color</label>
                           <input type="color" value={selectedEl.properties.pen2Color || '#A78BFA'}
                             onChange={(e) => updateElementProps(selectedEl.id, { pen2Color: e.target.value })}
+                            className="w-full h-7 rounded border border-gray-200 cursor-pointer" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Pen 3 Color</label>
+                          <input type="color" value={selectedEl.properties.pen3Color || '#4ADE80'}
+                            onChange={(e) => updateElementProps(selectedEl.id, { pen3Color: e.target.value })}
+                            className="w-full h-7 rounded border border-gray-200 cursor-pointer" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Pen 4 Color</label>
+                          <input type="color" value={selectedEl.properties.pen4Color || '#FB923C'}
+                            onChange={(e) => updateElementProps(selectedEl.id, { pen4Color: e.target.value })}
                             className="w-full h-7 rounded border border-gray-200 cursor-pointer" />
                         </div>
                       </div>
