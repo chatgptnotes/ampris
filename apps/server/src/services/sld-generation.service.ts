@@ -119,14 +119,27 @@ Return ONLY the JSON object.`;
   console.log('[SLD] Response length:', textContent.length);
 
   let jsonStr = textContent.trim();
+  // Strip leading "json" word if Gemini returns without proper fences
+  jsonStr = jsonStr.replace(/^json\s*/i, '');
+  // Strip markdown fences
   const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (fence) jsonStr = fence[1].trim();
+  // Extract first {...} block
   const jMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (jMatch) jsonStr = jMatch[0];
 
   let parsed: any;
   try { parsed = JSON.parse(jsonStr); }
-  catch { throw new Error('Failed to parse Gemini response: ' + textContent.substring(0, 300)); }
+  catch (e: any) {
+    // Try to fix truncated JSON by finding last valid closing brace
+    const lastBrace = jsonStr.lastIndexOf('}');
+    if (lastBrace > 0) {
+      try { parsed = JSON.parse(jsonStr.substring(0, lastBrace + 1)); }
+      catch { throw new Error('Failed to parse Gemini response: ' + textContent.substring(0, 300)); }
+    } else {
+      throw new Error('Failed to parse Gemini response: ' + textContent.substring(0, 300));
+    }
+  }
 
   const comps: any[] = parsed.components || [];
   if (comps.length === 0) throw new Error('No components detected');
