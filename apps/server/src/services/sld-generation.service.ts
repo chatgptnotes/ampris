@@ -176,42 +176,46 @@ Return ONLY the JSON, no markdown.`;
     });
   }
 
-  // Auto-connect: connect busbars to equipment in next row at same column
-  const busbars = elements.filter(e => e.elementType === 'BusBar');
-  const others = elements.filter(e => e.elementType !== 'BusBar');
+  // Helper: center-bottom point of an element
+  function bottomCenter(el: any) { return { x: el.x + el.width / 2, y: el.y + el.height }; }
+  function topCenter(el: any)    { return { x: el.x + el.width / 2, y: el.y }; }
 
+  function makeConn(fromEl: any, toEl: any, color = '#374151') {
+    const from = bottomCenter(fromEl);
+    const to   = topCenter(toEl);
+    const midY = (from.y + to.y) / 2;
+    return {
+      id: uuidv4(),
+      fromId: fromEl.id,
+      toId: toEl.id,
+      points: [from, { x: from.x, y: midY }, { x: to.x, y: midY }, to],
+      color,
+      thickness: 2,
+    };
+  }
+
+  const busbars = elements.filter(e => e.elementType === 'BusBar');
+  const others  = elements.filter(e => e.elementType !== 'BusBar');
+
+  // Busbar → equipment directly below (same column)
   for (const busbar of busbars) {
     const busRow = busbar._row;
-    // Find elements in row busRow+1
-    const below = others.filter(e => e._row === busRow + 1);
+    const below  = others.filter(e => e._row === busRow + 1);
     for (const el of below) {
+      const fromPt = { x: el.x + el.width / 2, y: busbar.y + busbar.height };
+      const toPt   = topCenter(el);
       connections.push({
-        id: uuidv4(),
-        fromElementId: busbar.id,
-        fromPoint: 'bottom',
-        toElementId: el.id,
-        toPoint: 'top',
-        voltageLevel: 11,
-        style: 'solid',
-        color: '#ef4444',
+        id: uuidv4(), fromId: busbar.id, toId: el.id,
+        points: [fromPt, toPt], color: '#374151', thickness: 2,
       });
     }
   }
 
-  // Connect within column: row1 -> row2 -> row3
-  for (let col = 0; col <= maxCol; col++) {
-    const colEls = others.filter(e => e._col === col).sort((a, b) => a._row - b._row);
+  // Within-column: row N → row N+1
+  for (let c = 0; c <= maxCol; c++) {
+    const colEls = others.filter(e => e._col === c).sort((a: any, b: any) => a._row - b._row);
     for (let i = 0; i < colEls.length - 1; i++) {
-      connections.push({
-        id: uuidv4(),
-        fromElementId: colEls[i].id,
-        fromPoint: 'bottom',
-        toElementId: colEls[i + 1].id,
-        toPoint: 'top',
-        voltageLevel: 11,
-        style: 'solid',
-        color: '#ef4444',
-      });
+      connections.push(makeConn(colEls[i], colEls[i + 1]));
     }
   }
 

@@ -1240,7 +1240,7 @@ export default function MimicEditor() {
         },
       })) as MimicElement[];
       setElements(els);
-      setConnections((data.connections || []) as MimicConnection[]);
+      setConnections((data.connections || []).filter((c: any) => Array.isArray(c.points) && c.points.length >= 2) as MimicConnection[]);
       setGridSize(data.gridSize || 5);
       setBgColor(data.backgroundColor || '#FFFFFF');
       setPageName(data.name || '');
