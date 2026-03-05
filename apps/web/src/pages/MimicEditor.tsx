@@ -1178,7 +1178,7 @@ export default function MimicEditor() {
   const [connectingFrom, setConnectingFrom] = useState<{ elementId: string; point: string } | null>(null);
   const [drawingBus, setDrawingBus] = useState<null | 'active' | { x: number; y: number }>(null);
   const [busPreviewEnd, setBusPreviewEnd] = useState<{ x: number; y: number } | null>(null);
-  const [pageSettings, Upload, setPageSettings] = useState<PageSettings>({
+  const [pageSettings, setPageSettings] = useState<PageSettings>({
     header: { show: true, logoUrl: '', title: '', subtitle: '', bgColor: '#0F172A', textColor: '#FFFFFF', height: 50 },
     footer: { show: true, customText: '', bgColor: '#0F172A', textColor: '#FFFFFF', height: 60, widgets: [{ id: 'w1', type: 'alarm-banner' as FooterWidgetType, label: 'Alarm Banner', height: 28 }, { id: 'w2', type: 'status-bar' as FooterWidgetType, label: 'Status Bar', height: 22 }] },
   });
@@ -1430,7 +1430,7 @@ export default function MimicEditor() {
         connections,
         gridSize,
         backgroundColor: bgColor,
-        pageSettings, Upload,
+        pageSettings,
       });
     } finally {
       setSaving(false);
