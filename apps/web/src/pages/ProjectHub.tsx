@@ -289,15 +289,16 @@ export default function ProjectHub() {
 
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Project Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="e.g. Waluj 33/11kV Substation"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!newName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
                   autoFocus
                 />
+                {!newName.trim() && <p className="text-xs text-red-500 mt-1">Project name is required to create</p>}
               </div>
 
               <div>
