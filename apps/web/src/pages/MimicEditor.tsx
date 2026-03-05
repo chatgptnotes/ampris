@@ -3907,6 +3907,75 @@ export default function MimicEditor() {
                 </>
               )}
 
+
+              {/* 3D Button Properties */}
+              {selectedEl.type.startsWith('3d-') && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Button Text</label>
+                    <input type="text" value={selectedEl.properties.buttonText || ''}
+                      onChange={(e) => updateElementProps(selectedEl.id, { buttonText: e.target.value })}
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Button Color</label>
+                    <input type="color" value={selectedEl.properties.buttonColor || '#6B7280'}
+                      onChange={(e) => updateElementProps(selectedEl.id, { buttonColor: e.target.value })}
+                      className="w-full h-8 rounded border border-gray-200 cursor-pointer" />
+                  </div>
+                  {!['3d-indicator-lamp'].includes(selectedEl.type) && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag Binding</label>
+                        <input type="text" value={selectedEl.properties.tagBinding || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tagBinding: e.target.value })}
+                          placeholder="e.g. PUMP_01_STATUS"
+                          className="w-full px-2 py-1 text-xs font-mono border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Action</label>
+                        <select value={selectedEl.properties.controlAction || 'setValue'}
+                          onChange={(e) => updateElementProps(selectedEl.id, { controlAction: e.target.value })}
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white">
+                          <option value="setValue">Set Value</option>
+                          <option value="toggle">Toggle</option>
+                          <option value="momentary">Momentary (hold ON)</option>
+                          <option value="increment">Increment</option>
+                          <option value="script">Run Script</option>
+                        </select>
+                      </div>
+                      {selectedEl.properties.controlAction === 'setValue' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Value to Set</label>
+                          <input type="text" value={selectedEl.properties.controlValue || ''}
+                            onChange={(e) => updateElementProps(selectedEl.id, { controlValue: e.target.value })}
+                            placeholder="e.g. 1"
+                            className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                        </div>
+                      )}
+                      {selectedEl.properties.controlAction === 'increment' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Increment By</label>
+                          <input type="number" value={selectedEl.properties.incrementBy || 1}
+                            onChange={(e) => updateElementProps(selectedEl.id, { incrementBy: parseFloat(e.target.value) || 1 })}
+                            className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                        </div>
+                      )}
+                      {selectedEl.properties.controlAction === 'script' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Script (JS)</label>
+                          <textarea value={selectedEl.properties.controlScript || ''}
+                            onChange={(e) => updateElementProps(selectedEl.id, { controlScript: e.target.value })}
+                            rows={4}
+                            placeholder="// e.g. PUMP_01=1; WAIT(500); PUMP_02=1;"
+                            className="w-full px-2 py-1 text-xs font-mono border border-gray-200 rounded text-gray-900 bg-white" />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
               {/* Scripting & Action properties */}
               {['action-button', 'script-runner', 'formula-display', 'sequence-trigger', 'conditional-display'].includes(selectedEl.type) && (
                 <>
