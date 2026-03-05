@@ -105,7 +105,7 @@ export default function ProjectHub() {
             setAiGenerating(true);
             setAiError(null);
 
-            // Compress image client-side to JPEG (max 1600px, quality 0.85) to stay under Vercel 4.5MB limit
+            // Compress image client-side to JPEG (max 1600px, 85% quality)
             const compressedBase64 = await new Promise<string>((resolve, reject) => {
               const img = new Image();
               const url = URL.createObjectURL(aiFile);
@@ -118,8 +118,7 @@ export default function ProjectHub() {
                   height = Math.round(height * scale);
                 }
                 const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+                canvas.width = width; canvas.height = height;
                 canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
                 const b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
                 URL.revokeObjectURL(url);
@@ -129,15 +128,24 @@ export default function ProjectHub() {
               img.src = url;
             });
 
-            // Send as JSON (avoids multipart size issues)
-            const sldRes = await axios.post('/api/sld-generate', {
+            // Queue job on backend (returns jobId instantly — no timeout)
+            const queueRes = await axios.post('/api/sld-generate', {
               image: compressedBase64,
               mimeType: 'image/jpeg',
-            }, {
-              headers: { 'Content-Type': 'application/json' },
-              timeout: 120000,
-            });
-            const layout = sldRes.data.layout;
+            }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
+
+            if (!queueRes.data.jobId) throw new Error(queueRes.data.error || 'Failed to queue SLD job');
+            const jobId = queueRes.data.jobId;
+
+            // Poll backend for result (up to 90 seconds)
+            let layout = null;
+            for (let i = 0; i < 30; i++) {
+              await new Promise(r => setTimeout(r, 3000));
+              const statusRes = await api.get(`/sld/status/${jobId}`);
+              if (statusRes.data.status === 'done') { layout = statusRes.data.layout; break; }
+              if (statusRes.data.status === 'error') throw new Error(statusRes.data.error || 'AI generation failed');
+            }
+            if (!layout) throw new Error('AI generation timed out after 90 seconds');
             if (layout && layout.elements && layout.elements.length > 0) {
               // Save the generated layout into the page
               await api.put(`/projects/${data.id}/pages/${pageId}`, {
