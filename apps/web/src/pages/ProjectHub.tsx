@@ -74,8 +74,19 @@ export default function ProjectHub() {
   const handleCreate = async () => {
     if (!newName.trim()) return;
     setCreating(true);
+    setAiError(null);
     try {
-      const { data } = await api.post('/projects', { name: newName, description: newDesc || undefined });
+      let projectData: any;
+      try {
+        const { data } = await api.post('/projects', { name: newName, description: newDesc || undefined });
+        projectData = data;
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Failed to create project. Check server connection.';
+        setAiError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        setCreating(false);
+        return;
+      }
+      const data = projectData;
       if (creationMode === 'template' && selectedTemplate) {
         const tpl = TEMPLATES.find((t) => t.id === selectedTemplate);
         await api.post(`/projects/${data.id}/pages`, { name: tpl?.name || 'Overview' });
@@ -125,8 +136,9 @@ export default function ProjectHub() {
       setSelectedTemplate('');
       localStorage.setItem('gridvision-last-project', data.id);
       navigate(`/app/projects/${data.id}/edit`);
-    } catch {
-      // ignore
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Something went wrong. Please try again.';
+      setAiError(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setCreating(false);
     }
@@ -377,6 +389,12 @@ export default function ProjectHub() {
               )}
             </div>
 
+            {aiError && (
+              <div className="mx-5 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600 font-medium">Error</p>
+                <p className="text-xs text-red-500 mt-0.5">{aiError}</p>
+              </div>
+            )}
             <div className="flex justify-end gap-3 p-5 border-t border-gray-100">
               <button
                 onClick={() => setShowNewModal(false)}
