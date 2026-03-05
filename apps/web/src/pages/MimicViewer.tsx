@@ -465,8 +465,10 @@ export default function MimicViewer() {
   // Handle control element clicks
   const handleControlClick = useCallback(async (el: MimicElement) => {
     const tag = el.properties.targetTag;
-    if (!tag) return;
     const action = el.properties.controlAction || 'setValue';
+    // Navigation/script actions don't need a tag binding
+    const noTagNeeded = ['script', 'pagegoto', 'page_back', 'page_home'].includes(action);
+    if (!tag && !noTagNeeded) return;
 
     // Check if SBO is enabled for this tag
     if (sboConfigs[tag] && !sboSelected[tag]) {
@@ -588,7 +590,7 @@ export default function MimicViewer() {
         transform={`translate(${el.x}, ${el.y}) rotate(${el.rotation}, ${el.width / 2}, ${el.height / 2})`}
         onClick={(e) => {
           e.stopPropagation();
-          if (isCtrl) {
+          if (isCtrl || is3D) {
             handleControlClick(el);
           } else if (isNav) {
             handleNavClick(el);
@@ -649,7 +651,7 @@ export default function MimicViewer() {
                 {el.type === '3d-push-button' && (
                   <div
                     onMouseDown={(e) => { const t = e.currentTarget; t.style.transform = 'translateY(2px)'; t.style.boxShadow = '0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25)'; }}
-                    onMouseUp={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; handleElementClick(el, e as any); }}
+                    onMouseUp={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; handleControlClick(el); }}
                     onMouseLeave={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; }}
                     style={{
                       width: '90%', height: '75%', borderRadius: 6,
@@ -663,7 +665,7 @@ export default function MimicViewer() {
                   </div>
                 )}
                 {el.type === '3d-toggle-switch' && (
-                  <div onClick={(e) => handleElementClick(el, e as any)} style={{
+                  <div onClick={(e) => handleControlClick(el)} style={{
                     width: '85%', height: '65%', borderRadius: 20,
                     background: tv(el.properties.targetTag) ? 'linear-gradient(180deg, #065f46, #064e3b)' : 'linear-gradient(180deg, #1f2937, #111827)',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1)',
@@ -685,7 +687,7 @@ export default function MimicViewer() {
                 {el.type === '3d-emergency-stop' && (
                   <div
                     onMouseDown={(e) => { const t = e.currentTarget; t.style.transform = 'translateY(4px)'; t.style.boxShadow = '0 2px 4px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.3)'; }}
-                    onMouseUp={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; handleElementClick(el, e as any); }}
+                    onMouseUp={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; handleControlClick(el); }}
                     onMouseLeave={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; }}
                     style={{
                       width: '90%', height: '90%', borderRadius: '50%',
@@ -718,7 +720,7 @@ export default function MimicViewer() {
                   }} />
                 )}
                 {el.type === '3d-rocker-switch' && (
-                  <div onClick={(e) => handleElementClick(el, e as any)} style={{
+                  <div onClick={(e) => handleControlClick(el)} style={{
                     width: '80%', height: '70%', borderRadius: 4,
                     background: 'linear-gradient(180deg, #374151, #1f2937)',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1)',
@@ -735,7 +737,7 @@ export default function MimicViewer() {
                   </div>
                 )}
                 {el.type === '3d-rotary-selector' && (
-                  <div onClick={(e) => handleElementClick(el, e as any)} style={{
+                  <div onClick={(e) => handleControlClick(el)} style={{
                     width: '85%', height: '85%', borderRadius: '50%',
                     background: 'linear-gradient(145deg, #4b5563, #374151)',
                     boxShadow: '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
