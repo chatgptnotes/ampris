@@ -229,6 +229,7 @@ export default function MimicViewer() {
     footer: { show: true, customText: 'GridVision SCADA', bgColor: '#1E293B', textColor: '#FFFFFF', showAlarmBanner: true, showStatusBar: true },
   });
   const fullscreenRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Save current projectId to localStorage for sidebar navigation
   useEffect(() => {
@@ -460,6 +461,20 @@ export default function MimicViewer() {
       await api.post('/sbo/cancel', { tagName: tag });
       setSboSelected(prev => { const next = { ...prev }; delete next[tag]; return next; });
     } catch (err) { console.error('SBO cancel failed:', err); }
+  }, []);
+
+  // Non-passive wheel listener for zoom-only (prevents page scroll)
+  useEffect(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      setViewZoom(z => Math.max(0.1, Math.min(10, z * delta)));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
   // Handle control element clicks
@@ -1107,12 +1122,9 @@ export default function MimicViewer() {
 
       {/* Canvas */}
       <div
+        ref={canvasContainerRef}
         className="flex-1 overflow-auto relative"
-        onWheel={(e) => {
-          e.preventDefault();
-          const delta = e.deltaY > 0 ? 0.9 : 1.1;
-          setViewZoom(z => Math.max(0.1, Math.min(10, z * delta)));
-        }}
+
         onMouseDown={(e) => {
           if (e.button === 1 || (e.button === 0 && e.altKey)) {
             setIsPanning(true);
