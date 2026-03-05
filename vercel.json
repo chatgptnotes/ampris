@@ -9,6 +9,10 @@
     {
       "source": "/backend/:path*",
       "destination": "http://76.13.244.21:3002/:path*"
+    },
+    {
+      "source": "/((?!api|backend|assets|_next).*)",
+      "destination": "/index.html"
     }
   ]
 }
