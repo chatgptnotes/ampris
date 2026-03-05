@@ -1227,7 +1227,18 @@ export default function MimicEditor() {
     if (!projectId || !activePageId) return;
     api.get(`/projects/${projectId}/pages/${activePageId}`).then(({ data }) => {
       setPage(data);
-      const els = (data.elements || []) as MimicElement[];
+      const els = (data.elements || []).map((el: any) => ({
+        ...el,
+        elementType: el.elementType || el.type || 'FEEDER_LINE',
+        zIndex: el.zIndex ?? 0,
+        width: el.width ?? 80,
+        height: el.height ?? 80,
+        properties: {
+          tagBindings: {},
+          label: el.label || el.properties?.label || '',
+          ...( el.properties || {}),
+        },
+      })) as MimicElement[];
       setElements(els);
       setConnections((data.connections || []) as MimicConnection[]);
       setGridSize(data.gridSize || 5);
