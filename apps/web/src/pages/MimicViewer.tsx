@@ -229,6 +229,9 @@ export default function MimicViewer() {
     footer: { show: true, customText: 'GridVision SCADA', bgColor: '#1E293B', textColor: '#FFFFFF', showAlarmBanner: true, showStatusBar: true },
   });
   const fullscreenRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  // Rolling history buffer for sparklines: tag -> last 60 {v,t} entries
+  const tagHistoryRef = useRef<Record<string, { v: number; t: number }[]>>({});
 
   // Save current projectId to localStorage for sidebar navigation
   useEffect(() => {
@@ -462,11 +465,41 @@ export default function MimicViewer() {
     } catch (err) { console.error('SBO cancel failed:', err); }
   }, []);
 
+  // Collect tag history for sparklines
+  useEffect(() => {
+    const now = Date.now();
+    Object.entries(values).forEach(([tag, data]: [string, any]) => {
+      const v = typeof data?.value === 'number' ? data.value : parseFloat(String(data?.value ?? ''));
+      if (isNaN(v)) return;
+      const hist = tagHistoryRef.current[tag] || [];
+      const last = hist[hist.length - 1];
+      if (!last || last.v !== v || now - last.t > 5000) {
+        tagHistoryRef.current[tag] = [...hist, { v, t: now }].slice(-60);
+      }
+    });
+  }, [values]);
+
+  // Non-passive wheel listener for zoom-only (prevents page scroll)
+  useEffect(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      setViewZoom(z => Math.max(0.1, Math.min(10, z * delta)));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
   // Handle control element clicks
   const handleControlClick = useCallback(async (el: MimicElement) => {
     const tag = el.properties.targetTag;
-    if (!tag) return;
     const action = el.properties.controlAction || 'setValue';
+    // Navigation/script actions don't need a tag binding
+    const noTagNeeded = ['script', 'pagegoto', 'page_back', 'page_home'].includes(action);
+    if (!tag && !noTagNeeded) return;
 
     // Check if SBO is enabled for this tag
     if (sboConfigs[tag] && !sboSelected[tag]) {
@@ -521,7 +554,12 @@ export default function MimicViewer() {
             if (targetPage) setActivePageId(targetPage.id);
             else console.warn('Page not found:', pageName);
           };
-          const page_back = () => window.history.back();
+          const page_back = () => {
+            const pages = project?.mimicPages || [];
+            const currentIndex = pages.findIndex((p: any) => p.id === activePageId);
+            if (currentIndex > 0) setActivePageId(pages[currentIndex - 1].id);
+            else if (pages.length > 0) setActivePageId(pages[0].id);
+          };
           const page_home = () => {
             const home = project?.mimicPages?.find((p: any) => p.isHomePage) || project?.mimicPages?.[0];
             if (home) setActivePageId(home.id);
@@ -537,7 +575,10 @@ export default function MimicViewer() {
         if (targetPage) setActivePageId(targetPage.id);
         else console.warn('Page not found:', targetPageName);
       } else if (action === 'page_back') {
-        window.history.back();
+        const pages = project?.mimicPages || [];
+        const currentIndex = pages.findIndex((p: any) => p.id === activePageId);
+        if (currentIndex > 0) setActivePageId(pages[currentIndex - 1].id);
+        else if (pages.length > 0) setActivePageId(pages[0].id);
       } else if (action === 'page_home') {
         const home = project?.mimicPages?.find((p: any) => p.isHomePage) || project?.mimicPages?.[0];
         if (home) setActivePageId(home.id);
@@ -588,7 +629,7 @@ export default function MimicViewer() {
         transform={`translate(${el.x}, ${el.y}) rotate(${el.rotation}, ${el.width / 2}, ${el.height / 2})`}
         onClick={(e) => {
           e.stopPropagation();
-          if (isCtrl) {
+          if (isCtrl || is3D) {
             handleControlClick(el);
           } else if (isNav) {
             handleNavClick(el);
@@ -635,7 +676,100 @@ export default function MimicViewer() {
               rx={4}
             />
           )
-        ) : el.type === 'value-display' ? (
+        ) : el.type === 'trend-banner' ? (() => {
+          // Multi-tag sparkline: support tag1..tag4 (fallback to tagBinding for single-tag legacy)
+          const bg = el.properties.bgColor || '#0f172a';
+          const w = el.width, h = el.height;
+          const LEGEND_H = 14;
+          const px = 8, py = 4;
+          const chartH = h - py * 2 - LEGEND_H;
+          const cw = w - px * 2;
+
+          const pens: Array<{ tag: string; color: string }> = [
+            { tag: el.properties.tag1 || el.properties.tagBinding || el.properties.targetTag || '', color: el.properties.pen1Color || '#22d3ee' },
+            { tag: el.properties.tag2 || '', color: el.properties.pen2Color || '#a78bfa' },
+            { tag: el.properties.tag3 || '', color: el.properties.pen3Color || '#4ade80' },
+            { tag: el.properties.tag4 || '', color: el.properties.pen4Color || '#fb923c' },
+          ].filter(p => p.tag.trim() !== '');
+
+          // Compute global min/max across all pens
+          const allVals: number[] = [];
+          pens.forEach(p => { (tagHistoryRef.current[p.tag] || []).forEach((pt: {v:number;t:number}) => allVals.push(pt.v)); });
+          const gMin = allVals.length ? Math.min(...allVals) : 0;
+          const gMax = allVals.length ? Math.max(...allVals) : 1;
+          const gRange = gMax - gMin || 1;
+
+          const buildPath = (hist: {v:number;t:number}[]) => {
+            if (hist.length < 2) return '';
+            return hist.map((p: {v:number;t:number}, i: number) => {
+              const x = px + (i / (hist.length - 1)) * cw;
+              const y = py + chartH - ((p.v - gMin) / gRange) * chartH;
+              return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+            }).join(' ');
+          };
+
+          const hasAnyData = pens.some(p => (tagHistoryRef.current[p.tag] || []).length >= 2);
+
+          return (
+            <g>
+              <rect width={w} height={h} fill={bg} rx={4} opacity={0.96} />
+              {/* Grid lines */}
+              {[0.25, 0.5, 0.75].map((f: number) => (
+                <line key={f} x1={px} y1={py + chartH * (1 - f)} x2={w - px} y2={py + chartH * (1 - f)} stroke="rgba(255,255,255,0.07)" strokeWidth={0.5} strokeDasharray="3,3" />
+              ))}
+              {/* No data */}
+              {!hasAnyData && (
+                <text x={w / 2} y={h / 2 - LEGEND_H / 2} textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.3)" fontFamily="monospace">
+                  {pens.length === 0 ? 'No tags bound' : 'Waiting for data...'}
+                </text>
+              )}
+              {/* Sparklines */}
+              {pens.map((pen, pi) => {
+                const hist = tagHistoryRef.current[pen.tag] || [];
+                const path = buildPath(hist);
+                if (!path) return null;
+                const fillPath = path + ' L' + (px + cw).toFixed(1) + ',' + (py + chartH).toFixed(1) + ' L' + px + ',' + (py + chartH).toFixed(1) + ' Z';
+                return (
+                  <g key={pi}>
+                    {pi === 0 && <path d={fillPath} fill={pen.color + '18'} />}
+                    <path d={path} fill="none" stroke={pen.color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+                    {/* Current value dot */}
+                    {hist.length >= 1 && (() => {
+                      const last = hist[hist.length - 1];
+                      const lx = px + cw;
+                      const ly = py + chartH - ((last.v - gMin) / gRange) * chartH;
+                      return <circle cx={lx} cy={ly} r={2.5} fill={pen.color} />;
+                    })()}
+                  </g>
+                );
+              })}
+              {/* Min / Max axis labels */}
+              {hasAnyData && (
+                <>
+                  <text x={px} y={py + 8} fontSize={7} fill="rgba(255,255,255,0.3)" fontFamily="monospace">{gMax.toFixed(1)}</text>
+                  <text x={px} y={py + chartH} fontSize={7} fill="rgba(255,255,255,0.3)" fontFamily="monospace">{gMin.toFixed(1)}</text>
+                </>
+              )}
+              {/* Legend bar at bottom */}
+              <rect x={0} y={h - LEGEND_H} width={w} height={LEGEND_H} fill="rgba(0,0,0,0.35)" rx={0} />
+              {pens.map((pen, pi) => {
+                const curVal = tv(pen.tag);
+                const label = pen.tag.length > 10 ? pen.tag.slice(0, 10) + '…' : pen.tag;
+                const segW = w / pens.length;
+                const sx = pi * segW + 6;
+                return (
+                  <g key={pi}>
+                    <rect x={sx} y={h - LEGEND_H + 3} width={8} height={4} fill={pen.color} rx={1} />
+                    <text x={sx + 10} y={h - 3} fontSize={7.5} fill={pen.color} fontFamily="monospace" fontWeight="bold">
+                      {label}{curVal !== undefined ? ': ' + (typeof curVal === 'number' ? (curVal as number).toFixed(1) : curVal) : ''}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })()
+        : el.type === 'value-display' ? (
           <g>
             <rect width={el.width} height={el.height} fill="#F0F9FF" stroke="#3B82F6" strokeWidth={1} rx={4} />
             <text x={el.width / 2} y={el.height / 2 + 5} textAnchor="middle" fontSize={12} fill="#1E40AF" fontFamily="monospace">
@@ -649,7 +783,7 @@ export default function MimicViewer() {
                 {el.type === '3d-push-button' && (
                   <div
                     onMouseDown={(e) => { const t = e.currentTarget; t.style.transform = 'translateY(2px)'; t.style.boxShadow = '0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25)'; }}
-                    onMouseUp={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; handleElementClick(el, e as any); }}
+                    onMouseUp={(e) => { e.stopPropagation(); const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; handleControlClick(el); }}
                     onMouseLeave={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; }}
                     style={{
                       width: '90%', height: '75%', borderRadius: 6,
@@ -663,7 +797,7 @@ export default function MimicViewer() {
                   </div>
                 )}
                 {el.type === '3d-toggle-switch' && (
-                  <div onClick={(e) => handleElementClick(el, e as any)} style={{
+                  <div onClick={(e) => { e.stopPropagation(); handleControlClick(el); }} style={{
                     width: '85%', height: '65%', borderRadius: 20,
                     background: tv(el.properties.targetTag) ? 'linear-gradient(180deg, #065f46, #064e3b)' : 'linear-gradient(180deg, #1f2937, #111827)',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1)',
@@ -685,7 +819,7 @@ export default function MimicViewer() {
                 {el.type === '3d-emergency-stop' && (
                   <div
                     onMouseDown={(e) => { const t = e.currentTarget; t.style.transform = 'translateY(4px)'; t.style.boxShadow = '0 2px 4px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.3)'; }}
-                    onMouseUp={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; handleElementClick(el, e as any); }}
+                    onMouseUp={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; handleControlClick(el); }}
                     onMouseLeave={(e) => { const t = e.currentTarget; t.style.transform = ''; t.style.boxShadow = ''; }}
                     style={{
                       width: '90%', height: '90%', borderRadius: '50%',
@@ -718,7 +852,7 @@ export default function MimicViewer() {
                   }} />
                 )}
                 {el.type === '3d-rocker-switch' && (
-                  <div onClick={(e) => handleElementClick(el, e as any)} style={{
+                  <div onClick={(e) => { e.stopPropagation(); handleControlClick(el); }} style={{
                     width: '80%', height: '70%', borderRadius: 4,
                     background: 'linear-gradient(180deg, #374151, #1f2937)',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1)',
@@ -735,7 +869,7 @@ export default function MimicViewer() {
                   </div>
                 )}
                 {el.type === '3d-rotary-selector' && (
-                  <div onClick={(e) => handleElementClick(el, e as any)} style={{
+                  <div onClick={(e) => { e.stopPropagation(); handleControlClick(el); }} style={{
                     width: '85%', height: '85%', borderRadius: '50%',
                     background: 'linear-gradient(145deg, #4b5563, #374151)',
                     boxShadow: '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
@@ -1097,12 +1231,9 @@ export default function MimicViewer() {
 
       {/* Canvas */}
       <div
+        ref={canvasContainerRef}
         className="flex-1 overflow-auto relative"
-        onWheel={(e) => {
-          e.preventDefault();
-          const delta = e.deltaY > 0 ? 0.9 : 1.1;
-          setViewZoom(z => Math.max(0.1, Math.min(10, z * delta)));
-        }}
+
         onMouseDown={(e) => {
           if (e.button === 1 || (e.button === 0 && e.altKey)) {
             setIsPanning(true);

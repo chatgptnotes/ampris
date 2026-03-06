@@ -313,69 +313,69 @@ type TagTemplate = { suffix: string; dataType: 'BOOLEAN' | 'FLOAT' | 'INTEGER' |
 const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
   // ── Switchgear ──
   CB: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'tripCount', dataType: 'INTEGER', unit: '', min: 0, max: 99999 },
     { suffix: 'lastTrip', dataType: 'STRING', unit: '' },
   ],
   VacuumCB: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'tripCount', dataType: 'INTEGER', unit: '', min: 0, max: 99999 },
     { suffix: 'vacuumIntegrity', dataType: 'BOOLEAN', unit: '' },
   ],
   SF6CB: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'sf6Pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 10 },
     { suffix: 'tripCount', dataType: 'INTEGER', unit: '', min: 0, max: 99999 },
   ],
   ACB: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'tripCount', dataType: 'INTEGER', unit: '', min: 0, max: 99999 },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
   ],
   MCCB: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
   ],
   MCB: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
   ],
   RCCB: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'leakageCurrent', dataType: 'FLOAT', unit: 'mA', min: 0, max: 300 },
   ],
   Isolator: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 1 }  /* 0=Open 1=Closed */,
   ],
   EarthSwitch: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 1 }  /* 0=Open 1=Closed */,
   ],
   Fuse: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 1 }  /* 0=Open 1=Closed */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
   ],
   Contactor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'operationCount', dataType: 'INTEGER', unit: '', min: 0, max: 999999 },
   ],
   LoadBreakSwitch: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
   ],
   AutoRecloser: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'reclosureCount', dataType: 'INTEGER', unit: '', min: 0, max: 9999 },
   ],
   Sectionalizer: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'faultCount', dataType: 'INTEGER', unit: '', min: 0, max: 9999 },
   ],
   RingMainUnit: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 36 },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 630 },
   ],
   GIS: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'sf6Pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 10 },
     { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 100 },
   ],
@@ -409,109 +409,109 @@ const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
   ],
   ShuntReactor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
     { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 150 },
   ],
   SeriesReactor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
   ],
   SaturableReactor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
   ],
   Reactor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
     { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 150 },
   ],
   // ── Rotating Machines ──
   Generator: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 33 },
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
     { suffix: 'power', dataType: 'FLOAT', unit: 'MW', min: 0, max: 500 },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
   ],
   SyncGenerator: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 33 },
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
     { suffix: 'power', dataType: 'FLOAT', unit: 'MW', min: 0, max: 500 },
     { suffix: 'powerFactor', dataType: 'FLOAT', unit: '', min: 0, max: 1 },
   ],
   Motor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
     { suffix: 'speed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 3600 },
     { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 200 },
   ],
   AsyncMotor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
     { suffix: 'speed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 3600 },
     { suffix: 'slip', dataType: 'FLOAT', unit: '%', min: 0, max: 10 },
   ],
   SyncMotor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
     { suffix: 'speed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 3600 },
     { suffix: 'powerFactor', dataType: 'FLOAT', unit: '', min: 0, max: 1 },
   ],
   VFD: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 0, max: 60 },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
     { suffix: 'speed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 3600 },
   ],
   SoftStarter: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
   ],
   // ── Power Electronics ──
   Rectifier: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'dcVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 1000 },
     { suffix: 'dcCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 500 },
   ],
   Inverter: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'acVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
     { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 1000 },
   ],
   UPSDetail: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'batteryLevel', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
     { suffix: 'load', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
     { suffix: 'inputVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
     { suffix: 'outputVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
   ],
   StaticTransferSwitch: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 3 }  /* 0=Open 1=Closed 2=Trip 3=FailedToOperate */,
     { suffix: 'activeSource', dataType: 'INTEGER', unit: '', min: 1, max: 2 },
   ],
   SVC: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'reactivePower', dataType: 'FLOAT', unit: 'MVAr', min: -200, max: 200 },
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
   ],
   STATCOM: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'reactivePower', dataType: 'FLOAT', unit: 'MVAr', min: -200, max: 200 },
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'kV', min: 0, max: 500 },
   ],
   Thyristor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'firingAngle', dataType: 'FLOAT', unit: '°', min: 0, max: 180 },
   ],
   CapacitorBank: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'reactivePower', dataType: 'FLOAT', unit: 'kVAr', min: 0, max: 10000 },
     { suffix: 'steps', dataType: 'INTEGER', unit: '', min: 0, max: 12 },
   ],
   Battery: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
     { suffix: 'soc', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: -500, max: 500 },
@@ -524,19 +524,19 @@ const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
     { suffix: 'irradiance', dataType: 'FLOAT', unit: 'W/m²', min: 0, max: 1200 },
   ],
   SolarInverter: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 1000 },
     { suffix: 'efficiency', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
     { suffix: 'dcVoltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 1000 },
   ],
   WindTurbine: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 5000 },
     { suffix: 'windSpeed', dataType: 'FLOAT', unit: 'm/s', min: 0, max: 30 },
     { suffix: 'rotorSpeed', dataType: 'FLOAT', unit: 'RPM', min: 0, max: 30 },
   ],
   BESS: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'soc', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
     { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: -5000, max: 5000 },
     { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 60 },
@@ -600,78 +600,78 @@ const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
   ],
   // ── Protection Relays ──
   Relay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
   ],
   OvercurrentRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'pickupCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
   ],
   EarthFaultRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'residualCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 500 },
   ],
   DistanceRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'impedance', dataType: 'FLOAT', unit: 'Ω', min: 0, max: 100 },
   ],
   DifferentialRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'differentialCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 1000 },
   ],
   DirectionalRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
   ],
   UnderFrequencyRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
   ],
   OverFrequencyRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
   ],
   LockoutRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'locked', dataType: 'BOOLEAN', unit: '' },
   ],
   BuchholzRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'gasLevel', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
   ],
   OvervoltageRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
   ],
   UndervoltageRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
   ],
   NegativeSequenceRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'negSeqCurrent', dataType: 'FLOAT', unit: 'A', min: 0, max: 500 },
   ],
   ThermalOverloadRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'thermalLoad', dataType: 'FLOAT', unit: '%', min: 0, max: 200 },
   ],
   ReversePowerRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tripSignal', dataType: 'BOOLEAN', unit: '' },
     { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: -1000, max: 1000 },
   ],
   SynchCheckRelay: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'synchOk', dataType: 'BOOLEAN', unit: '' },
   ],
   // ── Bus & Connections ──
@@ -685,10 +685,10 @@ const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 5000 },
   ],
   BusSection: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   BusTie: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   Cable: [
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
@@ -703,29 +703,29 @@ const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
     { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 90 },
   ],
   LightningArrester: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'leakageCurrent', dataType: 'FLOAT', unit: 'mA', min: 0, max: 10 },
   ],
   Feeder: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 2000 },
     { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 10000 },
   ],
   // ── Indicators ──
   IndicatorLamp: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   AlarmHorn: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   PushButton: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   SelectorSwitch: [
     { suffix: 'position', dataType: 'INTEGER', unit: '', min: 0, max: 3 },
   ],
   LEDIndicator: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   DigitalDisplay: [
     { suffix: 'value', dataType: 'FLOAT', unit: '', min: 0, max: 9999 },
@@ -735,38 +735,38 @@ const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
   ],
   // ── Infrastructure ──
   Panel: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   MCC: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
   ],
   PLC: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'commStatus', dataType: 'BOOLEAN', unit: '' },
   ],
   HMI: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   Communication: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
   ],
   Antenna: [
     { suffix: 'signalStrength', dataType: 'FLOAT', unit: 'dBm', min: -120, max: 0 },
   ],
   // ── Piping & Mechanical ──
   Valve: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'position', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
   ],
   Pump: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'flow', dataType: 'FLOAT', unit: 'm³/h', min: 0, max: 1000 },
     { suffix: 'pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 20 },
     { suffix: 'current', dataType: 'FLOAT', unit: 'A', min: 0, max: 500 },
   ],
   Compressor: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 30 },
     { suffix: 'temperature', dataType: 'FLOAT', unit: '°C', min: 0, max: 200 },
   ],
@@ -776,12 +776,12 @@ const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
     { suffix: 'pressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 20 },
   ],
   HeatExchanger: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'inletTemp', dataType: 'FLOAT', unit: '°C', min: 0, max: 300 },
     { suffix: 'outletTemp', dataType: 'FLOAT', unit: '°C', min: 0, max: 300 },
   ],
   Filter: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'differentialPressure', dataType: 'FLOAT', unit: 'bar', min: 0, max: 5 },
   ],
   FlowMeter: [
@@ -799,18 +799,18 @@ const TAG_TEMPLATES: Record<string, TagTemplate[]> = {
   ],
   // ── Miscellaneous ──
   DGSet: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
     { suffix: 'frequency', dataType: 'FLOAT', unit: 'Hz', min: 45, max: 55 },
     { suffix: 'power', dataType: 'FLOAT', unit: 'kW', min: 0, max: 5000 },
     { suffix: 'fuelLevel', dataType: 'FLOAT', unit: '%', min: 0, max: 100 },
   ],
   AVR: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'voltage', dataType: 'FLOAT', unit: 'V', min: 0, max: 500 },
   ],
   RTCC: [
-    { suffix: 'status', dataType: 'BOOLEAN', unit: '' },
+    { suffix: 'status', dataType: 'INTEGER', unit: '', min: 0, max: 2 }  /* 0=Stopped 1=Running 2=Fault */,
     { suffix: 'tapPosition', dataType: 'INTEGER', unit: '', min: 1, max: 32 },
   ],
 };
@@ -1147,6 +1147,14 @@ export default function MimicEditor() {
   const { projectId, pageId } = useParams<{ projectId: string; pageId?: string }>();
   const navigate = useNavigate();
 
+  // ── AI Chat state ──────────────────────────────────────────────────────────
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [aiMessages, setAiMessages] = useState<{ role: 'user'|'ai'; text: string }[]>([]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiChatEndRef = useRef<HTMLDivElement>(null);
+  // ───────────────────────────────────────────────────────────────────────────
+
   const [project, setProject] = useState<ProjectData | null>(null);
   const [page, setPage] = useState<PageData | null>(null);
   const [activePageId, setActivePageId] = useState(pageId || '');
@@ -1227,9 +1235,20 @@ export default function MimicEditor() {
     if (!projectId || !activePageId) return;
     api.get(`/projects/${projectId}/pages/${activePageId}`).then(({ data }) => {
       setPage(data);
-      const els = (data.elements || []) as MimicElement[];
+      const els = (data.elements || []).map((el: any) => ({
+        ...el,
+        type: el.type || el.elementType || 'Feeder',
+        zIndex: el.zIndex ?? 0,
+        width: el.width ?? 80,
+        height: el.height ?? 80,
+        properties: {
+          tagBindings: {},
+          label: el.label || el.properties?.label || '',
+          ...( el.properties || {}),
+        },
+      })) as MimicElement[];
       setElements(els);
-      setConnections((data.connections || []) as MimicConnection[]);
+      setConnections((data.connections || []).filter((c: any) => Array.isArray(c.points) && c.points.length >= 2) as MimicConnection[]);
       setGridSize(data.gridSize || 5);
       setBgColor(data.backgroundColor || '#FFFFFF');
       setPageName(data.name || '');
@@ -1329,10 +1348,10 @@ export default function MimicEditor() {
     try {
       await api.put(`/tags/${tag.id}`, {
         name: tag.name,
-        description: tag.description,
+        description: tag.description || undefined,
         type: tag.type,
         dataType: tag.dataType,
-        unit: tag.unit || null,
+        unit: tag.unit || undefined,
         minValue: tag.minValue ?? null,
         maxValue: tag.maxValue ?? null,
         simPattern: tag.simPattern || null,
@@ -1436,6 +1455,113 @@ export default function MimicEditor() {
       setSaving(false);
     }
   }, [projectId, activePageId, pageName, elements, connections, gridSize, bgColor, pageSettings]);
+
+  // ── AI Chat: send message, apply changes + auto-create & bind tags ────────
+  const sendAiChat = useCallback(async () => {
+    const msg = aiInput.trim();
+    if (!msg || aiLoading) return;
+    setAiMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setAiInput('');
+    setAiLoading(true);
+    try {
+      const prevElementIds = new Set(elements.map(e => e.id));
+
+      const { data } = await api.post('/sld/chat', {
+        elements,
+        connections,
+        message: msg,
+        projectName: project?.name || 'SLD',
+      });
+
+      // Push undo history before applying
+      pushHistory(elements);
+
+      // ── Auto-create tags for newly added elements ──────────────────────
+      const newElements: typeof elements = data.elements;
+      const addedElements = newElements.filter((e: any) => !prevElementIds.has(e.id));
+      let tagsBound = 0;
+
+      for (const el of addedElements) {
+        // Normalise type to match TAG_TEMPLATES keys (e.g. "circuit_breaker" → "VacuumCB")
+        const typeMap: Record<string, string> = {
+          circuit_breaker: 'VacuumCB',
+          vcb: 'VacuumCB',
+          breaker: 'VacuumCB',
+          transformer: 'Transformer',
+          avr: 'StepVoltageRegulator',
+          busbar: 'Busbar',
+          bus: 'Busbar',
+          generator: 'Generator',
+          motor: 'Motor',
+          load: 'GenericLoad',
+          solar: 'SolarInverter',
+          capacitor: 'CapacitorBank',
+          ct: 'CT',
+          pt: 'VT',
+          arrester: 'SurgeArrester',
+          isolator: 'Isolator',
+          fuse: 'Fuse',
+        };
+        const resolvedType = typeMap[el.type?.toLowerCase()] || el.type;
+        const templates = TAG_TEMPLATES[resolvedType] || TAG_TEMPLATES[el.type] || [];
+        if (!templates.length) continue;
+
+        const prefix = (el.properties?.label || el.type).replace(/[^a-zA-Z0-9_]/g, '_');
+        const newBindings: Record<string, string> = { ...(el.properties?.tagBindings || {}) };
+
+        for (const tmpl of templates) {
+          const tagName = `${prefix}.${tmpl.suffix}`;
+          const existing = tags.find(t => t.name === tagName);
+          if (!existing && projectId) {
+            try {
+              await api.post('/tags', {
+                name: tagName,
+                type: 'SIMULATED',
+                dataType: tmpl.dataType,
+                unit: tmpl.unit || undefined,
+                minValue: tmpl.min ?? undefined,
+                maxValue: tmpl.max ?? undefined,
+                projectId,
+                simPattern: 'rand',
+                simFrequency: 1,
+                simAmplitude: tmpl.max ? (tmpl.max - (tmpl.min || 0)) / 2 : 10,
+                simOffset: tmpl.max ? ((tmpl.max + (tmpl.min || 0)) / 2) : 0,
+              });
+            } catch { continue; }
+          }
+          newBindings[tmpl.suffix] = tagName;
+          tagsBound++;
+        }
+        // Patch the element in newElements with the bound tags
+        const idx = newElements.findIndex((e: any) => e.id === el.id);
+        if (idx >= 0) {
+          newElements[idx] = { ...newElements[idx], properties: { ...newElements[idx].properties, tagBindings: newBindings } };
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+      setElements(newElements);
+      setConnections(data.connections);
+      loadTags(); // Refresh tag list
+
+      const tagNote = tagsBound > 0 ? ` Auto-created & bound ${tagsBound} tags for ${addedElements.length} new element(s).` : '';
+      setAiMessages(prev => [...prev, { role: 'ai', text: (data.explanation || 'Changes applied.') + tagNote }]);
+
+      // Auto-save
+      if (projectId && activePageId) {
+        await api.put(`/projects/${projectId}/pages/${activePageId}`, {
+          name: pageName, elements: newElements, connections: data.connections,
+          gridSize, backgroundColor: bgColor, pageSettings,
+        }).catch(() => {});
+      }
+    } catch (err: any) {
+      setAiMessages(prev => [...prev, { role: 'ai', text: `Error: ${err?.response?.data?.error || err.message || 'Failed'}` }]);
+    } finally {
+      setAiLoading(false);
+      setTimeout(() => aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+  }, [aiInput, aiLoading, elements, connections, project, projectId, activePageId, pageName, gridSize, bgColor, pageSettings, pushHistory, tags, loadTags]);
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -3731,6 +3857,20 @@ export default function MimicEditor() {
                           placeholder="e.g. Current_R"
                           className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
                       </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag 3 (Pen 3)</label>
+                        <input type="text" value={selectedEl.properties.tag3 || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tag3: e.target.value })}
+                          placeholder="e.g. Power_kW"
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag 4 (Pen 4)</label>
+                        <input type="text" value={selectedEl.properties.tag4 || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tag4: e.target.value })}
+                          placeholder="e.g. Temp_C"
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">Pen 1 Color</label>
@@ -3742,6 +3882,18 @@ export default function MimicEditor() {
                           <label className="block text-xs font-medium text-gray-500 mb-1">Pen 2 Color</label>
                           <input type="color" value={selectedEl.properties.pen2Color || '#A78BFA'}
                             onChange={(e) => updateElementProps(selectedEl.id, { pen2Color: e.target.value })}
+                            className="w-full h-7 rounded border border-gray-200 cursor-pointer" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Pen 3 Color</label>
+                          <input type="color" value={selectedEl.properties.pen3Color || '#4ADE80'}
+                            onChange={(e) => updateElementProps(selectedEl.id, { pen3Color: e.target.value })}
+                            className="w-full h-7 rounded border border-gray-200 cursor-pointer" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Pen 4 Color</label>
+                          <input type="color" value={selectedEl.properties.pen4Color || '#FB923C'}
+                            onChange={(e) => updateElementProps(selectedEl.id, { pen4Color: e.target.value })}
                             className="w-full h-7 rounded border border-gray-200 cursor-pointer" />
                         </div>
                       </div>
@@ -3778,6 +3930,75 @@ export default function MimicEditor() {
                       onChange={(e) => updateElementProps(selectedEl.id, { buttonColor: e.target.value })}
                       className="w-full h-8 rounded border border-gray-200 cursor-pointer" />
                   </div>
+                </>
+              )}
+
+
+              {/* 3D Button Properties */}
+              {selectedEl.type.startsWith('3d-') && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Button Text</label>
+                    <input type="text" value={selectedEl.properties.buttonText || ''}
+                      onChange={(e) => updateElementProps(selectedEl.id, { buttonText: e.target.value })}
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Button Color</label>
+                    <input type="color" value={selectedEl.properties.buttonColor || '#6B7280'}
+                      onChange={(e) => updateElementProps(selectedEl.id, { buttonColor: e.target.value })}
+                      className="w-full h-8 rounded border border-gray-200 cursor-pointer" />
+                  </div>
+                  {!['3d-indicator-lamp'].includes(selectedEl.type) && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Tag Binding</label>
+                        <input type="text" value={selectedEl.properties.tagBinding || ''}
+                          onChange={(e) => updateElementProps(selectedEl.id, { tagBinding: e.target.value })}
+                          placeholder="e.g. PUMP_01_STATUS"
+                          className="w-full px-2 py-1 text-xs font-mono border border-gray-200 rounded text-gray-900 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Action</label>
+                        <select value={selectedEl.properties.controlAction || 'setValue'}
+                          onChange={(e) => updateElementProps(selectedEl.id, { controlAction: e.target.value })}
+                          className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white">
+                          <option value="setValue">Set Value</option>
+                          <option value="toggle">Toggle</option>
+                          <option value="momentary">Momentary (hold ON)</option>
+                          <option value="increment">Increment</option>
+                          <option value="script">Run Script</option>
+                        </select>
+                      </div>
+                      {selectedEl.properties.controlAction === 'setValue' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Value to Set</label>
+                          <input type="text" value={selectedEl.properties.controlValue || ''}
+                            onChange={(e) => updateElementProps(selectedEl.id, { controlValue: e.target.value })}
+                            placeholder="e.g. 1"
+                            className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                        </div>
+                      )}
+                      {selectedEl.properties.controlAction === 'increment' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Increment By</label>
+                          <input type="number" value={selectedEl.properties.incrementBy || 1}
+                            onChange={(e) => updateElementProps(selectedEl.id, { incrementBy: parseFloat(e.target.value) || 1 })}
+                            className="w-full px-2 py-1 text-sm border border-gray-200 rounded text-gray-900 bg-white" />
+                        </div>
+                      )}
+                      {selectedEl.properties.controlAction === 'script' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Script (JS)</label>
+                          <textarea value={selectedEl.properties.controlScript || ''}
+                            onChange={(e) => updateElementProps(selectedEl.id, { controlScript: e.target.value })}
+                            rows={4}
+                            placeholder="// e.g. PUMP_01=1; WAIT(500); PUMP_02=1;"
+                            className="w-full px-2 py-1 text-xs font-mono border border-gray-200 rounded text-gray-900 bg-white" />
+                        </div>
+                      )}
+                    </>
+                  )}
                 </>
               )}
 
@@ -4590,6 +4811,111 @@ export default function MimicEditor() {
           editComponent={editingComponent}
         />
       )}
+
+      {/* ── AI SLD Chat Panel ─────────────────────────────────────────────── */}
+      {/* Floating toggle button */}
+      <button
+        onClick={() => setAiChatOpen(v => !v)}
+        title="AI Chat — edit this SLD using natural language"
+        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-xl text-sm font-semibold transition-all
+          ${aiChatOpen
+            ? 'bg-purple-600 text-white'
+            : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:scale-105'}`}
+      >
+        <Sparkles className="w-4 h-4" />
+        {aiChatOpen ? 'Close AI Chat' : 'AI Edit'}
+      </button>
+
+      {/* Chat Panel */}
+      {aiChatOpen && (
+        <div className="fixed bottom-20 right-6 z-50 w-96 bg-white rounded-2xl shadow-2xl border border-purple-200 flex flex-col overflow-hidden"
+          style={{ maxHeight: '70vh' }}>
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-white">
+              <Bot className="w-5 h-5" />
+              <div>
+                <div className="text-sm font-bold">AI SLD Editor</div>
+                <div className="text-xs text-purple-200">{elements.length} elements · {tags.length} tags</div>
+              </div>
+            </div>
+            <button onClick={() => setAiChatOpen(false)} className="text-white/70 hover:text-white text-lg leading-none">×</button>
+          </div>
+
+          {/* Suggested prompts (shown when empty) */}
+          {aiMessages.length === 0 && (
+            <div className="p-3 border-b border-gray-100">
+              <p className="text-xs text-gray-400 mb-2">Try asking:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Add a new VCB feeder called NTPC-3',
+                  'Add a transformer called TR-3 (10MVA)',
+                  'Rename BCJ to BCJ-NEW',
+                  'Remove the SPARE bay',
+                  'Add a solar feeder after FBC',
+                  'Change busbar voltage to 33kV',
+                ].map(s => (
+                  <button key={s} onClick={() => setAiInput(s)}
+                    className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-full hover:bg-purple-100 transition-colors border border-purple-200">
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+            {aiMessages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed
+                  ${m.role === 'user'
+                    ? 'bg-purple-600 text-white rounded-br-sm'
+                    : 'bg-gray-100 text-gray-800 rounded-bl-sm flex items-start gap-1.5'}`}>
+                  {m.role === 'ai' && <Sparkles className="w-3.5 h-3.5 text-purple-500 mt-0.5 shrink-0" />}
+                  {m.text}
+                </div>
+              </div>
+            ))}
+            {aiLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-2.5 flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}}/>
+                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{animationDelay:'150ms'}}/>
+                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{animationDelay:'300ms'}}/>
+                  </div>
+                  <span className="text-xs text-gray-400">AI is editing your SLD...</span>
+                </div>
+              </div>
+            )}
+            <div ref={aiChatEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="p-3 border-t border-gray-100 bg-gray-50">
+            <div className="flex gap-2">
+              <input
+                className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-200 bg-white"
+                placeholder="Describe what to change..."
+                value={aiInput}
+                onChange={e => setAiInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAiChat(); } }}
+                disabled={aiLoading}
+              />
+              <button
+                onClick={sendAiChat}
+                disabled={!aiInput.trim() || aiLoading}
+                className="px-3 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-40 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5 text-center">Changes auto-saved. Ctrl+Z to undo.</p>
+          </div>
+        </div>
+      )}
+      {/* ── End AI SLD Chat Panel ─────────────────────────────────────────── */}
     </div>
   );
 }

@@ -1,236 +1,229 @@
-import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
-import { z } from 'zod';
-import { env } from '../config/environment';
+import * as https from 'https';
 
-// Zod schemas matching the SLDLayout interface
-const VALID_TYPES = [
-  'CIRCUIT_BREAKER', 'ISOLATOR', 'EARTH_SWITCH', 'POWER_TRANSFORMER',
-  'CURRENT_TRANSFORMER', 'POTENTIAL_TRANSFORMER', 'BUS_BAR',
-  'FEEDER_LINE', 'LIGHTNING_ARRESTER', 'CAPACITOR_BANK',
-] as const;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_MODEL   = 'gemini-3-pro-preview';
 
-// Map common OpenAI variations to valid types
-function normalizeElementType(type: string): typeof VALID_TYPES[number] {
-  const t = type.toUpperCase().replace(/[-\s]/g, '_');
-  if (VALID_TYPES.includes(t as any)) return t as typeof VALID_TYPES[number];
-  if (t.includes('BREAKER') || t.includes('CB')) return 'CIRCUIT_BREAKER';
-  if (t.includes('TRANSFORMER') || t.includes('XFMR') || t.includes('TX')) return 'POWER_TRANSFORMER';
-  if (t.includes('BUS') || t.includes('BUSBAR')) return 'BUS_BAR';
-  if (t.includes('ISOLATOR') || t.includes('DISCONNECT')) return 'ISOLATOR';
-  if (t.includes('EARTH') || t.includes('GROUND')) return 'EARTH_SWITCH';
-  if (t.includes('CT') || t.includes('CURRENT')) return 'CURRENT_TRANSFORMER';
-  if (t.includes('PT') || t.includes('POTENTIAL') || t.includes('VT')) return 'POTENTIAL_TRANSFORMER';
-  if (t.includes('FEEDER') || t.includes('LINE') || t.includes('CABLE')) return 'FEEDER_LINE';
-  if (t.includes('ARRESTER') || t.includes('LIGHTNING') || t.includes('SURGE')) return 'LIGHTNING_ARRESTER';
-  if (t.includes('CAPACITOR') || t.includes('CAP')) return 'CAPACITOR_BANK';
-  return 'FEEDER_LINE'; // default fallback
+const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
+  CIRCUIT_BREAKER:       { type: 'CB',               w: 40, h: 40 },
+  VACUUM_CB:             { type: 'VacuumCB',          w: 40, h: 40 },
+  ISOLATOR:              { type: 'Isolator',          w: 40, h: 25 },
+  EARTH_SWITCH:          { type: 'EarthSwitch',       w: 30, h: 30 },
+  POWER_TRANSFORMER:     { type: 'Transformer',       w: 70, h: 90 },
+  CURRENT_TRANSFORMER:   { type: 'CT',                w: 35, h: 25 },
+  POTENTIAL_TRANSFORMER: { type: 'PT',                w: 35, h: 25 },
+  BUS_BAR:               { type: 'BusBar',            w: 0,  h: 10 },
+  FEEDER:                { type: 'Feeder',            w: 40, h: 60 },
+  FEEDER_LINE:           { type: 'Feeder',            w: 40, h: 60 },
+  LIGHTNING_ARRESTER:    { type: 'LightningArrester', w: 30, h: 50 },
+  CAPACITOR_BANK:        { type: 'CapacitorBank',     w: 50, h: 50 },
+  OVERHEAD_LINE:         { type: 'OverheadLine',      w: 80, h: 20 },
+  CABLE:                 { type: 'Cable',             w: 80, h: 8  },
+  METER:                 { type: 'Meter',             w: 40, h: 40 },
+};
+
+function normalizeType(t: string): { type: string; w: number; h: number } {
+  const u = (t || '').toUpperCase().replace(/[-\s]/g, '_');
+  if (TYPE_MAP[u]) return { ...TYPE_MAP[u] };
+  if (u.includes('BREAKER') || u.includes('VCB') || u.includes('ACB') || u.includes('_CB') || u === 'CB') return { ...TYPE_MAP.CIRCUIT_BREAKER };
+  if (u.includes('TRANSFORM') || u.includes('XFMR') || u.includes('AVR') || u.includes('MVA') || u.includes('KVA')) return { ...TYPE_MAP.POWER_TRANSFORMER };
+  if (u.includes('BUS')) return { ...TYPE_MAP.BUS_BAR };
+  if (u.includes('FEEDER') || u.includes('OUTGOING') || u.includes('INCOMING') || u.includes('PANEL')) return { ...TYPE_MAP.FEEDER };
+  if (u.includes('ISOLAT') || u.includes('DISCONN')) return { ...TYPE_MAP.ISOLATOR };
+  if (u.includes('EARTH') || u.includes('GROUND')) return { ...TYPE_MAP.EARTH_SWITCH };
+  if (u.includes('ARRESTER') || u.includes('SURGE')) return { ...TYPE_MAP.LIGHTNING_ARRESTER };
+  if (u.includes('METER') || u.includes('METERING')) return { ...TYPE_MAP.METER };
+  if (u.includes('OVERHEAD') || u.includes('LINE') || u.includes('INCOMING')) return { ...TYPE_MAP.OVERHEAD_LINE };
+  return { ...TYPE_MAP.FEEDER };
 }
 
-const SLDElementSchema = z.object({
-  id: z.string(),
-  equipmentId: z.string().optional().default(() => uuidv4()),
-  type: z.string().transform(normalizeElementType),
-  x: z.number(),
-  y: z.number(),
-  rotation: z.number().optional().default(0),
-  label: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
+function geminiRequest(base64Image: string, mimeType: string, prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      contents: [{ parts: [
+        { inline_data: { mime_type: mimeType, data: base64Image } },
+        { text: prompt }
+      ]}],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+    });
 
-const SLDConnectionSchema = z.object({
-  id: z.string(),
-  fromElementId: z.string(),
-  fromPoint: z.string().optional().default('bottom'),
-  toElementId: z.string(),
-  toPoint: z.string().optional().default('top'),
-  voltageLevel: z.number().optional().default(11),
-});
+    const req = https.request({
+      hostname: 'generativelanguage.googleapis.com',
+      path: `/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (res) => {
+      let data = '';
+      res.on('data', d => data += d);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) return reject(new Error(parsed.error.message));
+          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          resolve(text);
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
 
-const SLDLayoutSchema = z.object({
-  id: z.string().optional().default(() => uuidv4()),
-  substationId: z.string().optional().default(() => uuidv4()),
-  name: z.string().optional().default('AI Generated SLD'),
-  width: z.number().optional().default(1200),
-  height: z.number().optional().default(800),
-  elements: z.array(SLDElementSchema),
-  connections: z.array(SLDConnectionSchema).optional().default([]),
-});
+export async function generateSLDFromImage(imageBuffer: Buffer, mimeType: string) {
+  const base64Image = imageBuffer.toString('base64');
 
-type SLDLayout = z.infer<typeof SLDLayoutSchema>;
+  const prompt = `You are an expert electrical engineer. Analyze this Single Line Diagram (SLD) carefully.
 
-const SYSTEM_PROMPT = `You are an expert electrical engineer specializing in Single Line Diagrams (SLDs) for power substations. You analyze images of hand-drawn, scanned, or digital SLD diagrams and produce a structured JSON representation.
+Extract EVERY electrical component with exact labels from the diagram.
 
-You MUST return ONLY valid JSON matching this exact schema (no markdown, no explanation, just JSON):
-
+Return ONLY valid JSON (no markdown, no explanation):
 {
-  "id": "string (UUID)",
-  "substationId": "string (UUID)",
-  "name": "string (descriptive name for the substation)",
-  "width": 1200,
-  "height": 800,
-  "elements": [
+  "name": "substation name from diagram",
+  "components": [
     {
-      "id": "string (UUID)",
-      "equipmentId": "string (UUID)",
-      "type": "EQUIPMENT_TYPE",
-      "x": number,
-      "y": number,
-      "rotation": 0,
-      "label": "string (tag/name visible on diagram)",
-      "metadata": { ... }
+      "id": "c1",
+      "type": "OVERHEAD_LINE | BUS_BAR | POWER_TRANSFORMER | CIRCUIT_BREAKER | ISOLATOR | EARTH_SWITCH | CT | PT | FEEDER | LIGHTNING_ARRESTER | CAPACITOR_BANK | METER",
+      "label": "exact label from diagram e.g. MADGI, 10 MVA 33/11KV, VCB-1, FBC",
+      "voltage": 33,
+      "level": 0,
+      "column": 0
     }
   ],
   "connections": [
-    {
-      "id": "string (UUID)",
-      "fromElementId": "string (element id)",
-      "fromPoint": "top|bottom|left|right",
-      "toElementId": "string (element id)",
-      "toPoint": "top|bottom|left|right",
-      "voltageLevel": number
-    }
+    { "from": "c1", "to": "c2" }
   ]
 }
 
-EQUIPMENT TYPES (use these exact strings):
-- CIRCUIT_BREAKER: Square with X symbol, used for switching/protection. Label like "CB1", "INC1", "BSC"
-- ISOLATOR: Blade switch symbol, used for isolation. Label like "ISO1", "DS1"
-- EARTH_SWITCH: Switch to ground symbol. Label like "ES1"
-- POWER_TRANSFORMER: Two overlapping circles, steps voltage up/down. Label like "TR-1", "T1". Metadata: { "hvVoltage": 33, "lvVoltage": 11, "mva": 8 }
-- CURRENT_TRANSFORMER: Small circle on conductor. Label like "CT1"
-- POTENTIAL_TRANSFORMER: Small circle with connection. Label like "PT1"
-- BUS_BAR: Thick horizontal line carrying power. Label like "33kV Bus 1", "11kV Bus". Metadata: { "busWidth": 300, "voltageKv": 33 }
-- FEEDER_LINE: Outgoing line with arrow, delivers power to loads. Label like "F1", "Feeder 1"
-- LIGHTNING_ARRESTER: Zigzag symbol to ground. Label like "LA1"
-- CAPACITOR_BANK: Two parallel plates symbol. Label like "CAP1"
+Level assignment (vertical position, top to bottom):
+- level 0: incoming grid lines (MADGI, KARDHA etc.)
+- level 1: HV busbar (33kV, 132kV etc.)
+- level 2: power transformers
+- level 3: LV busbar (11kV, 415V etc.)
+- level 4: outgoing circuit breakers / isolators
+- level 5: outgoing feeders / panels / loads
 
-COORDINATE SYSTEM:
-- Canvas is 1200 x 800 pixels
-- Place HV (higher voltage) bus bars in the top portion (y: 100-150)
-- Place LV (lower voltage) bus bars in the lower portion (y: 400-450)
-- Place transformers between the bus bars (y: 200-350)
-- Place feeders below the LV bus (y: 450-600)
-- Spread elements horizontally with adequate spacing (min 80px between elements)
-- Bus bars should span horizontally (typical width 300-600px in metadata.busWidth)
+Column assignment: each parallel branch gets its own column (0, 1, 2, 3...)
 
-VOLTAGE LEVELS:
-- 132kV: Extra High Voltage (use voltageLevel: 132)
-- 33kV: High Voltage (use voltageLevel: 33)
-- 11kV: Medium Voltage (use voltageLevel: 11)
-- Detect voltage levels from labels, symbols, and context in the diagram
+CRITICAL: 
+- Include ALL transformers (look for MVA ratings, transformer symbols)
+- Include ALL busbars at each voltage level
+- Include ALL outgoing feeders with their names
+- Set voltage field for each component
+- List ALL connections between components
 
-CONNECTION RULES:
-- Connect elements that are electrically linked in the diagram
-- fromPoint/toPoint indicate which side of the element the connection attaches to (top, bottom, left, right)
-- Set voltageLevel based on the voltage zone the connection is in
-- Bus bar connections typically use "top" or "bottom" points
-- Transformer HV side connects from "top", LV side from "bottom"
+Return ONLY the JSON object.`;
 
-Generate unique UUIDs for all id fields. Analyze the image carefully and produce accurate, complete JSON.`;
+  console.log(`[SLD] Calling Gemini ${GEMINI_MODEL}...`);
+  const textContent = await geminiRequest(base64Image, mimeType, prompt);
+  console.log('[SLD] Response length:', textContent.length);
 
-function extractJSON(text: string): string {
-  // Try to extract JSON from markdown code fences
-  const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-  if (fenceMatch) {
-    return fenceMatch[1].trim();
+  let jsonStr = textContent.trim();
+  // Strip leading "json" word if Gemini returns without proper fences
+  jsonStr = jsonStr.replace(/^json\s*/i, '');
+  // Strip markdown fences
+  const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fence) jsonStr = fence[1].trim();
+  // Extract first {...} block
+  const jMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (jMatch) jsonStr = jMatch[0];
+
+  let parsed: any;
+  try { parsed = JSON.parse(jsonStr); }
+  catch (e: any) {
+    // Try to fix truncated JSON by finding last valid closing brace
+    const lastBrace = jsonStr.lastIndexOf('}');
+    if (lastBrace > 0) {
+      try { parsed = JSON.parse(jsonStr.substring(0, lastBrace + 1)); }
+      catch { throw new Error('Failed to parse Gemini response: ' + textContent.substring(0, 300)); }
+    } else {
+      throw new Error('Failed to parse Gemini response: ' + textContent.substring(0, 300));
+    }
   }
-  // Try to find raw JSON object
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    return jsonMatch[0].trim();
-  }
-  return text.trim();
-}
 
-function ensureUUIDs(layout: SLDLayout): SLDLayout {
+  const comps: any[] = parsed.components || [];
+  if (comps.length === 0) throw new Error('No components detected');
+  console.log('[SLD] Components detected:', comps.length);
+
+  // Layout engine
+  const CANVAS_W = 1600, CANVAS_H = 900;
+  const MARGIN = 60, USABLE_W = CANVAS_W - MARGIN * 2;
+  const LEVEL_H = 130;
+
+  const byLevel = new Map<number, any[]>();
+  for (const c of comps) {
+    const lv = Number(c.level ?? 0);
+    if (!byLevel.has(lv)) byLevel.set(lv, []);
+    byLevel.get(lv)!.push(c);
+  }
+  const levels = Array.from(byLevel.keys()).sort((a, b) => a - b);
+
+  const elements: any[] = [];
   const idMap = new Map<string, string>();
 
-  const ensureId = (original: string): string => {
-    if (!idMap.has(original)) {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(original);
-      idMap.set(original, isUUID ? original : uuidv4());
+  for (const lv of levels) {
+    const group = byLevel.get(lv)!.sort((a: any, b: any) => (a.column ?? 0) - (b.column ?? 0));
+    const colCount = Math.max(...group.map((c: any) => Number(c.column ?? 0))) + 1;
+    const colW = USABLE_W / Math.max(colCount, 1);
+    const y = MARGIN + lv * LEVEL_H;
+
+    for (let i = 0; i < group.length; i++) {
+      const comp = group[i];
+      const sym = normalizeType(comp.type);
+      const uid = uuidv4();
+      idMap.set(comp.id, uid);
+
+      let x: number, w: number, h: number;
+
+      if (sym.type === 'BusBar') {
+        x = MARGIN; w = USABLE_W; h = sym.h;
+      } else {
+        const col = Number(comp.column ?? i);
+        const cx = MARGIN + col * colW + colW / 2;
+        w = sym.w; h = sym.h;
+        x = Math.round(cx - w / 2);
+      }
+
+      x = Math.max(MARGIN, Math.min(CANVAS_W - w - MARGIN, x));
+      const cy = Math.max(MARGIN, Math.min(CANVAS_H - h - 20, y));
+
+      elements.push({
+        id: uid, type: sym.type,
+        x: Math.round(x), y: Math.round(cy),
+        width: w, height: h,
+        rotation: 0, zIndex: lv + 1,
+        properties: {
+          tagBindings: {}, label: comp.label || '',
+          showLabel: true,
+          labelPosition: sym.type === 'BusBar' ? 'top' : 'bottom',
+          voltageLevel: comp.voltage,
+        },
+      });
     }
-    return idMap.get(original)!;
-  };
+  }
 
+  const connections: any[] = [];
+  for (const conn of (parsed.connections || [])) {
+    const fromUid = idMap.get(conn.from), toUid = idMap.get(conn.to);
+    if (!fromUid || !toUid) continue;
+    const fromEl = elements.find(e => e.id === fromUid);
+    const toEl   = elements.find(e => e.id === toUid);
+    if (!fromEl || !toEl) continue;
+
+    const [topEl, botEl] = fromEl.y <= toEl.y ? [fromEl, toEl] : [toEl, fromEl];
+    const [topUid, botUid] = fromEl.y <= toEl.y ? [fromUid, toUid] : [toUid, fromUid];
+    const fx = Math.round(topEl.x + topEl.width / 2), fy = Math.round(topEl.y + topEl.height);
+    const tx = Math.round(botEl.x + botEl.width / 2), ty = Math.round(botEl.y);
+    const midY = Math.round((fy + ty) / 2);
+    const pts = fx === tx ? [{x:fx,y:fy},{x:tx,y:ty}] : [{x:fx,y:fy},{x:fx,y:midY},{x:tx,y:midY},{x:tx,y:ty}];
+    connections.push({ id: uuidv4(), fromId: topUid, toId: botUid, points: pts, color: '#374151', thickness: 2 });
+  }
+
+  console.log(`[SLD] Done: ${elements.length} elements, ${connections.length} connections`);
   return {
-    ...layout,
-    id: ensureId(layout.id),
-    substationId: ensureId(layout.substationId),
-    elements: layout.elements.map((el) => ({
-      ...el,
-      id: ensureId(el.id),
-      equipmentId: ensureId(el.equipmentId),
-    })),
-    connections: layout.connections.map((conn) => ({
-      ...conn,
-      id: ensureId(conn.id),
-      fromElementId: ensureId(conn.fromElementId),
-      toElementId: ensureId(conn.toElementId),
-    })),
+    id: uuidv4(), substationId: uuidv4(),
+    name: parsed.name || 'AI Generated SLD',
+    width: CANVAS_W, height: CANVAS_H,
+    elements, connections,
   };
-}
-
-export async function generateSLDFromImage(
-  imageBuffer: Buffer,
-  mimeType: string,
-): Promise<SLDLayout> {
-  if (!env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not configured. Set it in your .env file.');
-  }
-
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-  const base64Image = imageBuffer.toString('base64');
-  const dataUrl = `data:${mimeType};base64,${base64Image}`;
-
-  const userPrompt = `Please analyze this engineering schematic diagram and identify all the components visible in it.
-
-For each component you can see (transformers, circuit breakers, switches, busbars, feeders, cables, meters, etc.), extract:
-- A unique id (generate a UUID like "550e8400-e29b-41d4-a716-446655440000")
-- The component type - map to one of: CIRCUIT_BREAKER, ISOLATOR, EARTH_SWITCH, POWER_TRANSFORMER, CURRENT_TRANSFORMER, POTENTIAL_TRANSFORMER, BUS_BAR, FEEDER_LINE, LIGHTNING_ARRESTER, CAPACITOR_BANK
-- Its label or name as visible in the diagram
-- Its approximate x,y position in pixels (treat the diagram as 1200x800 canvas)
-- rotation: 0
-
-Return ONLY a JSON object with no markdown, no explanation, in this exact format:
-{"id":"uuid","substationId":"uuid","name":"substation name from diagram","width":1200,"height":800,"elements":[{"id":"uuid","equipmentId":"uuid","type":"CIRCUIT_BREAKER","x":100,"y":200,"rotation":0,"label":"CB1"}],"connections":[]}`;
-
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o',
-    max_tokens: 8192,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
-          { type: 'text', text: userPrompt },
-        ],
-      },
-    ],
-  });
-
-  const textContent = response.choices[0]?.message?.content;
-  if (!textContent) {
-    throw new Error('No text response received from OpenAI');
-  }
-
-  const jsonStr = extractJSON(textContent);
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch {
-    throw new Error(`Failed to parse OpenAI response as JSON: ${jsonStr.substring(0, 200)}...`);
-  }
-
-  const validation = SLDLayoutSchema.safeParse(parsed);
-  if (!validation.success) {
-    console.error('[SLD] Schema validation failed:', validation.error.message);
-    console.error('[SLD] Parsed JSON was:', JSON.stringify(parsed).substring(0, 500));
-    throw new Error(`Schema validation failed: ${validation.error.message}`);
-  }
-  console.log('[SLD] Schema validation passed — elements:', validation.data.elements.length);
-
-  return ensureUUIDs(validation.data);
 }

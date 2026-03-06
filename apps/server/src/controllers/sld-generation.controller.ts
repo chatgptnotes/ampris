@@ -104,3 +104,95 @@ export const generateSLD = [
     }
   }
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/sld/chat  — AI chat to modify existing SLD elements
+// Body: { elements, connections, message, projectName? }
+// Returns: { elements, connections, explanation }
+// ─────────────────────────────────────────────────────────────────────────────
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+export const chatSLD = async (req: Request, res: Response) => {
+  const { elements = [], connections = [], message, projectName = 'SLD' } = req.body;
+  if (!message) return res.status(400).json({ error: 'message required' });
+
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const SYSTEM = `You are an expert electrical SLD (Single Line Diagram) editor.
+You will receive the current SLD as JSON (elements + connections arrays) and a user instruction.
+Apply the instruction and return the COMPLETE updated SLD JSON.
+
+ELEMENT SCHEMA:
+{
+  "id": "unique string",
+  "type": "busbar|circuit_breaker|transformer|generator|load|cable|switch|isolator|fuse|ct|pt|arrester|motor|capacitor|label|line",
+  "x": number (0-1600),
+  "y": number (0-900),
+  "width": number,
+  "height": number,
+  "rotation": 0,
+  "zIndex": 1,
+  "properties": {
+    "label": "display text",
+    "showLabel": true,
+    "tagBindings": {},
+    "voltage"?: "11kV",
+    "rating"?: "1250A",
+    "color"?: "#1d4ed8"
+  }
+}
+
+CONNECTION SCHEMA:
+{ "id": "string", "fromId": "elementId", "toId": "elementId", "points": [{"x":n,"y":n},{"x":n,"y":n}], "color": "#000", "thickness": 2 }
+
+RULES:
+- Keep all existing elements unless explicitly told to remove
+- New element IDs: use "el_<random6chars>"
+- New connection IDs: use "conn_<random6chars>"  
+- Maintain vertical hierarchy: busbars horizontal, feeders hang downward
+- Keep elements within canvas bounds: x 0-1560, y 0-860
+- For "add feeder X": add a circuit_breaker below the busbar + a load below it + connection
+- For "rename X to Y": update the label property
+- For "remove X": remove from elements and any connections referencing it
+- For "change voltage": update voltage property on matching elements
+- For "move X left/right/up/down": adjust x/y by ~80px
+- Always return ONLY valid JSON, no markdown, no explanation text outside JSON
+
+Return format (STRICT JSON only):
+{
+  "elements": [...complete updated array...],
+  "connections": [...complete updated array...],
+  "explanation": "one sentence: what was done"
+}`;
+
+    const currentSLD = JSON.stringify({ elements, connections }, null, 2);
+    const prompt = `${SYSTEM}\n\nCurrent SLD (${elements.length} elements, ${connections.length} connections):\n${currentSLD}\n\nUser instruction: "${message}"\n\nReturn updated SLD JSON:`;
+
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text().trim()
+      .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      // Try to extract JSON from response
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('AI returned invalid JSON');
+      parsed = JSON.parse(match[0]);
+    }
+
+    if (!Array.isArray(parsed.elements)) throw new Error('Missing elements array in AI response');
+    return res.json({
+      elements: parsed.elements,
+      connections: parsed.connections || connections,
+      explanation: parsed.explanation || 'Changes applied',
+    });
+
+  } catch (err: any) {
+    console.error('[SLD Chat] Error:', err.message);
+    return res.status(500).json({ error: err.message || 'AI chat failed' });
+  }
+};

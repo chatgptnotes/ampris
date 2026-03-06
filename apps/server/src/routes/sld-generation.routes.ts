@@ -12,3 +12,7 @@ router.get('/status/:jobId', optionalAuth, getSLDStatus);
 router.post('/generate', optionalAuth, ...generateSLD);
 
 export default router;
+
+// AI chat to modify existing SLD
+import { chatSLD } from '../controllers/sld-generation.controller';
+router.post('/chat', optionalAuth, chatSLD);
