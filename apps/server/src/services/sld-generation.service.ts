@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
-import * as https from 'https';
+import Anthropic from '@anthropic-ai/sdk';
+import { env } from '../config/environment';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL   = 'gemini-3-pro-preview';
+const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
 
 const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
   CIRCUIT_BREAKER:       { type: 'CB',               w: 40, h: 40 },
@@ -37,37 +37,24 @@ function normalizeType(t: string): { type: string; w: number; h: number } {
   return { ...TYPE_MAP.FEEDER };
 }
 
-function geminiRequest(base64Image: string, mimeType: string, prompt: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      contents: [{ parts: [
-        { inline_data: { mime_type: mimeType, data: base64Image } },
-        { text: prompt }
-      ]}],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
-    });
+let anthropicClient: Anthropic | null = null;
 
-    const req = https.request({
-      hostname: 'generativelanguage.googleapis.com',
-      path: `/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-    }, (res) => {
-      let data = '';
-      res.on('data', d => data += d);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.error) return reject(new Error(parsed.error.message));
-          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          resolve(text);
-        } catch (e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
+function getAnthropicClient(): Anthropic {
+  if (!anthropicClient) {
+    if (!env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is not configured');
+    }
+    anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  }
+  return anthropicClient;
+}
+
+function toAnthropicMediaType(mimeType: string): 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' {
+  const normalized = mimeType.toLowerCase();
+  if (normalized === 'image/png') return 'image/png';
+  if (normalized === 'image/gif') return 'image/gif';
+  if (normalized === 'image/webp') return 'image/webp';
+  return 'image/jpeg';
 }
 
 export async function generateSLDFromImage(imageBuffer: Buffer, mimeType: string) {
@@ -105,7 +92,7 @@ Level assignment (vertical position, top to bottom):
 
 Column assignment: each parallel branch gets its own column (0, 1, 2, 3...)
 
-CRITICAL: 
+CRITICAL:
 - Include ALL transformers (look for MVA ratings, transformer symbols)
 - Include ALL busbars at each voltage level
 - Include ALL outgoing feeders with their names
@@ -114,12 +101,42 @@ CRITICAL:
 
 Return ONLY the JSON object.`;
 
-  console.log(`[SLD] Calling Gemini ${GEMINI_MODEL}...`);
-  const textContent = await geminiRequest(base64Image, mimeType, prompt);
+  console.log(`[SLD] Calling Anthropic ${ANTHROPIC_MODEL}...`);
+  const client = getAnthropicClient();
+
+  const response = await client.messages.create({
+    model: ANTHROPIC_MODEL,
+    max_tokens: 8192,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: toAnthropicMediaType(mimeType),
+              data: base64Image,
+            },
+          },
+          {
+            type: 'text',
+            text: prompt,
+          },
+        ],
+      },
+    ],
+  });
+
+  const textContent = response.content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map(block => block.text)
+    .join('');
+
   console.log('[SLD] Response length:', textContent.length);
 
   let jsonStr = textContent.trim();
-  // Strip leading "json" word if Gemini returns without proper fences
+  // Strip leading "json" word
   jsonStr = jsonStr.replace(/^json\s*/i, '');
   // Strip markdown fences
   const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -135,9 +152,9 @@ Return ONLY the JSON object.`;
     const lastBrace = jsonStr.lastIndexOf('}');
     if (lastBrace > 0) {
       try { parsed = JSON.parse(jsonStr.substring(0, lastBrace + 1)); }
-      catch { throw new Error('Failed to parse Gemini response: ' + textContent.substring(0, 300)); }
+      catch { throw new Error('Failed to parse Anthropic response: ' + textContent.substring(0, 300)); }
     } else {
-      throw new Error('Failed to parse Gemini response: ' + textContent.substring(0, 300));
+      throw new Error('Failed to parse Anthropic response: ' + textContent.substring(0, 300));
     }
   }
 

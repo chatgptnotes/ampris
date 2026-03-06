@@ -1,18 +1,18 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import { env } from '../config/environment';
 import fs from 'fs';
 import path from 'path';
 
-let genAI: GoogleGenerativeAI | null = null;
+let anthropicClient: Anthropic | null = null;
 
-function getClient(): GoogleGenerativeAI {
-  if (!genAI) {
-    if (!env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is not configured');
+function getClient(): Anthropic {
+  if (!anthropicClient) {
+    if (!env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is not configured');
     }
-    genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+    anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   }
-  return genAI;
+  return anthropicClient;
 }
 
 export type ContentType = 'features' | 'infographic' | 'facts' | 'description';
@@ -33,16 +33,22 @@ Return ONLY valid JSON.`,
 
 export async function generateContent(type: ContentType): Promise<string> {
   const client = getClient();
-  const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   const prompt = prompts[type];
   if (!prompt) {
     throw new Error(`Unknown content type: ${type}`);
   }
 
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  return response.text();
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  return response.content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map(block => block.text)
+    .join('');
 }
 
 // ── Image Generation via Gemini REST API ──

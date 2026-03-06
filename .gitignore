@@ -12,3 +12,4 @@ Thumbs.db
 .vercel
 # Electron build output
 apps/electron/release/
+.env*.local

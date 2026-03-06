@@ -110,15 +110,16 @@ export const generateSLD = [
 // Body: { elements, connections, message, projectName? }
 // Returns: { elements, connections, explanation }
 // ─────────────────────────────────────────────────────────────────────────────
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 
 export const chatSLD = async (req: Request, res: Response) => {
   const { elements = [], connections = [], message, projectName = 'SLD' } = req.body;
   if (!message) return res.status(400).json({ error: 'message required' });
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const apiKey = process.env.ANTHROPIC_API_KEY || '';
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured');
+    const client = new Anthropic({ apiKey });
 
     const SYSTEM = `You are an expert electrical SLD (Single Line Diagram) editor.
 You will receive the current SLD as JSON (elements + connections arrays) and a user instruction.
@@ -150,7 +151,7 @@ CONNECTION SCHEMA:
 RULES:
 - Keep all existing elements unless explicitly told to remove
 - New element IDs: use "el_<random6chars>"
-- New connection IDs: use "conn_<random6chars>"  
+- New connection IDs: use "conn_<random6chars>"
 - Maintain vertical hierarchy: busbars horizontal, feeders hang downward
 - Keep elements within canvas bounds: x 0-1560, y 0-860
 - For "add feeder X": add a circuit_breaker below the busbar + a load below it + connection
@@ -168,10 +169,20 @@ Return format (STRICT JSON only):
 }`;
 
     const currentSLD = JSON.stringify({ elements, connections }, null, 2);
-    const prompt = `${SYSTEM}\n\nCurrent SLD (${elements.length} elements, ${connections.length} connections):\n${currentSLD}\n\nUser instruction: "${message}"\n\nReturn updated SLD JSON:`;
+    const userMessage = `Current SLD (${elements.length} elements, ${connections.length} connections):\n${currentSLD}\n\nUser instruction: "${message}"\n\nReturn updated SLD JSON:`;
 
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text().trim()
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8192,
+      system: SYSTEM,
+      messages: [{ role: 'user', content: userMessage }],
+    });
+
+    const raw = response.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map(block => block.text)
+      .join('')
+      .trim()
       .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
     let parsed;
