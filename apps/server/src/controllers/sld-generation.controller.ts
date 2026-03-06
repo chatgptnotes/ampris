@@ -172,7 +172,7 @@ Return format (STRICT JSON only):
     const userMessage = `Current SLD (${elements.length} elements, ${connections.length} connections):\n${currentSLD}\n\nUser instruction: "${message}"\n\nReturn updated SLD JSON:`;
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-6',
       max_tokens: 8192,
       system: SYSTEM,
       messages: [{ role: 'user', content: userMessage }],

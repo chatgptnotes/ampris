@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from '../config/environment';
 
-const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
+const ANTHROPIC_MODEL = 'claude-opus-4-6';
 
 const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
   CIRCUIT_BREAKER:       { type: 'CB',               w: 40, h: 40 },
