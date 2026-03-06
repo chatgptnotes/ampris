@@ -11,7 +11,7 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { username: 'admin' },
-    update: { email: 'admin@gridvision.local' },
+    update: { passwordHash, email: 'admin@gridvision.local' },
     create: {
       username: 'admin',
       passwordHash,
@@ -21,36 +21,39 @@ async function main() {
     },
   });
 
+  const operatorHash = await bcrypt.hash('operator123', 12);
   const operator = await prisma.user.upsert({
     where: { username: 'operator1' },
-    update: {},
+    update: { passwordHash: operatorHash },
     create: {
       username: 'operator1',
-      passwordHash: await bcrypt.hash('operator123', 12),
+      passwordHash: operatorHash,
       name: 'Rajesh Kumar',
       email: 'rajesh.kumar@msedcl.in',
       role: 'OPERATOR',
     },
   });
 
+  const engineerHash = await bcrypt.hash('engineer123', 12);
   const engineer = await prisma.user.upsert({
     where: { username: 'engineer1' },
-    update: {},
+    update: { passwordHash: engineerHash },
     create: {
       username: 'engineer1',
-      passwordHash: await bcrypt.hash('engineer123', 12),
+      passwordHash: engineerHash,
       name: 'Sunil Patil',
       email: 'sunil.patil@msedcl.in',
       role: 'ENGINEER',
     },
   });
 
+  const viewerHash = await bcrypt.hash('viewer123', 12);
   const viewer = await prisma.user.upsert({
     where: { username: 'viewer1' },
-    update: {},
+    update: { passwordHash: viewerHash },
     create: {
       username: 'viewer1',
-      passwordHash: await bcrypt.hash('viewer123', 12),
+      passwordHash: viewerHash,
       name: 'Priya Deshmukh',
       email: 'priya.deshmukh@msedcl.in',
       role: 'VIEWER',
