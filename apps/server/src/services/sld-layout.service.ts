@@ -105,14 +105,29 @@ interface PlacedEl {
   properties: Record<string, any>;
 }
 
+// Breaker types that default to CLOSED (system starts fully energized = all RED)
+const BREAKER_TYPES_SET = new Set([
+  'VacuumCB','SF6CB','ACB','CB','MCCB','MCB','RCCB','Fuse','Contactor',
+  'LoadBreakSwitch','AutoRecloser','RingMainUnit','Isolator',
+]);
+const EARTH_SWITCH_TYPES = new Set(['EarthSwitch']);
+
 function makeEl(uid: string, type: string, x: number, y: number, label: string, zIdx = 5, extra: Record<string, any> = {}): PlacedEl {
   const s = elSize(type);
+  // Default breaker state: closed (energized) | earth switch: open (not grounded during operation)
+  const defaultState = BREAKER_TYPES_SET.has(type) ? 'closed'
+    : EARTH_SWITCH_TYPES.has(type) ? 'open'
+    : undefined;
   return {
     id: uid, type,
     x: Math.round(x), y: Math.round(y),
     width: s.w, height: s.h,
     rotation: 0, zIndex: zIdx,
-    properties: { label, showLabel: true, tagBindings: {}, ...extra },
+    properties: {
+      label, showLabel: true, tagBindings: {},
+      ...(defaultState ? { state: defaultState } : {}),
+      ...extra,
+    },
   };
 }
 

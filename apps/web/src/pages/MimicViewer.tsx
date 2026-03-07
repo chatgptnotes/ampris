@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
 import { useRealtimeStore } from '@/stores/realtimeStore';
@@ -217,9 +217,80 @@ export default function MimicViewer() {
   // Local breaker state override — allows click-to-toggle open/closed in viewer
   const [breakerStates, setBreakerStates] = useState<Record<string, 'open' | 'closed'>>({});
   const BREAKER_TYPES = new Set(['VacuumCB','SF6CB','ACB','CB','MCCB','MCB','RCCB','Fuse','Contactor','LoadBreakSwitch','AutoRecloser','RingMainUnit']);
+  const SOURCE_TYPES  = new Set(['LightningArrester','OverheadLine','Cable','Generator','SolarInverter','WindTurbine','BESS','Rectifier','Battery']);
   const toggleBreaker = useCallback((id: string) => {
     setBreakerStates(prev => ({ ...prev, [id]: prev[id] === 'open' ? 'closed' : 'open' }));
   }, []);
+
+  // ── Power Flow Tracing (BFS from sources) ────────────────────────────────
+  // RED = energized (power flowing), GREEN = de-energized (safe)
+  const ENERGIZED_COLOR     = '#DC2626'; // red
+  const DE_ENERGIZED_COLOR  = '#16A34A'; // green
+
+  const { energizedEls, energizedConns } = useMemo(() => {
+    if (!page || !Array.isArray(page.elements)) return { energizedEls: new Set<string>(), energizedConns: new Set<string>() };
+    const els: MimicElement[]   = page.elements as MimicElement[];
+    const conns: any[]          = Array.isArray(page.connections) ? page.connections : [];
+
+    // Resolve breaker state: local toggle > element property
+    const getBreakerState = (el: MimicElement): 'open' | 'closed' =>
+      breakerStates[el.id] ?? (el.properties?.state === 'open' ? 'open' : 'closed');
+
+    // Build adjacency: element id → list of connected element ids (bidirectional)
+    const adj = new Map<string, string[]>();
+    const connByPair = new Map<string, string>(); // "fromId|toId" → connId
+    for (const c of conns) {
+      if (!c.fromId || !c.toId) continue;
+      if (!adj.has(c.fromId)) adj.set(c.fromId, []);
+      if (!adj.has(c.toId))   adj.set(c.toId,   []);
+      adj.get(c.fromId)!.push(c.toId);
+      adj.get(c.toId)!.push(c.fromId);
+      connByPair.set(`${c.fromId}|${c.toId}`, c.id);
+      connByPair.set(`${c.toId}|${c.fromId}`, c.id);
+    }
+
+    const elMap = new Map(els.map(e => [e.id, e]));
+    const energized = new Set<string>();
+
+    // Seed: source elements are always energized
+    const queue: string[] = [];
+    for (const el of els) {
+      if (SOURCE_TYPES.has(el.type)) {
+        energized.add(el.id);
+        queue.push(el.id);
+      }
+    }
+
+    // BFS — breakers gate the flow
+    const visited = new Set<string>();
+    while (queue.length) {
+      const id = queue.shift()!;
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const el = elMap.get(id);
+      if (!el) continue;
+      // If this is an OPEN breaker, power does NOT propagate from it
+      if (BREAKER_TYPES.has(el.type) && getBreakerState(el) === 'open') continue;
+      // Propagate to neighbours
+      for (const nId of (adj.get(id) || [])) {
+        if (visited.has(nId)) continue;
+        const nEl = elMap.get(nId);
+        if (!nEl) continue;
+        energized.add(nId);
+        queue.push(nId);
+      }
+    }
+
+    // Connections energized if both endpoints are energized
+    const energizedConns = new Set<string>();
+    for (const c of conns) {
+      if (energized.has(c.fromId) && energized.has(c.toId)) {
+        energizedConns.add(c.id);
+      }
+    }
+
+    return { energizedEls: energized, energizedConns };
+  }, [page, breakerStates]);
   const [faceplates, setFaceplates] = useState<{ element: MimicElement; x: number; y: number; pinned: boolean }[]>([]);
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [viewZoom, setViewZoom] = useState(1);
@@ -642,6 +713,8 @@ export default function MimicViewer() {
     const breakerState = isBreaker
       ? (breakerStates[el.id] ?? (el.properties?.state || 'closed'))
       : undefined;
+    // Power flow color: energized=RED, de-energized=GREEN
+    const powerColor = energizedEls.has(el.id) ? ENERGIZED_COLOR : DE_ENERGIZED_COLOR;
     const is3D = el.type.startsWith('3d-');
     const conditionalColor = resolveConditionalColor(el);
 
@@ -986,12 +1059,12 @@ export default function MimicViewer() {
               y1={el.properties.relY1}
               x2={el.properties.relX2}
               y2={el.properties.relY2}
-              stroke={conditionalColor || el.properties.color || '#333'}
+              stroke={conditionalColor || powerColor}
               strokeWidth={el.properties.busWidth || 6}
               strokeLinecap="round"
             />
-            <circle cx={el.properties.relX1} cy={el.properties.relY1} r={4} fill={conditionalColor || el.properties.color || '#333'} stroke="#fff" strokeWidth={1.5} />
-            <circle cx={el.properties.relX2} cy={el.properties.relY2} r={4} fill={conditionalColor || el.properties.color || '#333'} stroke="#fff" strokeWidth={1.5} />
+            <circle cx={el.properties.relX1} cy={el.properties.relY1} r={4} fill={conditionalColor || powerColor} stroke="#fff" strokeWidth={1.5} />
+            <circle cx={el.properties.relX2} cy={el.properties.relY2} r={4} fill={conditionalColor || powerColor} stroke="#fff" strokeWidth={1.5} />
             {tagValue !== undefined && el.properties.tagBinding && (
               <text
                 x={(el.properties.relX1 + el.properties.relX2) / 2}
@@ -1033,7 +1106,7 @@ export default function MimicViewer() {
                     if (n === 2) return { state: 'TRIPPED' };
                     return { state: v };
                   })()),
-                  ...(conditionalColor ? { color: conditionalColor } : {}),
+                  color: conditionalColor || powerColor,
                   ...(el.properties.label ? { label: el.properties.label } : {}),
                   ...(el.properties.rotation ? { rotation: el.properties.rotation } : {}),
                   ...(el.type === 'Transformer' ? {
@@ -1301,14 +1374,14 @@ export default function MimicViewer() {
             }}
             onClick={() => setSelectedEquipment(null)}
           >
-            {/* Connections */}
+            {/* Connections — RED if energized, GREEN if dead */}
             {(Array.isArray(page.connections) ? page.connections as MimicConnection[] : []).map((conn) => (
               <polyline
                 key={conn.id}
                 points={(conn.points || []).map((p: any) => `${p.x},${p.y}`).join(' ')}
                 fill="none"
-                stroke={conn.color || '#374151'}
-                strokeWidth={conn.thickness || 2}
+                stroke={energizedConns.has(conn.id) ? ENERGIZED_COLOR : DE_ENERGIZED_COLOR}
+                strokeWidth={conn.thickness || 3}
               />
             ))}
 
