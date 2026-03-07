@@ -1282,31 +1282,12 @@ export default function MimicViewer() {
               <div className="w-px h-4 bg-gray-300" />
             </>
           )}
-          <button
-            onClick={() => setShowTagValues(v => !v)}
-            className={`px-1.5 py-0.5 rounded ${showTagValues ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:bg-gray-100'}`}
-            title="Show/Hide Tag Values"
-          >
-            <Tags className="w-4 h-4" />
-          </button>
-          <div className="w-px h-4 bg-gray-300" />
           <button onClick={() => setViewZoom(z => Math.min(10, z * 1.2))} className="px-2 py-0.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded">+</button>
           <span className="text-xs text-gray-500 min-w-[40px] text-center">{Math.round(viewZoom * 100)}%</span>
           <button onClick={() => setViewZoom(z => Math.max(0.1, z / 1.2))} className="px-2 py-0.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded">−</button>
           <button onClick={() => { setViewZoom(1); setViewPan({ x: 0, y: 0 }); }} className="px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 rounded ml-1">Reset</button>
         </div>
-        {/* Floating Tag Values Panel */}
-        {showTagValues && Object.keys(values).length > 0 && (
-          <div className="absolute top-14 left-3 z-10 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-lg shadow-xl p-2 max-h-[50vh] overflow-y-auto min-w-[180px]">
-            <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 px-1">Live Tag Values</div>
-            {Object.entries(values).map(([tag, data]) => (
-              <div key={tag} className="flex items-center justify-between gap-3 px-1 py-0.5 hover:bg-slate-800 rounded">
-                <span className="text-[11px] text-slate-300 truncate">{tag}</span>
-                <span className="text-[11px] font-mono font-bold text-cyan-400">{typeof (data as any)?.value === 'number' ? (data as any).value.toFixed(2) : String((data as any)?.value ?? '---')}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Tag Values Panel removed — was cluttering the SLD view */}
         {page ? (
           <svg
             viewBox={`0 0 ${page.width} ${page.height}`}
