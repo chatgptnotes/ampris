@@ -116,7 +116,7 @@ function makeEl(uid: string, type: string, x: number, y: number, label: string, 
   };
 }
 
-function wire(fromId: string, toId: string, fromEl: PlacedEl, toEl: PlacedEl, color = '#374151', thick = 2) {
+function wire(fromId: string, toId: string, fromEl: PlacedEl, toEl: PlacedEl, color = '#374151', thick = 3) {
   // Connect bottom-center of upper element to top-center of lower element
   const [topEl, botEl, topId, botId] = fromEl.y <= toEl.y
     ? [fromEl, toEl, fromId, toId]
@@ -147,13 +147,26 @@ export function layoutSubstation(topo: SubstationTopology): { elements: PlacedEl
   // Total columns: incomers | feeders | transformers
   const totalCols = incomers.length + feeders.length + transformers.length;
 
-  // Busbar width spans all columns with padding
-  const busbarWidth = Math.max(MIN_BUSBAR_W, totalCols * FEEDER_SPACING + MARGIN_LEFT * 2);
-  const busbarX     = MARGIN_LEFT;
-  const busbarY     = BUSBAR_Y;
+  // Compute column centers FIRST — then busbar spans them all
+  const busbarX = MARGIN_LEFT;
+  const busbarY = BUSBAR_Y;
+
+  // Column center X: fixed FEEDER_SPACING between columns, starting from MARGIN_LEFT
+  const colCenterX = (colIdx: number): number =>
+    Math.round(busbarX + FEEDER_SPACING / 2 + colIdx * FEEDER_SPACING);
+
+  // Busbar width = span all column centers + half FEEDER_SPACING on each side
+  const computedBusbarWidth = totalCols > 0
+    ? colCenterX(totalCols - 1) - busbarX + Math.round(FEEDER_SPACING / 2) + 20
+    : MIN_BUSBAR_W;
+  const busbarWidth = Math.max(MIN_BUSBAR_W, computedBusbarWidth);
 
   // Normalize busbar type
   const busNorm = normalizeType(topo.busbar?.type || 'BusBar');
+
+  // Busbar voltage color label
+  const voltageColors: Record<number, string> = { 132: '#1E40AF', 66: '#7C3AED', 33: '#DC2626', 11: '#16A34A', 6: '#D97706', 0.4: '#6B7280' };
+  const busVoltage = topo.busbar?.voltage || 11;
 
   // Place main busbar
   const busbarUid = uuidv4();
@@ -164,17 +177,14 @@ export function layoutSubstation(topo: SubstationTopology): { elements: PlacedEl
     width: busbarWidth, height: BUSBAR_H,
     rotation: 0, zIndex: 10,
     properties: {
-      label: topo.busbar?.label || `${topo.busbar?.voltage || 11}kV Busbar`,
+      label: topo.busbar?.label || `${busVoltage}kV Busbar`,
       showLabel: true, tagBindings: {},
-      voltageLevel: topo.busbar?.voltage,
+      voltageLevel: busVoltage,
+      color: voltageColors[busVoltage] || '#16A34A',
       labelPosition: 'top',
     },
   };
   elements.push(busbarEl);
-
-  // Column center X positions — evenly spaced across busbar
-  const colCenterX = (colIdx: number): number =>
-    Math.round(busbarX + (colIdx + 0.5) * (busbarWidth / Math.max(totalCols, 1)));
 
   let colIdx = 0;
 
@@ -212,7 +222,7 @@ export function layoutSubstation(topo: SubstationTopology): { elements: PlacedEl
     connections.push({
       id: uuidv4(), fromId: busbarUid, toId: trUid,
       points: [{ x: tapX, y: busbarY + BUSBAR_H }, { x: tapX, y: trY }],
-      color: '#1d4ed8', thickness: 2,
+      color: '#1d4ed8', thickness: 3,
     });
 
     // Add LV busbar below transformer if topology has one
@@ -243,7 +253,7 @@ export function layoutSubstation(topo: SubstationTopology): { elements: PlacedEl
           { x: Math.round(trX + size.w / 2), y: trY + size.h },
           { x: Math.round(lvBusX + lvBusW / 2), y: lvY },
         ],
-        color: '#16a34a', thickness: 2,
+        color: '#16a34a', thickness: 3,
       });
     }
   }
@@ -281,7 +291,7 @@ function placeChainAbove(
       connections.push({
         id: uuidv4(), fromId: uid, toId: busbarUid,
         points: [{ x: fx, y: fy }, { x: fx, y: ty }],
-        color: '#374151', thickness: 2,
+        color: '#374151', thickness: 3,
       });
     }
   }
@@ -321,7 +331,7 @@ function placeChainBelow(
       connections.push({
         id: uuidv4(), fromId: busbarUid, toId: uid,
         points: [{ x: tx, y: busbarBottom }, { x: tx, y: ty }],
-        color: '#374151', thickness: 2,
+        color: '#374151', thickness: 3,
       });
     }
   }
