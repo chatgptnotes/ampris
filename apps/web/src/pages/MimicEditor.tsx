@@ -1540,8 +1540,16 @@ export default function MimicEditor() {
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      setElements(newElements);
-      setConnections(data.connections);
+      setElements(newElements.map((el: any) => ({
+        ...el,
+        type: el.type || 'Feeder',
+        zIndex: el.zIndex ?? 1,
+        width: el.width ?? 60,
+        height: el.height ?? 60,
+        rotation: el.rotation ?? 0,
+        properties: { tagBindings: {}, showLabel: true, label: el.label || '', ...(el.properties || {}) },
+      })));
+      setConnections((data.connections || []).filter((c: any) => Array.isArray(c.points) && c.points.length >= 2));
       loadTags(); // Refresh tag list
 
       const tagNote = tagsBound > 0 ? ` Auto-created & bound ${tagsBound} tags for ${addedElements.length} new element(s).` : '';
@@ -1550,7 +1558,7 @@ export default function MimicEditor() {
       // Auto-save
       if (projectId && activePageId) {
         await api.put(`/projects/${projectId}/pages/${activePageId}`, {
-          name: pageName, elements: newElements, connections: data.connections,
+          name: pageName, elements: newElements, connections: (data.connections || []).filter((c: any) => Array.isArray(c.points) && c.points.length >= 2),
           gridSize, backgroundColor: bgColor, pageSettings,
         }).catch(() => {});
       }
@@ -3302,7 +3310,7 @@ export default function MimicEditor() {
               )}
 
               {/* Connections */}
-              {connections.map((conn) => (
+              {connections.filter(conn => Array.isArray(conn.points) && conn.points.length >= 2).map((conn) => (
                 <polyline
                   key={conn.id}
                   points={conn.points.map((p) => `${p.x},${p.y}`).join(' ')}

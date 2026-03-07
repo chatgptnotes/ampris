@@ -222,9 +222,32 @@ Return format (STRICT JSON only):
     }
 
     if (!Array.isArray(parsed.elements)) throw new Error('Missing elements array in AI response');
+
+    // Ensure every connection has a valid points array; generate straight-line points if missing
+    const rawConns: any[] = parsed.connections || connections || [];
+    const elementMap = new Map<string, any>(parsed.elements.map((e: any) => [e.id, e]));
+    const safeConns = rawConns.map((c: any) => {
+      if (Array.isArray(c.points) && c.points.length >= 2) return c;
+      // Generate points from fromId/toId element positions
+      const from = elementMap.get(c.fromId);
+      const to   = elementMap.get(c.toId);
+      if (from && to) {
+        const fx = Math.round((from.x || 0) + (from.width || 60) / 2);
+        const fy = Math.round((from.y || 0) + (from.height || 60));
+        const tx = Math.round((to.x || 0)   + (to.width   || 60) / 2);
+        const ty = Math.round(to.y || 0);
+        const midY = Math.round((fy + ty) / 2);
+        const pts = fx === tx
+          ? [{ x: fx, y: fy }, { x: tx, y: ty }]
+          : [{ x: fx, y: fy }, { x: fx, y: midY }, { x: tx, y: midY }, { x: tx, y: ty }];
+        return { ...c, points: pts };
+      }
+      return null; // drop connection if we can't compute points
+    }).filter(Boolean);
+
     return res.json({
       elements: parsed.elements,
-      connections: parsed.connections || connections,
+      connections: safeConns,
       explanation: parsed.explanation || 'Changes applied',
     });
 
