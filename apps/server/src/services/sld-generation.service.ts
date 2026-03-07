@@ -181,7 +181,7 @@ function claudeRequest(base64Image: string, mimeType: string, prompt: string): P
   });
 }
 
-export async function generateSLDFromImage(imageBuffer: Buffer, mimeType: string) {
+export async function generateSLDFromImage(imageBuffer: Buffer, mimeType: string, instructions = '') {
   const base64Image = imageBuffer.toString('base64');
 
   const prompt = `You are an expert electrical engineer analyzing a Single Line Diagram (SLD).
@@ -248,7 +248,7 @@ Level (vertical position, 0=top):
 
 Column: each parallel branch = separate column (0,1,2,3...)
 Include ALL components, ALL busbars, ALL connections.
-Return ONLY the JSON object.`;
+Return ONLY the JSON object.${instructions ? `\n\nADDITIONAL INSTRUCTIONS FROM USER:\n${instructions}\n\nApply these instructions on top of what you see in the diagram.` : ''}`;
 
   console.log(`[SLD] Calling Claude ${CLAUDE_MODEL}...`);
   const textContent = await claudeRequest(base64Image, mimeType, prompt);

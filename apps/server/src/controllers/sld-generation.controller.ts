@@ -97,7 +97,8 @@ export const generateSLD = [
       } else {
         return res.status(400).json({ success: false, error: 'No image provided' });
       }
-      const layout = await generateSLDFromImage(imageBuffer, mimeType);
+      const instructions = typeof req.body?.instructions === 'string' ? req.body.instructions.trim() : '';
+      const layout = await generateSLDFromImage(imageBuffer, mimeType, instructions);
       return res.json({ success: true, layout });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
