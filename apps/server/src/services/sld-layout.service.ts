@@ -11,60 +11,61 @@ import { normalizeType } from './sld-generation.service';
 // ─── Canvas & spacing constants ────────────────────────────────────────────
 const CANVAS_W        = 1600;
 const CANVAS_H        = 900;
-const MARGIN_LEFT     = 80;
-const BUSBAR_Y        = 370;   // top of main busbar
+const MARGIN_LEFT     = 100;
+const BUSBAR_Y        = 380;   // top of main busbar
 const BUSBAR_H        = 20;
-const ELEMENT_SPACING = 95;    // vertical gap between chain elements (center-to-center)
-const FEEDER_SPACING  = 140;   // horizontal gap between feeder columns
-const MIN_BUSBAR_W    = 500;
+const ELEMENT_SPACING = 120;   // vertical gap between chain elements (center-to-center)
+const FEEDER_SPACING  = 170;   // horizontal gap between feeder columns
+const MIN_BUSBAR_W    = 600;
 
 // ─── Element sizes (exact, matching SYMBOL_MAP rendering) ─────────────────
+// Sizes tuned for SLD readability — larger symbols render properly at any zoom
 const SIZES: Record<string, { w: number; h: number }> = {
   BusBar:               { w: 0,  h: 20  }, // width set dynamically
   DoubleBusBar:         { w: 0,  h: 30  },
-  BusSection:           { w: 40, h: 25  },
-  VacuumCB:             { w: 40, h: 40  },
-  SF6CB:                { w: 40, h: 40  },
-  ACB:                  { w: 40, h: 40  },
-  CB:                   { w: 40, h: 40  },
-  MCCB:                 { w: 35, h: 35  },
-  MCB:                  { w: 30, h: 35  },
-  RCCB:                 { w: 35, h: 35  },
-  Fuse:                 { w: 30, h: 40  },
-  Contactor:            { w: 35, h: 35  },
-  Isolator:             { w: 40, h: 25  },
-  EarthSwitch:          { w: 30, h: 30  },
-  LoadBreakSwitch:      { w: 40, h: 30  },
-  AutoRecloser:         { w: 40, h: 45  },
-  RingMainUnit:         { w: 60, h: 60  },
-  GIS:                  { w: 60, h: 60  },
-  Transformer:          { w: 70, h: 90  },
-  AutoTransformer:      { w: 70, h: 90  },
-  InstrumentTransformer:{ w: 50, h: 60  },
-  StepVoltageRegulator: { w: 60, h: 80  },
-  CT:                   { w: 35, h: 25  },
-  PT:                   { w: 35, h: 25  },
-  Meter:                { w: 40, h: 40  },
-  EnergyMeter:          { w: 40, h: 40  },
-  LightningArrester:    { w: 30, h: 50  },
-  Relay:                { w: 40, h: 40  },
-  OvercurrentRelay:     { w: 40, h: 40  },
-  EarthFaultRelay:      { w: 40, h: 40  },
-  DifferentialRelay:    { w: 40, h: 40  },
-  DistanceRelay:        { w: 40, h: 40  },
-  Feeder:               { w: 40, h: 60  },
-  GenericLoad:          { w: 50, h: 50  },
-  ResistiveLoad:        { w: 50, h: 50  },
-  InductiveLoad:        { w: 50, h: 50  },
-  Motor:                { w: 50, h: 50  },
-  Generator:            { w: 60, h: 60  },
-  SolarInverter:        { w: 50, h: 50  },
-  CapacitorBank:        { w: 50, h: 50  },
-  ShuntReactor:         { w: 50, h: 60  },
-  OverheadLine:         { w: 40, h: 40  },
-  Cable:                { w: 40, h: 30  },
-  Ground:               { w: 30, h: 30  },
-  Junction:             { w: 10, h: 10  },
+  BusSection:           { w: 50, h: 30  },
+  VacuumCB:             { w: 60, h: 60  },
+  SF6CB:                { w: 60, h: 60  },
+  ACB:                  { w: 60, h: 60  },
+  CB:                   { w: 60, h: 60  },
+  MCCB:                 { w: 50, h: 50  },
+  MCB:                  { w: 45, h: 50  },
+  RCCB:                 { w: 50, h: 50  },
+  Fuse:                 { w: 40, h: 55  },
+  Contactor:            { w: 50, h: 50  },
+  Isolator:             { w: 60, h: 35  },
+  EarthSwitch:          { w: 45, h: 45  },
+  LoadBreakSwitch:      { w: 55, h: 45  },
+  AutoRecloser:         { w: 55, h: 60  },
+  RingMainUnit:         { w: 80, h: 80  },
+  GIS:                  { w: 80, h: 80  },
+  Transformer:          { w: 90, h: 110 },
+  AutoTransformer:      { w: 90, h: 110 },
+  InstrumentTransformer:{ w: 65, h: 75  },
+  StepVoltageRegulator: { w: 75, h: 95  },
+  CT:                   { w: 50, h: 38  },
+  PT:                   { w: 50, h: 38  },
+  Meter:                { w: 55, h: 55  },
+  EnergyMeter:          { w: 55, h: 55  },
+  LightningArrester:    { w: 40, h: 65  },
+  Relay:                { w: 55, h: 55  },
+  OvercurrentRelay:     { w: 55, h: 55  },
+  EarthFaultRelay:      { w: 55, h: 55  },
+  DifferentialRelay:    { w: 55, h: 55  },
+  DistanceRelay:        { w: 55, h: 55  },
+  Feeder:               { w: 55, h: 75  },
+  GenericLoad:          { w: 65, h: 65  },
+  ResistiveLoad:        { w: 65, h: 65  },
+  InductiveLoad:        { w: 65, h: 65  },
+  Motor:                { w: 65, h: 65  },
+  Generator:            { w: 75, h: 75  },
+  SolarInverter:        { w: 65, h: 65  },
+  CapacitorBank:        { w: 65, h: 65  },
+  ShuntReactor:         { w: 65, h: 75  },
+  OverheadLine:         { w: 55, h: 55  },
+  Cable:                { w: 55, h: 45  },
+  Ground:               { w: 45, h: 40  },
+  Junction:             { w: 12, h: 12  },
 };
 
 function elSize(type: string): { w: number; h: number } {

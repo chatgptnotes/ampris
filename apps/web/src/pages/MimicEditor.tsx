@@ -1589,7 +1589,7 @@ export default function MimicEditor() {
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      setElements(newElements.map((el: any) => {
+      const finalElements = newElements.map((el: any) => {
         const resolvedType = frontendNormalizeType(el.type || '');
         return {
           ...el,
@@ -1600,9 +1600,13 @@ export default function MimicEditor() {
           rotation: el.rotation ?? 0,
           properties: { tagBindings: {}, showLabel: true, label: el.label || '', ...(el.properties || {}) },
         };
-      }));
-      setConnections((data.connections || []).filter((c: any) => Array.isArray(c.points) && c.points.length >= 2));
+      });
+      setElements(finalElements);
+      const safeConns = (data.connections || []).filter((c: any) => Array.isArray(c.points) && c.points.length >= 2);
+      setConnections(safeConns);
       loadTags(); // Refresh tag list
+      // Auto-fit canvas to show all generated elements
+      setTimeout(() => fitToElements(finalElements), 150);
 
       const tagNote = tagsBound > 0 ? ` Auto-created & bound ${tagsBound} tags for ${addedElements.length} new element(s).` : '';
       setAiMessages(prev => [...prev, { role: 'ai', text: (data.explanation || 'Changes applied.') + tagNote }]);
@@ -2046,6 +2050,28 @@ export default function MimicEditor() {
   const zoomIn = () => setZoom((z) => Math.min(z * 1.2, 5));
   const zoomOut = () => setZoom((z) => Math.max(z / 1.2, 0.1));
   const zoomFit = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+
+  // Fit all elements into the visible canvas area
+  const fitToElements = useCallback((els: typeof elements) => {
+    if (!els.length || !svgRef.current) return;
+    const bbox = els.reduce((acc, el) => ({
+      minX: Math.min(acc.minX, el.x),
+      minY: Math.min(acc.minY, el.y),
+      maxX: Math.max(acc.maxX, el.x + el.width),
+      maxY: Math.max(acc.maxY, el.y + el.height),
+    }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+
+    const svgRect = svgRef.current.getBoundingClientRect();
+    const viewW = svgRect.width  || 900;
+    const viewH = svgRect.height || 600;
+    const contentW = bbox.maxX - bbox.minX + 120;
+    const contentH = bbox.maxY - bbox.minY + 120;
+    const newZoom = Math.min(0.95, viewW / contentW, viewH / contentH);
+    const newPanX = (viewW - contentW * newZoom) / 2 - bbox.minX * newZoom + 60 * newZoom;
+    const newPanY = (viewH - contentH * newZoom) / 2 - bbox.minY * newZoom + 60 * newZoom;
+    setZoom(newZoom);
+    setPan({ x: newPanX, y: newPanY });
+  }, []);
 
   // Wheel zoom
   const handleWheel = useCallback((e: React.WheelEvent) => {
