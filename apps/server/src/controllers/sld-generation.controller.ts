@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { generateSLDFromImage } from '../services/sld-generation.service';
+import { generateSLDFromImage, normalizeType } from '../services/sld-generation.service';
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -156,14 +156,47 @@ export const chatSLD = async (req: Request, res: Response) => {
   if (!message) return res.status(400).json({ error: 'message required' });
 
   try {
-    const SYSTEM = `You are an expert electrical SLD (Single Line Diagram) editor.
+    const SYSTEM = `You are an expert electrical SLD (Single Line Diagram) editor for MSEDCL Smart Distribution Substations.
 You will receive the current SLD as JSON (elements + connections arrays) and a user instruction.
 Apply the instruction and return the COMPLETE updated SLD JSON.
+
+⚠️ CRITICAL RULE — EXACT TYPE NAMES:
+You MUST use ONLY these exact PascalCase type strings. Any other value will render as a blank box.
+
+SWITCHGEAR: CB | VacuumCB | SF6CB | ACB | MCCB | MCB | RCCB | Fuse | Contactor
+DISCONNECTS: Isolator | EarthSwitch | LoadBreakSwitch | AutoRecloser | Sectionalizer
+HV EQUIPMENT: RingMainUnit | GIS
+TRANSFORMERS: Transformer | AutoTransformer | ZigZagTransformer | InstrumentTransformer | StepVoltageRegulator
+BUSBARS: BusBar | DoubleBusBar | BusSection | BusTie
+LINES/CABLES: Cable | OverheadLine | UndergroundCable
+MEASUREMENT: CT | PT | Meter | EnergyMeter | PowerAnalyzer | Ammeter | Voltmeter | Wattmeter
+PROTECTION: LightningArrester | Relay | OvercurrentRelay | EarthFaultRelay | DifferentialRelay | DistanceRelay | DirectionalRelay | BuchholzRelay | LockoutRelay
+LOADS: Feeder | GenericLoad | ResistiveLoad | InductiveLoad | LightingLoad | HeatingLoad | FanLoad
+MACHINES: Motor | AsyncMotor | SyncMotor | Generator | SyncGenerator | VFD | SoftStarter
+POWER ELECTRONICS: CapacitorBank | ShuntReactor | SeriesReactor | Battery | SolarPanel | SolarInverter | WindTurbine | BESS | Inverter | Rectifier | UPSDetail
+INFRA: Junction | Ground | Terminal | Panel | MCC | PLC | HMI | Enclosure
+MISC: Valve | Pump | Compressor | AHU | Chiller | Tank
+
+TYPE SELECTION GUIDE:
+- vacuum breaker / VCB → VacuumCB
+- SF6 breaker → SF6CB
+- air circuit breaker → ACB
+- general circuit breaker → CB
+- bus / busbar → BusBar
+- 11kV/33kV/66kV/132kV bus → BusBar (width 300-600, height 10)
+- load point / distribution feeder → GenericLoad
+- outgoing feeder → Feeder
+- incoming HV line → OverheadLine or Cable
+- current transformer → CT
+- potential/voltage transformer → PT
+- lightning arrester → LightningArrester
+- earth switch → EarthSwitch
+- isolator / disconnector → Isolator
 
 ELEMENT SCHEMA:
 {
   "id": "unique string",
-  "type": "BusBar|DoubleBusBar|BusSection|CB|VacuumCB|SF6CB|ACB|MCCB|MCB|RCCB|Isolator|EarthSwitch|LoadBreakSwitch|AutoRecloser|RingMainUnit|GIS|Fuse|Contactor|Transformer|AutoTransformer|CT|PT|Meter|EnergyMeter|LightningArrester|Relay|OvercurrentRelay|EarthFaultRelay|DifferentialRelay|Feeder|GenericLoad|ResistiveLoad|InductiveLoad|Motor|Generator|SolarPanel|SolarInverter|WindTurbine|Battery|CapacitorBank|ShuntReactor|VFD|Cable|OverheadLine|UndergroundCable|Panel|MCC|Junction|Ground",
+  "type": "<exact type from list above — NEVER lowercase, NEVER snake_case>",
   "x": number (0-1600),
   "y": number (0-900),
   "width": number,
@@ -223,9 +256,30 @@ Return format (STRICT JSON only):
 
     if (!Array.isArray(parsed.elements)) throw new Error('Missing elements array in AI response');
 
+    // Normalize element types — AI sometimes returns lowercase/snake_case; convert to exact SYMBOL_MAP keys
+    const normalizedElements = parsed.elements.map((el: any) => {
+      const norm = normalizeType(el.type || '');
+      const defaults: Record<string, { w: number; h: number }> = { BusBar: { w: 300, h: 10 } };
+      const d = defaults[norm.type] || {};
+      return {
+        ...el,
+        type: norm.type,
+        width:  el.width  || d.w || norm.w || 60,
+        height: el.height || d.h || norm.h || 60,
+        rotation: el.rotation ?? 0,
+        zIndex: el.zIndex ?? 1,
+        properties: {
+          label: el.properties?.label || el.label || '',
+          showLabel: el.properties?.showLabel !== false,
+          tagBindings: el.properties?.tagBindings || {},
+          ...(el.properties || {}),
+        },
+      };
+    });
+
     // Ensure every connection has a valid points array; generate straight-line points if missing
     const rawConns: any[] = parsed.connections || connections || [];
-    const elementMap = new Map<string, any>(parsed.elements.map((e: any) => [e.id, e]));
+    const elementMap = new Map<string, any>(normalizedElements.map((e: any) => [e.id, e]));
     const safeConns = rawConns.map((c: any) => {
       if (Array.isArray(c.points) && c.points.length >= 2) return c;
       // Generate points from fromId/toId element positions
@@ -246,7 +300,7 @@ Return format (STRICT JSON only):
     }).filter(Boolean);
 
     return res.json({
-      elements: parsed.elements,
+      elements: normalizedElements,
       connections: safeConns,
       explanation: parsed.explanation || 'Changes applied',
     });

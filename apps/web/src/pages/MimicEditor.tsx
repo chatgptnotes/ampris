@@ -62,6 +62,51 @@ import * as ScadaSymbols from '@/components/scada-symbols';
 import CustomComponentCreator from '@/components/CustomComponentCreator';
 
 // ─── Symbol type → Component mapping ─────────────
+// Normalize AI-returned type strings to exact SYMBOL_MAP keys
+const FRONTEND_TYPE_MAP: Record<string, string> = {
+  vcb:'VacuumCB', vacuum_cb:'VacuumCB', vacuumcb:'VacuumCB', 'vacuum cb':'VacuumCB',
+  sf6cb:'SF6CB', sf6_cb:'SF6CB', 'sf6 cb':'SF6CB',
+  acb:'ACB', 'air circuit breaker':'ACB',
+  mccb:'MCCB', mcb:'MCB', rccb:'RCCB',
+  cb:'CB', circuit_breaker:'CB', 'circuit breaker':'CB',
+  isolator:'Isolator', disconnector:'Isolator', disconn:'Isolator',
+  earth_switch:'EarthSwitch', earthswitch:'EarthSwitch', 'earth switch':'EarthSwitch',
+  load_break_switch:'LoadBreakSwitch', lbs:'LoadBreakSwitch',
+  auto_recloser:'AutoRecloser', rmu:'RingMainUnit', ring_main_unit:'RingMainUnit',
+  gis:'GIS', fuse:'Fuse', contactor:'Contactor',
+  transformer:'Transformer', power_transformer:'Transformer', xfmr:'Transformer',
+  auto_transformer:'AutoTransformer', autotransformer:'AutoTransformer',
+  instrument_transformer:'InstrumentTransformer',
+  step_voltage_regulator:'StepVoltageRegulator',
+  busbar:'BusBar', bus_bar:'BusBar', bus:'BusBar', busbars:'BusBar',
+  double_busbar:'DoubleBusBar', doublebusbar:'DoubleBusBar',
+  bus_section:'BusSection', bus_tie:'BusTie',
+  ct:'CT', current_transformer:'CT', pt:'PT', vt:'PT', potential_transformer:'PT',
+  meter:'Meter', energy_meter:'EnergyMeter', energymeter:'EnergyMeter',
+  lightning_arrester:'LightningArrester', la:'LightningArrester', surge_arrester:'LightningArrester',
+  relay:'Relay', overcurrent_relay:'OvercurrentRelay', oc_relay:'OvercurrentRelay',
+  earth_fault_relay:'EarthFaultRelay', ef_relay:'EarthFaultRelay',
+  differential_relay:'DifferentialRelay', distance_relay:'DistanceRelay',
+  feeder:'Feeder', load:'GenericLoad', generic_load:'GenericLoad', genericload:'GenericLoad',
+  resistive_load:'ResistiveLoad', inductive_load:'InductiveLoad',
+  motor:'Motor', generator:'Generator', gen:'Generator',
+  solar_panel:'SolarPanel', solar_inverter:'SolarInverter', solarinverter:'SolarInverter',
+  wind_turbine:'WindTurbine', battery:'Battery', bess:'BESS',
+  capacitor_bank:'CapacitorBank', capacitor:'CapacitorBank',
+  shunt_reactor:'ShuntReactor', reactor:'ShuntReactor',
+  vfd:'VFD', ups:'UPSDetail',
+  cable:'Cable', overhead_line:'OverheadLine', underground_cable:'UndergroundCable',
+  junction:'Junction', ground:'Ground', terminal:'Terminal',
+  panel:'Panel', mcc:'MCC', plc:'PLC', hmi:'HMI',
+};
+function frontendNormalizeType(t: string): string {
+  if (!t) return 'Feeder';
+  // Already correct PascalCase key — check directly
+  if (FRONTEND_TYPE_MAP[t]) return FRONTEND_TYPE_MAP[t];
+  const lower = t.toLowerCase().replace(/[-\s.]/g, '_');
+  return FRONTEND_TYPE_MAP[lower] || t;
+}
+
 const SYMBOL_MAP: Record<string, React.ComponentType<any>> = {
   CB: ScadaSymbols.CBSymbol,
   VacuumCB: ScadaSymbols.VacuumCBSymbol,
@@ -1540,15 +1585,18 @@ export default function MimicEditor() {
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      setElements(newElements.map((el: any) => ({
-        ...el,
-        type: el.type || 'Feeder',
-        zIndex: el.zIndex ?? 1,
-        width: el.width ?? 60,
-        height: el.height ?? 60,
-        rotation: el.rotation ?? 0,
-        properties: { tagBindings: {}, showLabel: true, label: el.label || '', ...(el.properties || {}) },
-      })));
+      setElements(newElements.map((el: any) => {
+        const resolvedType = frontendNormalizeType(el.type || '');
+        return {
+          ...el,
+          type: resolvedType,
+          zIndex: el.zIndex ?? 1,
+          width: el.width ?? (resolvedType === 'BusBar' ? 300 : 60),
+          height: el.height ?? (resolvedType === 'BusBar' ? 10 : 60),
+          rotation: el.rotation ?? 0,
+          properties: { tagBindings: {}, showLabel: true, label: el.label || '', ...(el.properties || {}) },
+        };
+      }));
       setConnections((data.connections || []).filter((c: any) => Array.isArray(c.points) && c.points.length >= 2));
       loadTags(); // Refresh tag list
 

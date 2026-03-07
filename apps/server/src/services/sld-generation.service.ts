@@ -86,7 +86,7 @@ const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
   MCC:                   { type: 'MCC',              w: 60, h: 70 },
 };
 
-function normalizeType(t: string): { type: string; w: number; h: number } {
+export function normalizeType(t: string): { type: string; w: number; h: number } {
   const u = (t || '').toUpperCase().replace(/[-\s.]/g, '_');
   if (TYPE_MAP[u]) return { ...TYPE_MAP[u] };
   // Fuzzy matching — order matters (more specific first)
