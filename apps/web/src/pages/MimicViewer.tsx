@@ -218,9 +218,29 @@ export default function MimicViewer() {
   const [breakerStates, setBreakerStates] = useState<Record<string, 'open' | 'closed'>>({});
   const BREAKER_TYPES = new Set(['VacuumCB','SF6CB','ACB','CB','MCCB','MCB','RCCB','Fuse','Contactor','LoadBreakSwitch','AutoRecloser','RingMainUnit']);
   const SOURCE_TYPES  = new Set(['LightningArrester','OverheadLine','Cable','Generator','SolarInverter','WindTurbine','BESS','Rectifier','Battery']);
+  const [interlockAlert, setInterlockAlert] = useState<string | null>(null);
+
   const toggleBreaker = useCallback((id: string) => {
-    setBreakerStates(prev => ({ ...prev, [id]: prev[id] === 'open' ? 'closed' : 'open' }));
-  }, []);
+    setBreakerStates(prev => {
+      const currentState = prev[id] ?? 'closed';
+      const nextState = currentState === 'open' ? 'closed' : 'open';
+
+      // Check interlock: if closing, check if interlock partner is also closed
+      if (nextState === 'closed' && page && Array.isArray(page.elements)) {
+        const el = (page.elements as any[]).find((e: any) => e.id === id);
+        const partnerId = el?.properties?.interlock_partner;
+        if (partnerId) {
+          const partnerState = prev[partnerId] ?? 'closed';
+          if (partnerState === 'closed') {
+            setInterlockAlert(`⚡ INTERLOCK VIOLATION: Cannot close ${el?.properties?.label || id} — ${el?.properties?.interlock || 'interlocked partner'} is already CLOSED.`);
+            setTimeout(() => setInterlockAlert(null), 4000);
+            return prev; // Block the operation
+          }
+        }
+      }
+      return { ...prev, [id]: nextState };
+    });
+  }, [page]);
 
   // ── Power Flow Tracing (BFS from sources) ────────────────────────────────
   // RED = energized (power flowing), GREEN = de-energized (safe)
@@ -1360,7 +1380,13 @@ export default function MimicViewer() {
           <button onClick={() => setViewZoom(z => Math.max(0.1, z / 1.2))} className="px-2 py-0.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded">−</button>
           <button onClick={() => { setViewZoom(1); setViewPan({ x: 0, y: 0 }); }} className="px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 rounded ml-1">Reset</button>
         </div>
-        {/* Tag Values Panel removed — was cluttering the SLD view */}
+        {/* Interlock violation alert */}
+        {interlockAlert && (
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-xl border border-red-400 animate-pulse">
+            {interlockAlert}
+          </div>
+        )}
+
         {page ? (
           <svg
             viewBox={`0 0 ${page.width} ${page.height}`}

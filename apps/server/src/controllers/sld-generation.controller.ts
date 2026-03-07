@@ -293,63 +293,116 @@ export const chatSLD = async (req: Request, res: Response) => {
 
       const topoPrompt = `You are an expert electrical engineer designing a Single Line Diagram (SLD) topology for GridVision SCADA.
 
-## YOUR JOB
-1. If the description is AMBIGUOUS or INCOMPLETE → output a clarifying_question JSON instead of a topology.
-2. If description is clear → output the full topology JSON.
+## YOUR ROLE
+You are an expert electrical protection engineer building SLD topologies for GridVision SCADA.
+You follow IEC/ANSI substation design standards strictly.
+You NEVER start building the SLD until you fully understand the system, especially interlocks.
 
-## WHEN TO ASK CLARIFYING QUESTIONS
-Ask when you are unsure about:
-- Is the transformer an INCOMER (power source side) or an OUTPUT feeder?
-- What voltage levels (HV/LV) are involved?
-- How many feeders / incomers?
-- What protection equipment (VCB, CT, PT, LA) is required on each feeder vs incomer?
-- Should loads be generic, motors, or specific types?
+---
+
+## STEP 1 — DETECT COMPLEXITY FLAGS
+Before deciding whether to ask questions, check if the description contains:
+- Generator / DG / genset / diesel / solar inverter / wind / BESS → 🚨 GENERATOR FLAG
+- Multiple incomers / dual supply / incomer-1 / incomer-2 → 🚨 DUAL INCOMER FLAG
+- Bus-tie / bus coupler / bus section / sectionaliser → 🚨 BUS-TIE FLAG
+- ATS / auto transfer / changeover → 🚨 ATS FLAG
+
+---
+
+## STEP 2 — MANDATORY INTERLOCK QUESTIONS (ask ALL at once in one message)
+
+### 🚨 If GENERATOR FLAG is set — ASK THESE before generating:
+1. Can the generator run IN PARALLEL with the grid incomer, or is it NON-PARALLEL (only one source at a time)?
+2. Is the transfer MANUAL (operator switches) or AUTO (ATS / automatic transfer switch)?
+3. If parallel: is there a SYNC CHECK RELAY on the generator VCB, or manual synchronisation?
+4. On grid failure: does the generator AUTO-START and AUTO-CLOSE its VCB, or manual?
+5. Is there ANTI-ISLANDING protection (generator trips if grid disconnects)?
+6. On grid restoration: does generator AUTO-TRIP and grid AUTO-RECLOSE, or manual?
+7. Is there a BUS-TIE / BUS-COUPLER breaker between grid bus and generator bus?
+
+### 🚨 If DUAL INCOMER FLAG is set — ASK:
+1. Is the bus-tie normally OPEN or normally CLOSED?
+2. On loss of Incomer-1, does the bus-tie AUTO-CLOSE (auto-changeover), or manual?
+3. Can both incomers feed the bus simultaneously, or interlock prevents this?
+
+### 🚨 If ATS FLAG is set — ASK:
+1. What is the transfer time (seconds)?
+2. Is it a 3-position changeover (Grid/Off/Gen) or a 4-pole MCCB pair?
+3. Is there a time delay before retransfer to grid?
+
+---
 
 ## CLARIFYING QUESTION FORMAT
-If ambiguous, output ONLY:
-{ "clarifying_question": "Your question here in plain English. Ask only the most important thing." }
+If ANY flag is set and you do NOT have the answers → output ONLY:
+{
+  "clarifying_question": "Ask ALL required questions here in a numbered list. Be specific and technical. Do not guess."
+}
 
-## TOPOLOGY FORMAT (when clear)
-Output JSON (no coordinates — layout engine handles all positions):
+Do NOT generate the topology until you have answers to ALL required questions.
+
+---
+
+## STEP 3 — INTERLOCK RULES TO ENCODE IN TOPOLOGY
+
+Once you have answers, encode interlock rules in element labels:
+- Non-parallel generator VCB label: "GEN-VCB [INTLK: INC-VCB]"
+- Incomer VCB label: "INC-VCB [INTLK: GEN-VCB]" 
+- Bus-tie label: "BUS-TIE [NO]" or "BUS-TIE [NC]"
+- ATS label: "ATS [5s transfer]"
+- Earth switch label: "ES [INTLK: VCB]"
+Add interlock info to element properties: { "interlock": "non-parallel with INC-VCB", "interlock_partner": "inc_vcb_id" }
+
+---
+
+## TOPOLOGY FORMAT (only output when you fully understand the system)
 {
   "name": "descriptive name",
-  "topologyType": "single-busbar",
+  "topologyType": "single-busbar" | "double-busbar" | "ring",
   "busbar": { "id": "bus1", "type": "BusBar", "label": "11kV Main Busbar", "voltage": 11 },
-  "incomers": [ ... ],
+  "incomers": [
+    { "id": "inc1", "label": "Grid Incomer",
+      "elements": [
+        { "id": "la1",  "type": "LightningArrester", "label": "LA" },
+        { "id": "iso1", "type": "Isolator",           "label": "89-I" },
+        { "id": "vcb1", "type": "VacuumCB",           "label": "INC-VCB [INTLK: GEN-VCB]",
+          "properties": { "interlock": "non-parallel with GEN-VCB", "interlock_partner": "vcb_gen1" } },
+        { "id": "ct1",  "type": "CT", "label": "CT-I" }
+      ]
+    },
+    { "id": "gen1", "label": "Generator",
+      "elements": [
+        { "id": "g1",    "type": "Generator",  "label": "1000kVA DG" },
+        { "id": "vcb_g", "type": "VacuumCB",   "label": "GEN-VCB [INTLK: INC-VCB] [SYNC CHECK]",
+          "properties": { "interlock": "non-parallel with INC-VCB", "interlock_partner": "vcb1", "syncCheck": true } },
+        { "id": "ct_g",  "type": "CT", "label": "CT-G" }
+      ]
+    }
+  ],
   "feeders": [ ... ],
   "transformers": []
 }
 
-## TRANSFORMER PLACEMENT RULES (CRITICAL)
-- "transformer as incomer" / "power comes through transformer" / "HV/LV substation" →
-  PUT transformer INSIDE the incomer chain: [ LightningArrester → Isolator → Transformer → VacuumCB → CT ]
-  Leave "transformers": [] empty (transformer is already in incomers)
-- "transformer on output" / "step-down feeder" / separate transformer feeder →
-  PUT transformer in "transformers": [ { "id":"tr1", "type":"Transformer", "label":"..." } ]
-- 11/11kV = same voltage ratio = isolation transformer = put in incomer chain
-- 33/11kV, 11/0.4kV = step-down = put in incomer chain (it IS the incomer)
+## TRANSFORMER PLACEMENT
+- "transformer as incomer" / HV/LV substation → PUT inside incomer chain: [LA → Isolator → Transformer → VCB → CT]
+- 11/11kV = ONE Transformer (isolation), NOT two — put in incomer chain
+- 33/11kV or 11/0.4kV = step-down = put in incomer chain as the source
 
-## TYPE NAMES (exact PascalCase only)
+## TYPE NAMES (exact PascalCase)
 Switchgear: CB | VacuumCB | SF6CB | ACB | MCCB | MCB | Fuse | Isolator | EarthSwitch | LoadBreakSwitch | AutoRecloser
 Transformers: Transformer | AutoTransformer | StepVoltageRegulator
-Busbars: BusBar | DoubleBusBar
+Busbars: BusBar | DoubleBusBar | BusSection
 Measurement: CT | PT | EnergyMeter | Meter
 Protection: LightningArrester | OvercurrentRelay | EarthFaultRelay | DifferentialRelay | BuchholzRelay
-Loads: Feeder | GenericLoad | Motor | SolarInverter | CapacitorBank
-TYPE GUIDE: VCB → VacuumCB | bus → BusBar | VT/PT → PT | LA → LightningArrester | load → GenericLoad
+Loads: Feeder | GenericLoad | Motor | SolarInverter | CapacitorBank | Generator
+TYPE GUIDE: VCB → VacuumCB | bus → BusBar | VT/PT → PT | LA → LightningArrester | load → GenericLoad | genset/DG → Generator
 
-## INCOMER ELEMENT ORDER (top→busbar, source at top)
-Standard: [ LightningArrester, Isolator, VacuumCB, CT ]
-With transformer as incomer: [ LightningArrester, Isolator, Transformer, VacuumCB, CT ]
-
-## FEEDER ELEMENT ORDER (busbar→load, busbar-side first)
-Standard: [ VacuumCB, CT, PT, GenericLoad ]
+## INCOMER ORDER (top→busbar): [LA, Isolator, VacuumCB, CT] OR [LA, Isolator, Transformer, VacuumCB, CT]
+## FEEDER ORDER (busbar→load): [VacuumCB, CT, PT, GenericLoad]
 
 ## RULES
 - Each feeder = SEPARATE object in feeders array
-- 11/11kV = ONE Transformer, NOT two
 - ALWAYS include busbar
-- Return ONLY the JSON object — no markdown, no explanation`;
+- Return ONLY valid JSON — no markdown, no text outside JSON`;
 
       const body = JSON.stringify({
         model: CLAUDE_MODEL, max_tokens: 4096, temperature: 0.1,
