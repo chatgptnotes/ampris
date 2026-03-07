@@ -110,16 +110,51 @@ export const generateSLD = [
 // Body: { elements, connections, message, projectName? }
 // Returns: { elements, connections, explanation }
 // ─────────────────────────────────────────────────────────────────────────────
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as https from 'https';
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const CLAUDE_CHAT_MODEL = 'claude-sonnet-4-6';
+
+function claudeChatRequest(prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      model: CLAUDE_CHAT_MODEL,
+      max_tokens: 8192,
+      temperature: 0.1,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const req2 = https.request({
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+    }, (r) => {
+      let data = '';
+      r.on('data', (chunk) => { data += chunk; });
+      r.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          const text = json.content?.[0]?.text || '';
+          resolve(text);
+        } catch (e) { reject(new Error('Claude parse error: ' + data.slice(0, 200))); }
+      });
+    });
+    req2.on('error', reject);
+    req2.write(body);
+    req2.end();
+  });
+}
 
 export const chatSLD = async (req: Request, res: Response) => {
   const { elements = [], connections = [], message, projectName = 'SLD' } = req.body;
   if (!message) return res.status(400).json({ error: 'message required' });
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
     const SYSTEM = `You are an expert electrical SLD (Single Line Diagram) editor.
 You will receive the current SLD as JSON (elements + connections arrays) and a user instruction.
 Apply the instruction and return the COMPLETE updated SLD JSON.
@@ -170,8 +205,7 @@ Return format (STRICT JSON only):
     const currentSLD = JSON.stringify({ elements, connections }, null, 2);
     const prompt = `${SYSTEM}\n\nCurrent SLD (${elements.length} elements, ${connections.length} connections):\n${currentSLD}\n\nUser instruction: "${message}"\n\nReturn updated SLD JSON:`;
 
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text().trim()
+    const raw = (await claudeChatRequest(prompt)).trim()
       .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
     let parsed;

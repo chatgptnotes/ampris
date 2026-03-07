@@ -3359,7 +3359,7 @@ export default function MimicEditor() {
                 rightTab === 'pageSettings' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
-              Settings
+              {selectedEl ? 'Cmp Set' : 'Settings'}
             </button>
             <button
               onClick={() => setRightTab('headerFooter')}
@@ -4289,6 +4289,127 @@ export default function MimicEditor() {
               </div>
               <div className="text-xs text-gray-400 pt-2 border-t border-gray-100">
                 {elements.length} element{elements.length !== 1 ? 's' : ''} on this page
+              </div>
+            </div>
+          ) : rightTab === 'pageSettings' && selectedEl ? (
+            <div className="p-3 space-y-3">
+              {/* ===== COMPONENT SETTINGS ===== */}
+              <div className="text-xs font-semibold text-gray-600 uppercase border-b border-gray-200 pb-2 mb-2">
+                Component Settings
+              </div>
+              {/* Color Rules */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-gray-600">Conditional Color</span>
+                  <button
+                    onClick={() => {
+                      const el = elements.find(e => e.id === selectedEl);
+                      if (!el) return;
+                      const rules = el.colorRules || [];
+                      updateElement(selectedEl, { colorRules: [...rules, { operator: '==', value: '', color: '#22c55e' }] });
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                  >+ Add Rule</button>
+                </div>
+                {(() => {
+                  const el = elements.find(e => e.id === selectedEl);
+                  const rules = el?.colorRules || [];
+                  if (rules.length === 0) return <div className="text-xs text-gray-400">No color rules. Click + Add Rule.</div>;
+                  return rules.map((rule: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-1 mb-1">
+                      <select
+                        value={rule.operator}
+                        onChange={(e) => {
+                          const el = elements.find(el => el.id === selectedEl);
+                          const updated = [...(el?.colorRules || [])];
+                          updated[idx] = { ...updated[idx], operator: e.target.value };
+                          updateElement(selectedEl, { colorRules: updated });
+                        }}
+                        className="px-1 py-0.5 text-xs border border-gray-200 rounded bg-white"
+                      >
+                        <option value="==">==</option>
+                        <option value="!=">!=</option>
+                        <option value=">">&gt;</option>
+                        <option value="<">&lt;</option>
+                        <option value=">=">&gt;=</option>
+                        <option value="<=">&lt;=</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={rule.value}
+                        onChange={(e) => {
+                          const el = elements.find(el => el.id === selectedEl);
+                          const updated = [...(el?.colorRules || [])];
+                          updated[idx] = { ...updated[idx], value: e.target.value };
+                          updateElement(selectedEl, { colorRules: updated });
+                        }}
+                        placeholder="val"
+                        className="w-12 px-1 py-0.5 text-xs border border-gray-200 rounded bg-white"
+                      />
+                      <input
+                        type="color"
+                        value={rule.color || '#22c55e'}
+                        onChange={(e) => {
+                          const el = elements.find(el => el.id === selectedEl);
+                          const updated = [...(el?.colorRules || [])];
+                          updated[idx] = { ...updated[idx], color: e.target.value };
+                          updateElement(selectedEl, { colorRules: updated });
+                        }}
+                        className="w-8 h-6 rounded border border-gray-200 cursor-pointer"
+                      />
+                      <button
+                        onClick={() => {
+                          const el = elements.find(el => el.id === selectedEl);
+                          const updated = (el?.colorRules || []).filter((_: any, i: number) => i !== idx);
+                          updateElement(selectedEl, { colorRules: updated });
+                        }}
+                        className="text-red-400 hover:text-red-600 text-xs"
+                      >x</button>
+                    </div>
+                  ));
+                })()}
+              </div>
+              {/* State / Multi-state */}
+              <div className="border-t border-gray-100 pt-2">
+                <div className="text-xs font-medium text-gray-600 mb-1">State Tag Binding</div>
+                <div className="text-[9px] text-gray-400 mb-1">Bind a tag to switch component symbol state (e.g. open/closed contact)</div>
+                <input
+                  type="text"
+                  value={elements.find(e => e.id === selectedEl)?.stateTag || ''}
+                  onChange={(e) => updateElement(selectedEl, { stateTag: e.target.value })}
+                  placeholder="e.g. 1:CB1.status"
+                  className="w-full px-2 py-0.5 text-xs border border-gray-200 rounded bg-white"
+                />
+                <div className="mt-1">
+                  <div className="text-[9px] text-gray-400 mb-0.5">State 0 label (e.g. Closed)</div>
+                  <input
+                    type="text"
+                    value={elements.find(e => e.id === selectedEl)?.state0Label || 'Closed'}
+                    onChange={(e) => updateElement(selectedEl, { state0Label: e.target.value })}
+                    className="w-full px-2 py-0.5 text-xs border border-gray-200 rounded bg-white"
+                  />
+                </div>
+                <div className="mt-1">
+                  <div className="text-[9px] text-gray-400 mb-0.5">State 1 label (e.g. Open)</div>
+                  <input
+                    type="text"
+                    value={elements.find(e => e.id === selectedEl)?.state1Label || 'Open'}
+                    onChange={(e) => updateElement(selectedEl, { state1Label: e.target.value })}
+                    className="w-full px-2 py-0.5 text-xs border border-gray-200 rounded bg-white"
+                  />
+                </div>
+              </div>
+              {/* Visibility Condition */}
+              <div className="border-t border-gray-100 pt-2">
+                <div className="text-xs font-medium text-gray-600 mb-1">Visibility Condition</div>
+                <div className="text-[9px] text-gray-400 mb-1">Hide this component when condition is true</div>
+                <input
+                  type="text"
+                  value={elements.find(e => e.id === selectedEl)?.hideWhen || ''}
+                  onChange={(e) => updateElement(selectedEl, { hideWhen: e.target.value })}
+                  placeholder="e.g. tag == 0"
+                  className="w-full px-2 py-0.5 text-xs border border-gray-200 rounded bg-white"
+                />
               </div>
             </div>
           ) : rightTab === 'pageSettings' ? (

@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as https from 'https';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL   = 'gemini-3-pro-preview';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const CLAUDE_MODEL      = 'claude-sonnet-4-6';
 
 const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
   CIRCUIT_BREAKER:       { type: 'CB',               w: 40, h: 40 },
@@ -37,21 +37,31 @@ function normalizeType(t: string): { type: string; w: number; h: number } {
   return { ...TYPE_MAP.FEEDER };
 }
 
-function geminiRequest(base64Image: string, mimeType: string, prompt: string): Promise<string> {
+function claudeRequest(base64Image: string, mimeType: string, prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
-      contents: [{ parts: [
-        { inline_data: { mime_type: mimeType, data: base64Image } },
-        { text: prompt }
-      ]}],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+      model: CLAUDE_MODEL,
+      max_tokens: 8192,
+      temperature: 0.1,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Image } },
+          { type: 'text', text: prompt }
+        ]
+      }]
     });
 
     const req = https.request({
-      hostname: 'generativelanguage.googleapis.com',
-      path: `/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      }
     }, (res) => {
       let data = '';
       res.on('data', d => data += d);
@@ -59,7 +69,7 @@ function geminiRequest(base64Image: string, mimeType: string, prompt: string): P
         try {
           const parsed = JSON.parse(data);
           if (parsed.error) return reject(new Error(parsed.error.message));
-          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const text = parsed.content?.[0]?.text || '';
           resolve(text);
         } catch (e) { reject(e); }
       });
@@ -114,8 +124,8 @@ CRITICAL:
 
 Return ONLY the JSON object.`;
 
-  console.log(`[SLD] Calling Gemini ${GEMINI_MODEL}...`);
-  const textContent = await geminiRequest(base64Image, mimeType, prompt);
+  console.log(`[SLD] Calling Claude ${CLAUDE_MODEL}...`);
+  const textContent = await claudeRequest(base64Image, mimeType, prompt);
   console.log('[SLD] Response length:', textContent.length);
 
   let jsonStr = textContent.trim();
