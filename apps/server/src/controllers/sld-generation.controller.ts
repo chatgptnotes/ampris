@@ -1,3 +1,11 @@
+// ⚠️ SKILL FILE REQUIRED — READ BEFORE MODIFYING THIS FILE
+// ~/.openclaw/workspace/skills/gridvision-sld-ai/SKILL.md
+//
+// Key rules:
+// - normalizeType() MUST be called on every AI-returned element (chatSLD + generateSLD)
+// - claudeChatRequest(userMessage) — NOT claudeChatRequest(SYSTEM) [BUG-014]
+// - Connections must have points[] with >= 2 entries before setConnections [BUG-013]
+
 import { Request, Response } from 'express';
 import { generateSLDFromImage, normalizeType } from '../services/sld-generation.service';
 import multer from 'multer';

@@ -62,6 +62,10 @@ import * as ScadaSymbols from '@/components/scada-symbols';
 import CustomComponentCreator from '@/components/CustomComponentCreator';
 
 // ─── Symbol type → Component mapping ─────────────
+// ⚠️ SKILL FILE REQUIRED BEFORE MODIFYING SYMBOL_MAP OR AI SLD LOGIC
+// ~/.openclaw/workspace/skills/gridvision-sld-ai/SKILL.md
+// Key rules: BusBar w:500 h:20 | normalizeType in all 3 places | Transformer always mandatory
+
 // Normalize AI-returned type strings to exact SYMBOL_MAP keys
 const FRONTEND_TYPE_MAP: Record<string, string> = {
   vcb:'VacuumCB', vacuum_cb:'VacuumCB', vacuumcb:'VacuumCB', 'vacuum cb':'VacuumCB',

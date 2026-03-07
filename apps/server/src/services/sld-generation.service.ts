@@ -1,3 +1,12 @@
+// ⚠️ SKILL FILE REQUIRED — READ BEFORE MODIFYING THIS FILE
+// ~/.openclaw/workspace/skills/gridvision-sld-ai/SKILL.md
+//
+// Critical rules enforced here:
+// 1. normalizeType() → converts AI type strings to exact SYMBOL_MAP PascalCase keys
+// 2. BusBar: TYPE_MAP must have w:500, h:20 (never w:0, h:10)
+// 3. Transformer is MANDATORY in substation SLDs — enforced via AI prompt
+// 4. All known bugs: BUG-010 to BUG-014 in skills/gridvision/references/known-bugs.md
+
 import { v4 as uuidv4 } from 'uuid';
 import Anthropic from '@anthropic-ai/sdk';
 import * as https from 'https';
