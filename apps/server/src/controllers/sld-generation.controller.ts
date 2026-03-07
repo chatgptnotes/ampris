@@ -162,7 +162,7 @@ Apply the instruction and return the COMPLETE updated SLD JSON.
 ELEMENT SCHEMA:
 {
   "id": "unique string",
-  "type": "busbar|circuit_breaker|transformer|generator|load|cable|switch|isolator|fuse|ct|pt|arrester|motor|capacitor|label|line",
+  "type": "BusBar|DoubleBusBar|BusSection|CB|VacuumCB|SF6CB|ACB|MCCB|MCB|RCCB|Isolator|EarthSwitch|LoadBreakSwitch|AutoRecloser|RingMainUnit|GIS|Fuse|Contactor|Transformer|AutoTransformer|CT|PT|Meter|EnergyMeter|LightningArrester|Relay|OvercurrentRelay|EarthFaultRelay|DifferentialRelay|Feeder|GenericLoad|ResistiveLoad|InductiveLoad|Motor|Generator|SolarPanel|SolarInverter|WindTurbine|Battery|CapacitorBank|ShuntReactor|VFD|Cable|OverheadLine|UndergroundCable|Panel|MCC|Junction|Ground",
   "x": number (0-1600),
   "y": number (0-900),
   "width": number,
@@ -188,7 +188,9 @@ RULES:
 - New connection IDs: use "conn_<random6chars>"
 - Maintain vertical hierarchy: busbars horizontal, feeders hang downward
 - Keep elements within canvas bounds: x 0-1560, y 0-860
-- For "add feeder X": add a circuit_breaker below the busbar + a load below it + connection
+- For "add feeder X": add a VacuumCB (or appropriate CB type) below the busbar + a GenericLoad below it + connections
+- ALWAYS use the exact type strings listed above — never use generic names like "circuit_breaker", "busbar", "load", "cable"
+- VCB/vacuum breaker → VacuumCB | SF6 breaker → SF6CB | General CB → CB | Bus → BusBar | Load point → GenericLoad | Incoming/outgoing line → OverheadLine or Cable
 - For "rename X to Y": update the label property
 - For "remove X": remove from elements and any connections referencing it
 - For "change voltage": update voltage property on matching elements
@@ -205,7 +207,7 @@ Return format (STRICT JSON only):
     const currentSLD = JSON.stringify({ elements, connections }, null, 2);
     const userMessage = `Current SLD (${elements.length} elements, ${connections.length} connections):\n${currentSLD}\n\nUser instruction: "${message}"\n\nReturn updated SLD JSON:`;
 
-    const raw = (await claudeChatRequest(prompt)).trim()
+    const raw = (await claudeChatRequest(userMessage)).trim()
       .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
     let parsed;
