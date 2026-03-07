@@ -193,190 +193,123 @@ function claudeRequest(base64Image: string, mimeType: string, prompt: string): P
 export async function generateSLDFromImage(imageBuffer: Buffer, mimeType: string, instructions = '') {
   const base64Image = imageBuffer.toString('base64');
 
+  // ── NEW APPROACH: Claude outputs TOPOLOGY ONLY (no coordinates) ──────────
+  // The layout engine (sld-layout.service.ts) assigns ALL x,y,width,height,connections.
+  // This eliminates all geometric mistakes from AI.
+
   const prompt = `You are an expert electrical engineer analyzing a Single Line Diagram (SLD).
-Extract EVERY electrical component with its exact label.
+Your ONLY job: extract the electrical TOPOLOGY — what components exist, their labels, and how they are organized.
 
-IMPORTANT: Use ONLY these exact type values (they map directly to library symbols):
+DO NOT output x, y, width, height, level, column, or any coordinates. The layout engine handles all positioning.
 
-SWITCHGEAR: CB | VacuumCB | SF6CB | ACB | MCCB | MCB | RCCB | Isolator | EarthSwitch | LoadBreakSwitch | AutoRecloser | RingMainUnit | GIS | Fuse | Contactor
+⚠️ TYPE NAMES — use ONLY these exact PascalCase strings:
+Switchgear: CB | VacuumCB | SF6CB | ACB | MCCB | MCB | RCCB | Fuse | Contactor | Isolator | EarthSwitch | LoadBreakSwitch | AutoRecloser | RingMainUnit | GIS
+Transformers: Transformer | AutoTransformer | InstrumentTransformer | StepVoltageRegulator
+Busbars: BusBar | DoubleBusBar | BusSection
+Lines: OverheadLine | Cable | UndergroundCable
+Measurement: CT | PT | Meter | EnergyMeter | Ammeter | Voltmeter
+Protection: LightningArrester | Relay | OvercurrentRelay | EarthFaultRelay | DifferentialRelay | DistanceRelay | BuchholzRelay
+Loads: Feeder | GenericLoad | ResistiveLoad | InductiveLoad | Motor | Generator | SolarPanel | SolarInverter | Battery | CapacitorBank
+Misc: Panel | MCC | Ground | Junction
 
-TRANSFORMERS: Transformer | AutoTransformer | InstrumentTransformer | StepVoltageRegulator
+TYPE GUIDE:
+vcb / vacuum breaker → VacuumCB | sf6 → SF6CB | general breaker → CB
+busbar / bus → BusBar | ct → CT | pt / vt → PT | la / arrester → LightningArrester
+isolator / disconnector → Isolator | earth switch → EarthSwitch
+power transformer (MVA rated) → Transformer | load point → GenericLoad | outgoing feeder → Feeder
+incoming line → OverheadLine or Cable
 
-BUSBARS & LINES: BusBar | DoubleBusBar | BusSection | Cable | OverheadLine | UndergroundCable
-
-MEASUREMENT: CT | PT | Meter | EnergyMeter | PowerAnalyzer | Ammeter | Voltmeter | FrequencyMeter
-
-PROTECTION: LightningArrester | Relay | OvercurrentRelay | EarthFaultRelay | DifferentialRelay | DistanceRelay | BuchholzRelay
-
-LOADS & GENERATION: Feeder | GenericLoad | ResistiveLoad | InductiveLoad | Motor | Generator | SolarPanel | SolarInverter | WindTurbine | Battery
-
-POWER ELECTRONICS: CapacitorBank | ShuntReactor | VFD | UPSDetail
-
-MISC: Panel | MCC | Junction | Ground
-
-TYPE SELECTION GUIDE:
-- Vacuum CB / VCB → VacuumCB
-- SF6 breaker → SF6CB
-- Air circuit breaker → ACB
-- General circuit breaker / OCB → CB
-- Miniature circuit breaker → MCB or MCCB
-- Isolating switch / disconnector → Isolator
-- Lightning arrester / surge arrester / LA → LightningArrester
-- Current transformer / CT → CT
-- Potential/voltage transformer / PT / VT → PT
-- Incoming/outgoing power line → OverheadLine or Cable
-- Load point / consumer / feeder end → GenericLoad or Feeder
-- Power transformer (with MVA rating) → Transformer
-- Busbar / bus → BusBar
-
-Return ONLY valid JSON (no markdown):
+Return ONLY valid JSON:
 {
-  "name": "substation or system name from diagram",
-  "components": [
+  "name": "substation name from diagram",
+  "topologyType": "single-busbar",
+  "busbar": { "id": "bus1", "type": "BusBar", "label": "11kV Main Busbar", "voltage": 11 },
+  "incomers": [
     {
-      "id": "c1",
-      "type": "VacuumCB",
-      "label": "exact label from diagram e.g. VCB-1, 10 MVA 33/11kV, HV BUSBAR",
-      "voltage": 33,
-      "level": 0,
-      "column": 0
+      "id": "inc1",
+      "label": "Incomer",
+      "elements": [
+        { "id": "la1",  "type": "LightningArrester", "label": "LA" },
+        { "id": "iso1", "type": "Isolator",           "label": "89-I" },
+        { "id": "vcb1", "type": "VacuumCB",           "label": "VCB-I" },
+        { "id": "ct1",  "type": "CT",                 "label": "CT-I" }
+      ]
     }
   ],
-  "connections": [
-    { "from": "c1", "to": "c2" }
+  "feeders": [
+    {
+      "id": "f1", "label": "Feeder-1",
+      "elements": [
+        { "id": "vcb_f1",  "type": "VacuumCB",    "label": "VCB-F1" },
+        { "id": "ct_f1",   "type": "CT",           "label": "CT-F1" },
+        { "id": "load_f1", "type": "GenericLoad",  "label": "Feeder-1" }
+      ]
+    }
+  ],
+  "transformers": [
+    { "id": "tr1", "type": "Transformer", "label": "10MVA 33/11kV", "voltage": 33 }
   ]
 }
 
-Level (vertical position, 0=top):
-- 0: incoming supply / grid source / overhead line
-- 1: HV busbar (highest voltage)
-- 2: power transformers
-- 3: LV busbar (lower voltage)
-- 4: feeder breakers / protection devices
-- 5: loads / outgoing feeders / panels
+RULES:
+- incomers = chains above the busbar (source side): ordered top → bottom (topmost element first)
+- feeders = chains below the busbar (load side): ordered top → bottom (busbar-side element first)
+- transformers = separate elements connected to the busbar (not in chains)
+- ALWAYS include the Transformer if the diagram has stepped voltages (33/11kV, 11/0.4kV etc.)
+- ALWAYS include the busbar — it is the backbone of the diagram
+- Each feeder is a SEPARATE object in the feeders array
+- Each incomer is a SEPARATE object in the incomers array
+- NEVER merge multiple feeders into one
+- If diagram has 5 feeders → feeders array has 5 objects
+${instructions ? `\nADDITIONAL INSTRUCTIONS:\n${instructions}` : ''}
 
-Column: each parallel branch = separate column (0,1,2,3...)
+Return ONLY the JSON object, no markdown.`;
 
-⚠️ MANDATORY RULES:
-1. ALWAYS include at least one BusBar element for every voltage level present in the diagram.
-2. ALWAYS include the power Transformer if voltages are stepped up/down (e.g. 33/11kV, 11/0.4kV).
-3. BusBar elements MUST have width >= 400 and height = 20 (never width=0 or height=10).
-4. NEVER omit the Transformer. It is the most critical element in a substation SLD.
-5. Every busbar must be labeled with its voltage level (e.g. "11kV Busbar", "33kV Busbar").
-
-Include ALL components, ALL busbars, ALL transformers, ALL connections.
-Return ONLY the JSON object.${instructions ? `\n\nADDITIONAL INSTRUCTIONS FROM USER:\n${instructions}\n\nApply these instructions on top of what you see in the diagram.` : ''}`;
-
-  console.log(`[SLD] Calling Claude ${CLAUDE_MODEL}...`);
+  console.log(`[SLD] Calling Claude ${CLAUDE_MODEL} (topology mode)...`);
   const textContent = await claudeRequest(base64Image, mimeType, prompt);
   console.log('[SLD] Response length:', textContent.length);
 
-  let jsonStr = textContent.trim();
-  // Strip leading "json" word
-  jsonStr = jsonStr.replace(/^json\s*/i, '');
-  // Strip markdown fences
-  const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (fence) jsonStr = fence[1].trim();
-  // Extract first {...} block
+  // Parse Claude's JSON response
+  let jsonStr = textContent.trim()
+    .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
   const jMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (jMatch) jsonStr = jMatch[0];
 
-  let parsed: any;
-  try { parsed = JSON.parse(jsonStr); }
-  catch (e: any) {
-    // Try to fix truncated JSON by finding last valid closing brace
+  let topo: any;
+  try {
+    topo = JSON.parse(jsonStr);
+  } catch {
     const lastBrace = jsonStr.lastIndexOf('}');
     if (lastBrace > 0) {
-      try { parsed = JSON.parse(jsonStr.substring(0, lastBrace + 1)); }
-      catch { throw new Error('Failed to parse Anthropic response: ' + textContent.substring(0, 300)); }
+      try { topo = JSON.parse(jsonStr.substring(0, lastBrace + 1)); }
+      catch { throw new Error('Failed to parse topology JSON: ' + textContent.substring(0, 300)); }
     } else {
-      throw new Error('Failed to parse Anthropic response: ' + textContent.substring(0, 300));
+      throw new Error('Failed to parse topology JSON: ' + textContent.substring(0, 300));
     }
   }
 
-  const comps: any[] = parsed.components || [];
-  if (comps.length === 0) throw new Error('No components detected');
-  console.log('[SLD] Components detected:', comps.length);
-
-  // Layout engine
-  const CANVAS_W = 1600, CANVAS_H = 900;
-  const MARGIN = 60, USABLE_W = CANVAS_W - MARGIN * 2;
-  const LEVEL_H = 130;
-
-  const byLevel = new Map<number, any[]>();
-  for (const c of comps) {
-    const lv = Number(c.level ?? 0);
-    if (!byLevel.has(lv)) byLevel.set(lv, []);
-    byLevel.get(lv)!.push(c);
-  }
-  const levels = Array.from(byLevel.keys()).sort((a, b) => a - b);
-
-  const elements: any[] = [];
-  const idMap = new Map<string, string>();
-
-  for (const lv of levels) {
-    const group = byLevel.get(lv)!.sort((a: any, b: any) => (a.column ?? 0) - (b.column ?? 0));
-    const colCount = Math.max(...group.map((c: any) => Number(c.column ?? 0))) + 1;
-    const colW = USABLE_W / Math.max(colCount, 1);
-    const y = MARGIN + lv * LEVEL_H;
-
-    for (let i = 0; i < group.length; i++) {
-      const comp = group[i];
-      const sym = normalizeType(comp.type);
-      const uid = uuidv4();
-      idMap.set(comp.id, uid);
-
-      let x: number, w: number, h: number;
-
-      if (sym.type === 'BusBar') {
-        x = MARGIN; w = USABLE_W; h = sym.h;
-      } else {
-        const col = Number(comp.column ?? i);
-        const cx = MARGIN + col * colW + colW / 2;
-        w = sym.w; h = sym.h;
-        x = Math.round(cx - w / 2);
-      }
-
-      x = Math.max(MARGIN, Math.min(CANVAS_W - w - MARGIN, x));
-      const cy = Math.max(MARGIN, Math.min(CANVAS_H - h - 20, y));
-
-      elements.push({
-        id: uid, type: sym.type,
-        x: Math.round(x), y: Math.round(cy),
-        width: w, height: h,
-        rotation: 0, zIndex: lv + 1,
-        properties: {
-          tagBindings: {}, label: comp.label || '',
-          showLabel: true,
-          labelPosition: sym.type === 'BusBar' ? 'top' : 'bottom',
-          voltageLevel: comp.voltage,
-        },
-      });
-    }
+  if (!topo.busbar && !topo.incomers && !topo.feeders) {
+    throw new Error('No topology detected in diagram');
   }
 
-  const connections: any[] = [];
-  for (const conn of (parsed.connections || [])) {
-    const fromUid = idMap.get(conn.from), toUid = idMap.get(conn.to);
-    if (!fromUid || !toUid) continue;
-    const fromEl = elements.find(e => e.id === fromUid);
-    const toEl   = elements.find(e => e.id === toUid);
-    if (!fromEl || !toEl) continue;
+  // Ensure arrays exist
+  topo.incomers     = topo.incomers     || [];
+  topo.feeders      = topo.feeders      || [];
+  topo.transformers = topo.transformers || [];
+  if (!topo.busbar) topo.busbar = { id: 'bus1', type: 'BusBar', label: 'Main Busbar', voltage: 11 };
 
-    const [topEl, botEl] = fromEl.y <= toEl.y ? [fromEl, toEl] : [toEl, fromEl];
-    const [topUid, botUid] = fromEl.y <= toEl.y ? [fromUid, toUid] : [toUid, fromUid];
-    const fx = Math.round(topEl.x + topEl.width / 2), fy = Math.round(topEl.y + topEl.height);
-    const tx = Math.round(botEl.x + botEl.width / 2), ty = Math.round(botEl.y);
-    const midY = Math.round((fy + ty) / 2);
-    const pts = fx === tx ? [{x:fx,y:fy},{x:tx,y:ty}] : [{x:fx,y:fy},{x:fx,y:midY},{x:tx,y:midY},{x:tx,y:ty}];
-    connections.push({ id: uuidv4(), fromId: topUid, toId: botUid, points: pts, color: '#374151', thickness: 2 });
-  }
+  console.log(`[SLD] Topology: ${topo.incomers.length} incomers, ${topo.feeders.length} feeders, ${topo.transformers.length} transformers`);
 
-  console.log(`[SLD] Done: ${elements.length} elements, ${connections.length} connections`);
+  // ── Hand off to deterministic layout engine ─────────────────────────────
+  const { layoutSubstation } = await import('./sld-layout.service');
+  const { elements, connections } = layoutSubstation(topo);
+
+  console.log(`[SLD] Layout done: ${elements.length} elements, ${connections.length} connections`);
+
   return {
     id: uuidv4(), substationId: uuidv4(),
-    name: parsed.name || 'AI Generated SLD',
-    width: CANVAS_W, height: CANVAS_H,
+    name: topo.name || 'AI Generated SLD',
+    width: 1600, height: 900,
     elements, connections,
   };
 }

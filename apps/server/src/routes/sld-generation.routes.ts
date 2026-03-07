@@ -14,5 +14,8 @@ router.post('/generate', optionalAuth, ...generateSLD);
 export default router;
 
 // AI chat to modify existing SLD
-import { chatSLD } from '../controllers/sld-generation.controller';
+import { chatSLD, generateSLDFromText } from '../controllers/sld-generation.controller';
 router.post('/chat', optionalAuth, chatSLD);
+
+// Text-to-SLD: generate from description (no image needed)
+router.post('/generate-text', optionalAuth, generateSLDFromText);

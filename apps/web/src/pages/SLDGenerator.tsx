@@ -4,9 +4,9 @@ import AnimatedBackground from '@/components/sld-generator/AnimatedBackground';
 import SLDPreview from '@/components/sld-generator/SLDPreview';
 import {
   Zap, Upload, Send, Bot, User, ImageIcon,
-  Sparkles, X, RefreshCw, CheckCircle2, ChevronRight, Paperclip,
+  Sparkles, X, RefreshCw, CheckCircle2, ChevronRight, FileText,
 } from 'lucide-react';
-import { generateSLD, type ChatMessage } from '@/services/sld-generation';
+import { generateSLD, generateSLDFromText, type ChatMessage } from '@/services/sld-generation';
 import type { SLDLayout } from '@gridvision/shared';
 
 /* ─── tiny utils ─────────────────────────────────────────────────────────── */
@@ -26,6 +26,8 @@ export default function SLDGenerator() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const [mode, setMode] = useState<'upload' | 'describe'>('upload');
+  const [description, setDescription] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -105,7 +107,8 @@ export default function SLDGenerator() {
 
   /* GENERATE */
   const handleGenerate = useCallback(async () => {
-    if (!uploadedFile) return;
+    if (mode === 'upload' && !uploadedFile) return;
+    if (mode === 'describe' && !description.trim()) return;
     setIsGenerating(true);
     setError(null);
     setGeneratedLayout(null);
@@ -113,11 +116,15 @@ export default function SLDGenerator() {
     const instructions = buildInstructions();
     setMessages(prev => [
       ...prev,
-      { role: 'assistant', content: '🔄 Analyzing drawing and applying your instructions...' },
+      { role: 'assistant', content: mode === 'describe'
+          ? '🔄 Building SLD topology from your description...'
+          : '🔄 Analyzing drawing and applying your instructions...' },
     ]);
 
     try {
-      const layout = await generateSLD(uploadedFile, instructions);
+      const layout = mode === 'describe'
+        ? await generateSLDFromText(description, instructions)
+        : await generateSLD(uploadedFile!, instructions);
       setGeneratedLayout(layout);
       setMessages(prev => [
         ...prev,
@@ -171,8 +178,43 @@ export default function SLDGenerator() {
           {/* ── LEFT COLUMN ── */}
           <div className="flex flex-col gap-4">
 
+            {/* Mode tabs */}
+            <div className="flex rounded-xl border border-gray-800 overflow-hidden">
+              <button onClick={() => setMode('upload')}
+                className={`flex-1 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-all
+                  ${mode === 'upload' ? 'bg-blue-600 text-white' : 'bg-white/[0.03] text-gray-400 hover:text-white'}`}>
+                <Upload className="w-4 h-4" /> Upload Drawing
+              </button>
+              <button onClick={() => setMode('describe')}
+                className={`flex-1 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-all
+                  ${mode === 'describe' ? 'bg-blue-600 text-white' : 'bg-white/[0.03] text-gray-400 hover:text-white'}`}>
+                <FileText className="w-4 h-4" /> Describe SLD
+              </button>
+            </div>
+
+            {/* Describe mode */}
+            {mode === 'describe' && (
+              <div className="rounded-2xl border border-gray-800 bg-white/[0.02] p-4 space-y-3">
+                <p className="text-xs text-gray-400">Describe your substation in plain English. The layout engine handles all geometry — no drawing needed.</p>
+                <textarea
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  rows={5}
+                  placeholder="e.g. 33/11kV substation with 1 incomer (LA, isolator, VCB, CT) and 5 outgoing feeders each with VCB, CT and load. Include 10 MVA transformer."
+                  className="w-full bg-gray-900 border border-gray-600 rounded-xl px-3.5 py-2.5 text-sm placeholder-gray-500 resize-none focus:outline-none focus:border-blue-400 transition-colors"
+                  style={{ color: '#ffffff', caretColor: '#60a5fa' }}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {['11kV substation, 1 incomer, 5 feeders','33/11kV substation with transformer','Double busbar 11kV, 2 incomers, 6 feeders','11kV bus with VCBs and CT on each feeder'].map(s => (
+                    <button key={s} onClick={() => setDescription(s)}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-blue-500/50 hover:bg-blue-500/10 transition-all">{s}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Upload zone */}
-            <div
+            {mode === 'upload' && <div
               onDragOver={e => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={onDrop}
@@ -242,7 +284,7 @@ export default function SLDGenerator() {
                   </div>
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* AI Chat panel */}
             <div className="flex flex-col rounded-2xl border border-gray-800 bg-white/[0.02] overflow-hidden" style={{ height: '420px' }}>
@@ -312,7 +354,7 @@ export default function SLDGenerator() {
             {/* Generate button */}
             <button
               onClick={handleGenerate}
-              disabled={!uploadedFile || isGenerating}
+              disabled={(mode === 'upload' ? !uploadedFile : !description.trim()) || isGenerating}
               className="w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2.5 transition-all
                 disabled:opacity-40 disabled:cursor-not-allowed
                 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500

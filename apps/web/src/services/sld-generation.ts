@@ -28,6 +28,16 @@ export async function generateSLD(file: File, instructions?: string): Promise<SL
   return response.data.layout;
 }
 
+// Text-to-SLD: generate from description (no image needed)
+export async function generateSLDFromText(description: string, instructions?: string): Promise<SLDLayout> {
+  const response = await api.post('/sld/generate-text', {
+    description,
+    instructions: instructions?.trim() || undefined,
+  }, { timeout: 60000 });
+  // Response is SLDLayout directly (not wrapped in .layout)
+  return response.data as SLDLayout;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;

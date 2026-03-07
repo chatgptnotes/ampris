@@ -159,6 +159,118 @@ function claudeChatRequest(prompt: string): Promise<string> {
   });
 }
 
+// ── Text-to-SLD: generate from description (no image upload) ───────────────
+export const generateSLDFromText = async (req: Request, res: Response) => {
+  const { description, instructions } = req.body;
+  if (!description) return res.status(400).json({ error: 'description required' });
+
+  try {
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || process.env.VITE_AI_API_KEY || '';
+    const CLAUDE_MODEL = 'claude-opus-4-6';
+
+    const systemPrompt = `You are an expert electrical engineer designing a Single Line Diagram (SLD) topology.
+Given a description, output the substation topology as JSON.
+DO NOT output any coordinates, x, y, width, height — the layout engine handles all positioning.
+
+⚠️ TYPE NAMES — EXACT PascalCase only:
+Switchgear: CB | VacuumCB | SF6CB | ACB | MCCB | Fuse | Isolator | EarthSwitch | LoadBreakSwitch | AutoRecloser | RingMainUnit | GIS
+Transformers: Transformer | AutoTransformer | StepVoltageRegulator
+Busbars: BusBar | DoubleBusBar
+Lines: OverheadLine | Cable
+Measurement: CT | PT | EnergyMeter | Meter
+Protection: LightningArrester | OvercurrentRelay | EarthFaultRelay | DifferentialRelay | BuchholzRelay
+Loads: Feeder | GenericLoad | Motor | Generator | SolarInverter | CapacitorBank
+
+TYPE GUIDE:
+VCB/vacuum breaker → VacuumCB | general breaker → CB | bus → BusBar
+CT → CT | PT/VT → PT | LA/arrester → LightningArrester
+isolator/disconnector → Isolator | earth switch → EarthSwitch
+power transformer → Transformer | load → GenericLoad | outgoing feeder → Feeder
+
+Output format:
+{
+  "name": "descriptive name",
+  "topologyType": "single-busbar",
+  "busbar": { "id": "bus1", "type": "BusBar", "label": "11kV Main Busbar", "voltage": 11 },
+  "incomers": [
+    { "id": "inc1", "label": "Incomer",
+      "elements": [
+        { "id": "la1",  "type": "LightningArrester", "label": "LA"       },
+        { "id": "iso1", "type": "Isolator",           "label": "89-I"     },
+        { "id": "vcb1", "type": "VacuumCB",           "label": "VCB-I"   },
+        { "id": "ct1",  "type": "CT",                 "label": "CT-I"    }
+      ]
+    }
+  ],
+  "feeders": [
+    { "id": "f1", "label": "Feeder-1",
+      "elements": [
+        { "id": "vcb_f1", "type": "VacuumCB",   "label": "VCB-F1"   },
+        { "id": "ct_f1",  "type": "CT",          "label": "CT-F1"    },
+        { "id": "ld_f1",  "type": "GenericLoad", "label": "Feeder-1" }
+      ]
+    }
+  ],
+  "transformers": []
+}
+
+RULES:
+- Each feeder = SEPARATE object in feeders array (NEVER merge feeders)
+- incomers = chains above busbar, ordered top→bottom (source first)
+- feeders = chains below busbar, ordered top→bottom (busbar side first)
+- transformers = separate from chains
+- ALWAYS include Transformer if description mentions voltage ratio (e.g. 33/11kV, 11/0.4kV)
+- ALWAYS include busbar
+- Standard incomer chain: LightningArrester → Isolator → VacuumCB → CT (top to bottom)
+- Standard feeder chain: VacuumCB → CT → GenericLoad (top to bottom)
+${instructions ? `\nExtra instructions: ${instructions}` : ''}`;
+
+    const body = JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 4096,
+      temperature: 0.1,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: description }],
+    });
+
+    const https = require('https');
+    const raw: string = await new Promise((resolve, reject) => {
+      const req2 = https.request({
+        hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      }, (r: any) => { let d = ''; r.on('data', (c: any) => d += c); r.on('end', () => { try { const p = JSON.parse(d); resolve(p.content?.[0]?.text || ''); } catch { reject(new Error('Parse error')); } }); });
+      req2.on('error', reject); req2.write(body); req2.end();
+    });
+
+    let jsonStr = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+    const jMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jMatch) jsonStr = jMatch[0];
+
+    let topo: any;
+    try { topo = JSON.parse(jsonStr); }
+    catch { const lb = jsonStr.lastIndexOf('}'); try { topo = JSON.parse(jsonStr.substring(0, lb + 1)); } catch { throw new Error('Invalid JSON from AI: ' + raw.substring(0, 200)); } }
+
+    topo.incomers     = topo.incomers     || [];
+    topo.feeders      = topo.feeders      || [];
+    topo.transformers = topo.transformers || [];
+    if (!topo.busbar) topo.busbar = { id: 'bus1', type: 'BusBar', label: 'Main Busbar', voltage: 11 };
+
+    const { layoutSubstation } = await import('../services/sld-layout.service');
+    const { elements, connections } = layoutSubstation(topo);
+    const { v4: uuid } = require('uuid');
+
+    return res.json({
+      id: uuid(), substationId: uuid(),
+      name: topo.name || 'AI Generated SLD',
+      width: 1600, height: 900,
+      elements, connections,
+    });
+  } catch (err: any) {
+    console.error('[SLD-TEXT]', err.message);
+    return res.status(500).json({ error: err.message || 'Generation failed' });
+  }
+};
+
 export const chatSLD = async (req: Request, res: Response) => {
   const { elements = [], connections = [], message, projectName = 'SLD' } = req.body;
   if (!message) return res.status(400).json({ error: 'message required' });
