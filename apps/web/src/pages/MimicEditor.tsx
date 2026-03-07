@@ -1543,11 +1543,14 @@ export default function MimicEditor() {
       pushHistory(elements);
 
       // ── Auto-create tags for newly added elements ──────────────────────
+      // Skip tag creation if data source is 'none' (diagram-only mode)
+      const dataSourceProtocol = data.dataSource?.protocol || 'none';
+      const skipTags = dataSourceProtocol === 'none' || dataSourceProtocol === 'diagram';
       const newElements: typeof elements = data.elements;
       const addedElements = newElements.filter((e: any) => !prevElementIds.has(e.id));
       let tagsBound = 0;
 
-      for (const el of addedElements) {
+      for (const el of skipTags ? [] : addedElements) {
         // Normalise type to match TAG_TEMPLATES keys (e.g. "circuit_breaker" → "VacuumCB")
         const typeMap: Record<string, string> = {
           circuit_breaker: 'VacuumCB',

@@ -274,8 +274,15 @@ export default function MimicViewer() {
 
     // Seed: source elements are always energized
     const queue: string[] = [];
+
+    // Find elements that have NO incoming connections (roots of chains = grid/source side)
+    const hasIncoming = new Set<string>();
+    for (const c of conns) { if (c.toId) hasIncoming.add(c.toId); }
+
     for (const el of els) {
-      if (SOURCE_TYPES.has(el.type)) {
+      const isExplicitSource = SOURCE_TYPES.has(el.type) || el.properties?.isSource === true;
+      const isChainRoot = !hasIncoming.has(el.id); // no upstream connections
+      if (isExplicitSource || isChainRoot) {
         energized.add(el.id);
         queue.push(el.id);
       }
@@ -319,7 +326,8 @@ export default function MimicViewer() {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const values = useRealtimeStore((s) => s.values);
   const user = useAuthStore((s) => s.user);
-  const [showTagValues, setShowTagValues] = useState(true);
+  // Tag values hidden by default — only show when real data source is connected
+  const [showTagValues, setShowTagValues] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [pageSettings, setPageSettings] = useState<PageSettings>({
     header: { show: true, logoUrl: '/gridvision-logo.jpg', title: 'GridVision SCADA', subtitle: '', bgColor: '#1E293B', textColor: '#FFFFFF', height: 50 },
@@ -389,9 +397,13 @@ export default function MimicViewer() {
     return () => clearInterval(timer);
   }, []);
 
-  // Client-side tag simulator — fetches ALL project tags and simulates values
+  // Client-side tag simulator — DISABLED by default. Only runs when project has a configured real data source.
+  // Mock values on SLD clutter the diagram and imply fake operational data.
+  // To enable: set project.settings.enableSimulator = true OR configure a real device (Modbus/DNP3/IEC61850).
   useEffect(() => {
     if (!projectId) return;
+    // Check if simulator is explicitly enabled — disabled by default
+    if (!project?.settings?.enableSimulator) return;
     const store = useRealtimeStore.getState();
     let tagDefs: Record<string, any> = {};
     let allTagNames = new Set<string>();

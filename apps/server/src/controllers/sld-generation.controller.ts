@@ -399,6 +399,24 @@ TYPE GUIDE: VCB → VacuumCB | bus → BusBar | VT/PT → PT | LA → LightningA
 ## INCOMER ORDER (top→busbar): [LA, Isolator, VacuumCB, CT] OR [LA, Isolator, Transformer, VacuumCB, CT]
 ## FEEDER ORDER (busbar→load): [VacuumCB, CT, PT, GenericLoad]
 
+## STEP 4 — ALWAYS ASK ABOUT DATA SOURCE (ask along with other questions or after topology is clear)
+Before generating the final topology, ask:
+"What is the real-time data source for this SLD? Options:
+  (a) Modbus TCP/RTU — specify IP/port and slave ID
+  (b) DNP3 — specify IP and station address
+  (c) IEC 61850 — specify IED name and IP
+  (d) OPC-UA — specify server URL
+  (e) MQTT — specify broker and topic prefix
+  (f) Manual / no real-time data (SLD diagram only, no live values)"
+
+Encode the answer in the topology JSON:
+{ "dataSource": { "protocol": "modbus-tcp", "host": "192.168.1.100", "port": 502, "slaveId": 1 } }
+OR
+{ "dataSource": { "protocol": "none" } }
+
+If user says "no data" or "diagram only" → set dataSource.protocol = "none" and do NOT create tag bindings.
+If user provides a real device → include device details so tags can be mapped to registers/addresses.
+
 ## RULES
 - Each feeder = SEPARATE object in feeders array
 - ALWAYS include busbar
