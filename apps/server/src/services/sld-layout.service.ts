@@ -258,15 +258,24 @@ export function layoutSubstation(topo: SubstationTopology): { elements: PlacedEl
       const lvBusW   = Math.max(300, feeders.length * FEEDER_SPACING);
       const lvBusX   = Math.round(cx - lvBusW / 2);
 
+      const lvBusLineY = BUSBAR_H / 2;
+      const lvVoltage = topo.lvBusbar.voltage || 0.4;
       const lvBusEl: PlacedEl = {
-        id: lvUid, type: lvNorm.type === 'BusBar' ? 'BusBar' : 'BusBar',
+        id: lvUid, type: 'BusBar',
         x: lvBusX, y: lvY, width: lvBusW, height: BUSBAR_H,
         rotation: 0, zIndex: 9,
         properties: {
-          label: topo.lvBusbar.label || `${topo.lvBusbar.voltage || 0.4}kV Busbar`,
+          label: topo.lvBusbar.label || `${lvVoltage}kV Busbar`,
           showLabel: true, tagBindings: {},
-          voltageLevel: topo.lvBusbar.voltage,
+          voltageLevel: lvVoltage,
           labelPosition: 'top',
+          // Line rendering properties — REQUIRED for BusBar to render full-width
+          relX1: 0,
+          relY1: lvBusLineY,
+          relX2: lvBusW,
+          relY2: lvBusLineY,
+          busWidth: 6,
+          color: voltageColors[lvVoltage] || '#6B7280',
         },
       };
       elements.push(lvBusEl);

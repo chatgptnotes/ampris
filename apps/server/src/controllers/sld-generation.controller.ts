@@ -482,13 +482,19 @@ If user provides a real device → include device details so tags can be mapped 
       // Normalize all types through the TYPE_MAP
       const newElements = newEls.map((el: any) => {
         const norm = normalizeType(el.type || '');
-        // Preserve BusBar relX1/relY1/relX2/relY2 — these are required for full-width line rendering
-        return {
-          ...el,
-          type: norm.type,
-          width: (el.width && el.width > 0) ? el.width : (norm.w || 60),
-          height: (el.height && el.height > 0) ? el.height : (norm.h || 60),
-        };
+        const w = (el.width && el.width > 0) ? el.width : (norm.w || 60);
+        const h = (el.height && el.height > 0) ? el.height : (norm.h || 60);
+        const props = { ...(el.properties || {}) };
+        // Ensure BusBar has relX1/relX2 for full-width line rendering
+        if ((norm.type === 'BusBar' || norm.type === 'DoubleBusBar') && props.relX1 === undefined) {
+          props.relX1 = 0;
+          props.relY1 = Math.round(h / 2);
+          props.relX2 = w;
+          props.relY2 = Math.round(h / 2);
+          props.busWidth = norm.type === 'DoubleBusBar' ? 8 : 6;
+          if (!props.color) props.color = '#333333';
+        }
+        return { ...el, type: norm.type, width: w, height: h, properties: props };
       });
 
       return res.json({
@@ -662,6 +668,29 @@ Omit or use [] for unchanged sections. Never return full elements/connections ar
         if (w < busDef.minW) w = busDef.defW;
         h = busDef.h;
       }
+
+      const props = {
+        label: el.properties?.label || el.label || norm.type,
+        showLabel: el.properties?.showLabel !== false,
+        tagBindings: el.properties?.tagBindings || {},
+        ...(el.properties || {}),
+      };
+
+      // Ensure BusBar/DoubleBusBar always have relX1/relY1/relX2/relY2 for full-width line rendering.
+      // Without these, the frontend falls back to a tiny SYMBOL_MAP foreignObject (~120px).
+      if ((norm.type === 'BusBar' || norm.type === 'DoubleBusBar') && props.relX1 === undefined) {
+        props.relX1 = 0;
+        props.relY1 = Math.round(h / 2);
+        props.relX2 = w;
+        props.relY2 = Math.round(h / 2);
+        props.busWidth = norm.type === 'DoubleBusBar' ? 8 : 6;
+        if (!props.color) props.color = '#333333';
+      }
+      // Also fix if relX2 is too small (AI shrunk the busbar coordinates)
+      if ((norm.type === 'BusBar' || norm.type === 'DoubleBusBar') && props.relX2 !== undefined && props.relX2 < w) {
+        props.relX2 = w;
+      }
+
       return {
         ...el,
         type: norm.type,
@@ -669,12 +698,7 @@ Omit or use [] for unchanged sections. Never return full elements/connections ar
         height: h,
         rotation: el.rotation ?? 0,
         zIndex:   el.zIndex   ?? 1,
-        properties: {
-          label: el.properties?.label || el.label || norm.type,
-          showLabel: el.properties?.showLabel !== false,
-          tagBindings: el.properties?.tagBindings || {},
-          ...(el.properties || {}),
-        },
+        properties: props,
       };
     }
 
