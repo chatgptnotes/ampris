@@ -141,7 +141,8 @@ export function normalizeType(t: string): { type: string; w: number; h: number }
   if (u.includes('VFD') || u.includes('DRIVE'))                     return { ...TYPE_MAP.VFD };
   if (u.includes('MCC'))                                            return { ...TYPE_MAP.MCC };
   if (u.includes('PANEL'))                                          return { ...TYPE_MAP.PANEL };
-  if (u.includes('LOAD'))                                           return { ...TYPE_MAP.LOAD };
+  // ALL load types default to GenericLoad — InductiveLoad / ResistiveLoad not used in generated SLDs
+  if (u.includes('INDUCTIVE') || u.includes('RESISTIVE') || u.includes('LOAD')) return { ...TYPE_MAP.GENERIC_LOAD };
   if (u.includes('FEEDER') || u.includes('OUTGOING') || u.includes('INCOMING')) return { ...TYPE_MAP.FEEDER };
   if (u.includes('GROUND') || u.includes('EARTH'))                  return { ...TYPE_MAP.GROUND };
   return { ...TYPE_MAP.FEEDER };
@@ -209,7 +210,7 @@ Busbars: BusBar | DoubleBusBar | BusSection
 Lines: OverheadLine | Cable | UndergroundCable
 Measurement: CT | PT | Meter | EnergyMeter | Ammeter | Voltmeter
 Protection: LightningArrester | Relay | OvercurrentRelay | EarthFaultRelay | DifferentialRelay | DistanceRelay | BuchholzRelay
-Loads: Feeder | GenericLoad | ResistiveLoad | InductiveLoad | Motor | Generator | SolarPanel | SolarInverter | Battery | CapacitorBank
+Loads: GenericLoad (use this for ALL load points — NEVER use InductiveLoad or ResistiveLoad)
 Misc: Panel | MCC | Ground | Junction
 
 TYPE GUIDE:
