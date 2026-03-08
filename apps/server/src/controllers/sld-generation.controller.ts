@@ -7,7 +7,7 @@
 // - Connections must have points[] with >= 2 entries before setConnections [BUG-013]
 
 import { Request, Response } from 'express';
-import { generateSLDFromImage, normalizeType, parseAndMergeTopology } from '../services/sld-generation.service';
+import { generateSLDFromImage, normalizeType, parseAndMergeTopology, sanitizeTopology } from '../services/sld-generation.service';
 import { prisma } from '../config/database';
 import multer from 'multer';
 
@@ -251,6 +251,7 @@ ${instructions ? `\nExtra instructions: ${instructions}` : ''}`;
     topo.feeders      = topo.feeders      || [];
     topo.transformers = topo.transformers || [];
     if (!topo.busbar) topo.busbar = { id: 'bus1', type: 'BusBar', label: 'Main Busbar', voltage: 11 };
+    sanitizeTopology(topo);
 
     const { layoutSubstation } = await import('../services/sld-layout.service');
     const { elements, connections } = layoutSubstation(topo);
@@ -465,6 +466,7 @@ If user provides a real device → include device details so tags can be mapped 
       topo.feeders      = topo.feeders      || [];
       topo.transformers = topo.transformers || [];
       if (!topo.busbar) topo.busbar = { id:'bus1', type:'BusBar', label:'Main Busbar', voltage:11 };
+      sanitizeTopology(topo);
 
       const { layoutSubstation } = await import('../services/sld-layout.service');
       const { elements: newEls, connections: newConns } = layoutSubstation(topo);

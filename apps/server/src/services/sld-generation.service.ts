@@ -112,6 +112,77 @@ export function parseAndMergeTopology(textContent: string): any {
   return topo;
 }
 
+// ─── Sanitize topology: fix wrong types, ensure valid feeder endpoints ────────
+// This is the HARD SAFETY NET. No matter what Claude returns, this function
+// guarantees correct element types. Called by ALL generation paths.
+const BREAKER_TYPES_LIST = ['CB','VacuumCB','SF6CB','ACB','MCCB','MCB','RCCB','LoadBreakSwitch','Fuse','Contactor','AutoRecloser'];
+const BUS_TIE_LIST = ['BusTie','BusSection','DoubleBusBar'];
+
+export function sanitizeTopology(topo: any): void {
+  if (!topo.feeders) return;
+
+  // Pass 1: Fix all-transformer feeders
+  topo.feeders = topo.feeders.map((feeder: any) => {
+    const els: any[] = feeder.elements || [];
+    const allTransformers = els.length > 0 && els.every((e: any) => ['Transformer','AutoTransformer'].includes(normalizeType(e.type || '').type));
+    if (allTransformers) {
+      const label = feeder.label || els[0]?.label || `Feeder-${feeder.id}`;
+      console.log(`[SLD] Sanitize: all-transformer feeder "${label}" → [CB, GenericLoad]`);
+      return { ...feeder, elements: [
+        { id: `cb_${feeder.id}`, type: 'CB', label: `CB-${label}` },
+        { id: `ld_${feeder.id}`, type: 'GenericLoad', label },
+      ]};
+    }
+    return feeder;
+  });
+
+  // Pass 2: Move stray single-transformer feeders to transformers array
+  const stray: any[] = [];
+  topo.feeders = topo.feeders.filter((feeder: any) => {
+    const els: any[] = feeder.elements || [];
+    const isSingleTr = els.length === 1 && ['Transformer','AutoTransformer'].includes(normalizeType(els[0]?.type || '').type);
+    if (isSingleTr) { stray.push({ id: feeder.id, type: 'Transformer', label: feeder.label || els[0].label || 'Transformer' }); return false; }
+    return true;
+  });
+  if (stray.length > 0) {
+    topo.transformers = [...(topo.transformers || []), ...stray];
+    console.log(`[SLD] Sanitize: moved ${stray.length} stray transformer(s) to transformers[]`);
+  }
+
+  // Pass 3: HARD SAFETY NET — normalize all element types & fix feeder endpoints
+  for (const feeder of topo.feeders) {
+    const els: any[] = feeder.elements || [];
+    if (els.length === 0) continue;
+
+    // Normalize every element type
+    for (const el of els) {
+      if (el.type) el.type = normalizeType(el.type).type;
+    }
+
+    const lastEl = els[els.length - 1];
+    const lastType = lastEl?.type || '';
+
+    // Bus tie/coupler endpoint → keep as-is
+    if (BUS_TIE_LIST.includes(lastType)) continue;
+
+    // Generator endpoint → force GenericLoad UNLESS label says it's an actual generator
+    if (lastType === 'Generator' || lastType === 'Motor') {
+      const lbl = (feeder.label || lastEl.label || '').toLowerCase();
+      const isActual = /generator|genset|dg\s*set|diesel|turbine|motor/i.test(lbl);
+      if (!isActual) {
+        console.log(`[SLD] Safety net: "${feeder.label}" endpoint ${lastType} → GenericLoad`);
+        lastEl.type = 'GenericLoad';
+      }
+    }
+
+    // If feeder ends with breaker/CT/Isolator (no load endpoint), append GenericLoad
+    if (BREAKER_TYPES_LIST.includes(lastType) || ['CT','PT','Isolator','EarthSwitch','LightningArrester','Relay'].includes(lastType)) {
+      console.log(`[SLD] Safety net: appending GenericLoad to "${feeder.label}" (ends with ${lastType})`);
+      els.push({ id: `ld_${feeder.id}`, type: 'GenericLoad', label: feeder.label || 'Load' });
+    }
+  }
+}
+
 // SYMBOL_MAP must exactly match the frontend MimicEditor SYMBOL_MAP keys
 const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
   // Switchgear
@@ -433,45 +504,8 @@ Return ONLY the JSON object, no markdown.`;
   topo.transformers = topo.transformers || [];
   if (!topo.busbar) topo.busbar = { id: 'bus1', type: 'BusBar', label: 'Main Busbar', voltage: 11 };
 
-  // ── POST-PROCESSING: Fix feeder chains where Claude put Transformer instead of GenericLoad ──
-  // A feeder chain that is a single Transformer element = Claude misidentified a feeder
-  topo.feeders = topo.feeders.map((feeder: any) => {
-    const els: any[] = feeder.elements || [];
-    // Check if this feeder chain is ONLY Transformer elements (no VCB/CB/CT)
-    const hasBreaker = els.some((e: any) => ['VacuumCB','SF6CB','CB','ACB','MCCB','LoadBreakSwitch'].includes(normalizeType(e.type || '').type));
-    const allTransformers = els.length > 0 && els.every((e: any) => ['Transformer','AutoTransformer'].includes(normalizeType(e.type || '').type));
-    if (allTransformers || (!hasBreaker && els.length <= 2)) {
-      // This is a misidentified feeder — rebuild proper feeder chain
-      const label = feeder.label || els[0]?.label || `Feeder-${feeder.id}`;
-      const base  = feeder.id;
-      console.log(`[SLD] Auto-correcting feeder "${label}" — was [${els.map((e:any)=>e.type).join(',')}] → [VacuumCB, CT, GenericLoad]`);
-      return {
-        ...feeder,
-        elements: [
-          { id: `vcb_${base}`, type: 'VacuumCB',    label: `VCB-${label}` },
-          { id: `ct_${base}`,  type: 'CT',           label: `CT-${label}`  },
-          { id: `ld_${base}`,  type: 'GenericLoad',  label: label          },
-        ]
-      };
-    }
-    return feeder;
-  });
-
-  // Move any stray Transformers that ended up in feeders into the transformers array
-  const strayTransformers: any[] = [];
-  topo.feeders = topo.feeders.filter((feeder: any) => {
-    const els: any[] = feeder.elements || [];
-    const isSingleTransformer = els.length === 1 && ['Transformer','AutoTransformer'].includes(normalizeType(els[0]?.type || '').type);
-    if (isSingleTransformer) {
-      strayTransformers.push({ id: feeder.id, type: 'Transformer', label: feeder.label || els[0].label || 'Transformer' });
-      return false;
-    }
-    return true;
-  });
-  if (strayTransformers.length > 0) {
-    console.log(`[SLD] Moved ${strayTransformers.length} stray transformer(s) from feeders → transformers`);
-    topo.transformers = [...topo.transformers, ...strayTransformers];
-  }
+  // Apply shared topology sanitization — fixes wrong types, stray transformers, feeder endpoints
+  sanitizeTopology(topo);
 
   // ── Post-process: strip 33kV elements when scope restriction is active ───────
   const scopeRestricted = /metering|cubicle|after.*meter|ignore.*33|skip.*33|ignore.*hv|skip.*hv|11kv.*only|only.*11kv/i.test(instructions);
