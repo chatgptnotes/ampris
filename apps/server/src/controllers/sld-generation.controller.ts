@@ -8,6 +8,7 @@
 
 import { Request, Response } from 'express';
 import { generateSLDFromImage, normalizeType } from '../services/sld-generation.service';
+import { prisma } from '../config/database';
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -127,39 +128,39 @@ import * as https from 'https';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const CLAUDE_CHAT_MODEL = 'claude-opus-4-6';
 
-function claudeChatRequest(prompt: string): Promise<string> {
+// claudeChatRequestWithImage — sends text + optional image to Claude
+function claudeChatRequestWithImage(prompt: string, imageBase64?: string | null, imageMime?: string): Promise<string> {
+  const content: any[] = [];
+  if (imageBase64) {
+    content.push({ type: 'image', source: { type: 'base64', media_type: imageMime || 'image/jpeg', data: imageBase64 } });
+  }
+  content.push({ type: 'text', text: prompt });
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: CLAUDE_CHAT_MODEL,
       max_tokens: 16000,
       temperature: 0.1,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content }],
     });
     const req2 = https.request({
-      hostname: 'api.anthropic.com',
-      path: '/v1/messages',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
+      hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
     }, (r) => {
       let data = '';
       r.on('data', (chunk) => { data += chunk; });
       r.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          const text = json.content?.[0]?.text || '';
-          resolve(text);
-        } catch (e) { reject(new Error('Claude parse error: ' + data.slice(0, 200))); }
+        try { const json = JSON.parse(data); resolve(json.content?.[0]?.text || ''); }
+        catch (e) { reject(new Error('Claude parse error: ' + data.slice(0, 200))); }
       });
     });
     req2.on('error', reject);
     req2.write(body);
     req2.end();
   });
+}
+
+function claudeChatRequest(prompt: string): Promise<string> {
+  return claudeChatRequestWithImage(prompt, null);
 }
 
 // ── Text-to-SLD: generate from description (no image upload) ───────────────
@@ -284,8 +285,24 @@ function isCreateRequest(message: string, elements: any[]): boolean {
 }
 
 export const chatSLD = async (req: Request, res: Response) => {
-  const { elements = [], connections = [], message, projectName = 'SLD' } = req.body;
+  const { elements = [], connections = [], message, projectName = 'SLD', projectId } = req.body;
   if (!message) return res.status(400).json({ error: 'message required' });
+
+  // ── Fetch original SLD image from project (for Claude vision context) ──────
+  let sldImageBase64: string | null = null;
+  let sldImageMime = 'image/jpeg';
+  if (projectId) {
+    try {
+      const proj = await prisma.project.findUnique({ where: { id: projectId }, select: { sldImage: true, sldImageMime: true } });
+      if (proj?.sldImage) {
+        sldImageBase64 = proj.sldImage;
+        sldImageMime = proj.sldImageMime || 'image/jpeg';
+        console.log(`[chatSLD] Loaded SLD image for project ${projectId} (${sldImageBase64.length} chars)`);
+      }
+    } catch (e) {
+      console.warn('[chatSLD] Could not fetch project SLD image:', e);
+    }
+  }
 
   // ── Route "create" requests through the layout engine ─────────────────────
   if (isCreateRequest(message, elements)) {
@@ -601,9 +618,12 @@ Omit or use [] for unchanged sections. Never return full elements/connections ar
       id: c.id, fromId: c.fromId, toId: c.toId, points: c.points,
     }));
     const currentSLD = JSON.stringify({ elements: slimElements, connections: slimConns });
-    const userMessage = `Current SLD (${elements.length} elements, ${connections.length} connections):\n${currentSLD}\n\nUser instruction: "${message}"\n\nReturn updated SLD JSON:`;
+    const imageContextNote = sldImageBase64
+      ? `\nThe original SLD diagram image is attached. Use it to understand the full substation layout, any labels, and connections not yet reflected in the current elements JSON.\n`
+      : '';
+    const userMessage = `${imageContextNote}Current SLD (${elements.length} elements, ${connections.length} connections):\n${currentSLD}\n\nUser instruction: "${message}"\n\nReturn updated SLD JSON:`;
 
-    const raw = (await claudeChatRequest(userMessage)).trim()
+    const raw = (await claudeChatRequestWithImage(userMessage, sldImageBase64, sldImageMime)).trim()
       .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
     let parsed: any;

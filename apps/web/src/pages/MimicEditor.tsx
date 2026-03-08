@@ -1539,6 +1539,7 @@ export default function MimicEditor() {
         connections,
         message: msg,
         projectName: project?.name || 'SLD',
+        projectId: projectId || undefined,   // pass so AI can read original SLD image
       });
 
       // AI needs clarification — show question in chat, don't update canvas

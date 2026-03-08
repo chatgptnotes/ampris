@@ -374,9 +374,13 @@ Return ONLY the JSON object, no markdown.`;
   const feedersPerPageMatch = instructions.match(/(\d+)\s*feeders?\s*(per|each|on each|a)\s*page/i);
   const feedersPerPageOverride = feedersPerPageMatch ? parseInt(feedersPerPageMatch[1]) : undefined;
 
-  // ── Compute how many pages needed for canvas fit ──────────────────────────
-  const effectiveFeedersPerPage = feedersPerPageOverride || 8; // default 8 if not specified
-  const autoPages = Math.ceil((topo.feeders?.length || 0) / effectiveFeedersPerPage);
+  // ── Compute how many pages needed ────────────────────────────────────────
+  // If user explicitly specified feeders-per-page OR page count → respect it exactly, NO auto-split
+  const userSpecifiedLayout = feedersPerPageOverride !== undefined || requestedPages > 1;
+  const effectiveFeedersPerPage = feedersPerPageOverride || 8;
+  const autoPages = userSpecifiedLayout
+    ? requestedPages   // user knows what they want — don't override
+    : Math.ceil((topo.feeders?.length || 0) / effectiveFeedersPerPage);
   const numPages = Math.max(requestedPages, autoPages, 1);
 
   const { layoutSubstationMultiPage } = await import('./sld-layout.service');

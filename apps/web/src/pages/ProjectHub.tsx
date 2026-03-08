@@ -186,6 +186,14 @@ export default function ProjectHub() {
                 properties: { tagBindings: {}, label: el.label || '', ...(el.properties || {}) },
               });
 
+              // Save original SLD image to project (for AI chat context)
+              try {
+                await api.put(`/projects/${data.id}`, {
+                  sldImage: compressedBase64,
+                  sldImageMime: 'image/jpeg',
+                });
+              } catch (e) { console.warn('Could not save SLD image to project:', e); }
+
               // Save first page into the already-created page
               await api.put(`/projects/${data.id}/pages/${pageId}`, {
                 name: pages[0].name,

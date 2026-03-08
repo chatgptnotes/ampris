@@ -11,6 +11,8 @@ const updateProjectSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
   status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+  sldImage: z.string().optional(),       // base64 of original uploaded SLD image
+  sldImageMime: z.string().optional(),
 });
 
 const addMemberSchema = z.object({
