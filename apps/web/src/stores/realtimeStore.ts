@@ -32,7 +32,7 @@ export const useRealtimeStore = create<RealtimeState>()((set, get) => ({
       return { values: updated };
     }),
 
-  setConnectionStatus: (status) => set({ connectionStatus: status }),
+  setConnectionStatus: (status) => set((state) => state.connectionStatus === status ? state : { connectionStatus: status }),
 
   getValue: (tag) => get().values[tag],
 }));

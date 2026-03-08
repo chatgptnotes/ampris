@@ -52,7 +52,8 @@ export function useWebSocket(): void {
     });
 
     socket.on('reconnect_attempt', () => {
-      setConnectionStatus('connecting');
+      // Only update if status actually changed — avoids rapid re-renders on every retry
+      setConnectionStatus((prev: string) => prev === 'connecting' ? prev : 'connecting');
     });
 
     socket.on('snapshot', (data: Record<string, RealTimeValue>) => {
