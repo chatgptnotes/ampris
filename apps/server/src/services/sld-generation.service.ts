@@ -310,7 +310,22 @@ Return ONLY the JSON object, no markdown.`;
     }
   }
 
+  // If Claude returned a pages[] structure instead of flat topology, extract from first page
+  if (!topo.busbar && !topo.incomers && !topo.feeders && Array.isArray(topo.pages) && topo.pages.length > 0) {
+    console.log('[SLD] Claude returned pages[] format in topology — flattening from page 1');
+    const firstPage = topo.pages[0];
+    topo.busbar       = firstPage.busbar       || topo.busbar;
+    topo.incomers     = firstPage.incomers     || [];
+    topo.feeders      = firstPage.feeders      || [];
+    topo.transformers = firstPage.transformers || [];
+    // Keep all feeders from all pages merged (layout will split them)
+    for (let pi = 1; pi < topo.pages.length; pi++) {
+      topo.feeders = topo.feeders.concat(topo.pages[pi].feeders || []);
+    }
+  }
+
   if (!topo.busbar && !topo.incomers && !topo.feeders) {
+    console.error('[SLD] Top-level keys:', Object.keys(topo).join(', '), '| First 500 chars:', textContent.substring(0, 500));
     throw new Error('No topology detected in diagram');
   }
 
