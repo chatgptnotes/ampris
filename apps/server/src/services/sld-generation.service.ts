@@ -15,6 +15,103 @@ import { env } from '../config/environment';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const CLAUDE_MODEL      = 'claude-opus-4-6';
 
+// ─── Bulletproof JSON extractor ──────────────────────────────────────────────
+// Handles every way Claude might wrap JSON: markdown fences, leading text,
+// arrays, objects, truncated responses. Used by ALL topology parse paths.
+export function extractJSON(raw: string): any {
+  // 1. Strip ALL markdown code fences (anywhere in string, not just start/end)
+  let s = raw.replace(/```(?:json|JSON)?\s*/g, '').trim();
+
+  // 2. Try direct parse (works if clean JSON)
+  try { return JSON.parse(s); } catch {}
+
+  // 3. Find first [ or { and last ] or } to extract the JSON portion
+  const firstBracket = s.indexOf('[');
+  const firstBrace   = s.indexOf('{');
+  let start: number;
+  let isArray: boolean;
+
+  if (firstBracket >= 0 && (firstBrace < 0 || firstBracket < firstBrace)) {
+    start = firstBracket;
+    isArray = true;
+  } else if (firstBrace >= 0) {
+    start = firstBrace;
+    isArray = false;
+  } else {
+    throw new Error('No JSON found in AI response');
+  }
+
+  // Find matching end bracket/brace by counting nesting (handles strings correctly)
+  const closeChar = isArray ? ']' : '}';
+  const openChar  = isArray ? '[' : '{';
+  let depth = 0;
+  let inStr = false;
+  let escape = false;
+  let end = -1;
+
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === openChar) depth++;
+    if (ch === closeChar) { depth--; if (depth === 0) { end = i; break; } }
+  }
+
+  if (end < 0) {
+    // Truncated response — try to find the last closeChar anyway
+    const lastClose = s.lastIndexOf(closeChar);
+    if (lastClose > start) end = lastClose;
+    else throw new Error('Truncated JSON in AI response');
+  }
+
+  const jsonCandidate = s.substring(start, end + 1);
+  try { return JSON.parse(jsonCandidate); }
+  catch { throw new Error('Failed to parse topology JSON: ' + raw.substring(0, 300)); }
+}
+
+// ─── Parse AI response and merge multi-page topologies into one ──────────────
+export function parseAndMergeTopology(textContent: string): any {
+  const parsed = extractJSON(textContent);
+
+  let topo: any;
+
+  // Handle top-level array: [ {page1}, {page2} ]
+  if (Array.isArray(parsed)) {
+    console.log(`[SLD] Claude returned top-level array with ${parsed.length} page(s) — merging`);
+    const first = parsed[0] || {};
+    topo = {
+      name: first.name || 'AI Generated SLD',
+      topologyType: first.topologyType || 'single-busbar',
+      busbar: first.busbar,
+      incomers: first.incomers || [],
+      feeders: first.feeders || [],
+      transformers: first.transformers || [],
+    };
+    for (let pi = 1; pi < parsed.length; pi++) {
+      topo.feeders = topo.feeders.concat(parsed[pi].feeders || []);
+    }
+  } else {
+    topo = parsed;
+  }
+
+  // Handle { pages: [ {page1}, {page2} ] } wrapper
+  if (!topo.busbar && !topo.incomers && !topo.feeders && Array.isArray(topo.pages) && topo.pages.length > 0) {
+    console.log('[SLD] Claude returned pages[] format in topology — flattening');
+    const firstPage = topo.pages[0];
+    topo.busbar       = firstPage.busbar       || topo.busbar;
+    topo.incomers     = firstPage.incomers     || [];
+    topo.feeders      = firstPage.feeders      || [];
+    topo.transformers = firstPage.transformers || [];
+    for (let pi = 1; pi < topo.pages.length; pi++) {
+      topo.feeders = topo.feeders.concat(topo.pages[pi].feeders || []);
+    }
+  }
+
+  return topo;
+}
+
 // SYMBOL_MAP must exactly match the frontend MimicEditor SYMBOL_MAP keys
 const TYPE_MAP: Record<string, { type: string; w: number; h: number }> = {
   // Switchgear
@@ -297,69 +394,7 @@ Return ONLY the JSON object, no markdown.`;
   const textContent = await claudeRequest(base64Image, mimeType, prompt);
   console.log('[SLD] Response length:', textContent.length);
 
-  // Parse Claude's JSON response — handle markdown fences, arrays, and objects
-  let jsonStr = textContent.trim()
-    .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-
-  // Try direct parse first (handles both arrays and objects)
-  let parsed: any;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch {
-    // Try extracting array [...] or object {...}
-    const arrMatch = jsonStr.match(/\[[\s\S]*\]/);
-    const objMatch = jsonStr.match(/\{[\s\S]*\}/);
-    const candidate = arrMatch && arrMatch[0].length > (objMatch?.[0]?.length || 0) ? arrMatch[0] : objMatch?.[0];
-    if (candidate) {
-      try { parsed = JSON.parse(candidate); }
-      catch {
-        const lastBrace = candidate.lastIndexOf(candidate[0] === '[' ? ']' : '}');
-        if (lastBrace > 0) {
-          try { parsed = JSON.parse(candidate.substring(0, lastBrace + 1)); }
-          catch { throw new Error('Failed to parse topology JSON: ' + textContent.substring(0, 300)); }
-        } else {
-          throw new Error('Failed to parse topology JSON: ' + textContent.substring(0, 300));
-        }
-      }
-    } else {
-      throw new Error('Failed to parse topology JSON: ' + textContent.substring(0, 300));
-    }
-  }
-
-  // If Claude returned a top-level array of page topologies, merge into one
-  let topo: any;
-  if (Array.isArray(parsed)) {
-    console.log(`[SLD] Claude returned top-level array with ${parsed.length} page(s) — merging`);
-    const first = parsed[0] || {};
-    topo = {
-      name: first.name || 'AI Generated SLD',
-      topologyType: first.topologyType || 'single-busbar',
-      busbar: first.busbar,
-      incomers: first.incomers || [],
-      feeders: first.feeders || [],
-      transformers: first.transformers || [],
-    };
-    // Merge feeders from subsequent pages
-    for (let pi = 1; pi < parsed.length; pi++) {
-      topo.feeders = topo.feeders.concat(parsed[pi].feeders || []);
-    }
-  } else {
-    topo = parsed;
-  }
-
-  // If Claude returned a pages[] structure instead of flat topology, extract from first page
-  if (!topo.busbar && !topo.incomers && !topo.feeders && Array.isArray(topo.pages) && topo.pages.length > 0) {
-    console.log('[SLD] Claude returned pages[] format in topology — flattening from page 1');
-    const firstPage = topo.pages[0];
-    topo.busbar       = firstPage.busbar       || topo.busbar;
-    topo.incomers     = firstPage.incomers     || [];
-    topo.feeders      = firstPage.feeders      || [];
-    topo.transformers = firstPage.transformers || [];
-    // Keep all feeders from all pages merged (layout will split them)
-    for (let pi = 1; pi < topo.pages.length; pi++) {
-      topo.feeders = topo.feeders.concat(topo.pages[pi].feeders || []);
-    }
-  }
+  const topo = parseAndMergeTopology(textContent);
 
   if (!topo.busbar && !topo.incomers && !topo.feeders) {
     console.error('[SLD] Top-level keys:', Object.keys(topo).join(', '), '| First 500 chars:', textContent.substring(0, 500));

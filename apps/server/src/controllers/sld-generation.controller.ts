@@ -7,7 +7,7 @@
 // - Connections must have points[] with >= 2 entries before setConnections [BUG-013]
 
 import { Request, Response } from 'express';
-import { generateSLDFromImage, normalizeType } from '../services/sld-generation.service';
+import { generateSLDFromImage, normalizeType, parseAndMergeTopology } from '../services/sld-generation.service';
 import { prisma } from '../config/database';
 import multer from 'multer';
 
@@ -246,21 +246,7 @@ ${instructions ? `\nExtra instructions: ${instructions}` : ''}`;
       req2.on('error', reject); req2.write(body); req2.end();
     });
 
-    let jsonStr = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-    let parsed: any;
-    try { parsed = JSON.parse(jsonStr); } catch {
-      const arrM = jsonStr.match(/\[[\s\S]*\]/); const objM = jsonStr.match(/\{[\s\S]*\}/);
-      const c = arrM && arrM[0].length > (objM?.[0]?.length || 0) ? arrM[0] : objM?.[0];
-      if (c) { try { parsed = JSON.parse(c); } catch { throw new Error('Invalid JSON from AI: ' + raw.substring(0, 200)); } }
-      else throw new Error('Invalid JSON from AI: ' + raw.substring(0, 200));
-    }
-    let topo: any;
-    if (Array.isArray(parsed)) {
-      const f = parsed[0] || {};
-      topo = { name: f.name, topologyType: f.topologyType, busbar: f.busbar, incomers: f.incomers || [], feeders: f.feeders || [], transformers: f.transformers || [] };
-      for (let i = 1; i < parsed.length; i++) topo.feeders = topo.feeders.concat(parsed[i].feeders || []);
-    } else { topo = parsed; }
-
+    const topo = parseAndMergeTopology(raw);
     topo.incomers     = topo.incomers     || [];
     topo.feeders      = topo.feeders      || [];
     topo.transformers = topo.transformers || [];
@@ -464,20 +450,7 @@ If user provides a real device → include device details so tags can be mapped 
         r.on('error', reject); r.write(body); r.end();
       });
 
-      let jsonStr2 = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
-      let parsed2: any;
-      try { parsed2 = JSON.parse(jsonStr2); } catch {
-        const arrM2 = jsonStr2.match(/\[[\s\S]*\]/); const objM2 = jsonStr2.match(/\{[\s\S]*\}/);
-        const c2 = arrM2 && arrM2[0].length > (objM2?.[0]?.length || 0) ? arrM2[0] : objM2?.[0];
-        if (c2) { try { parsed2 = JSON.parse(c2); } catch { throw new Error('Invalid topology JSON'); } }
-        else throw new Error('Invalid topology JSON');
-      }
-      let topo: any;
-      if (Array.isArray(parsed2)) {
-        const f2 = parsed2[0] || {};
-        topo = { name: f2.name, topologyType: f2.topologyType, busbar: f2.busbar, incomers: f2.incomers || [], feeders: f2.feeders || [], transformers: f2.transformers || [] };
-        for (let i = 1; i < parsed2.length; i++) topo.feeders = topo.feeders.concat(parsed2[i].feeders || []);
-      } else { topo = parsed2; }
+      const topo = parseAndMergeTopology(raw);
 
       // Claude wants clarification before generating
       if (topo.clarifying_question) {
