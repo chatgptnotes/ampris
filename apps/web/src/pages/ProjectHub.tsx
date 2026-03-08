@@ -57,6 +57,15 @@ export default function ProjectHub() {
   const [aiInstructions, setAiInstructions] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // Pre-generation conversational flow
+  const [aiStep, setAiStep] = useState<'upload' | 'chat' | 'confirmed'>('upload');
+  const [aiAnalysis, setAiAnalysis] = useState<string>('');
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiChatHistory, setAiChatHistory] = useState<Array<{role:'user'|'assistant', content:string}>>([]);
+  const [aiChatInput, setAiChatInput] = useState('');
+  const [aiChatLoading, setAiChatLoading] = useState(false);
+  const [aiImageBase64, setAiImageBase64] = useState<string>('');
+  const [aiConfirmedInstructions, setAiConfirmedInstructions] = useState<string>('');
   const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
@@ -152,7 +161,7 @@ export default function ProjectHub() {
             const queueRes = await axios.post('/api/sld-generate', {
               image: compressedBase64,
               mimeType: 'image/jpeg',
-              instructions: aiInstructions.trim() || undefined,
+              instructions: (aiConfirmedInstructions || aiInstructions).trim() || undefined,
             }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
 
             if (!queueRes.data.jobId) throw new Error(queueRes.data.error || 'Failed to queue SLD job');
@@ -236,6 +245,12 @@ export default function ProjectHub() {
       setCreationMode('blank');
       setSelectedTemplate('');
       setAiInstructions('');
+      setAiStep('upload');
+      setAiAnalysis('');
+      setAiChatHistory([]);
+      setAiChatInput('');
+      setAiImageBase64('');
+      setAiConfirmedInstructions('');
       localStorage.setItem('gridvision-last-project', data.id);
       navigate(`/app/projects/${data.id}/edit`);
     } catch (err: any) {
@@ -273,7 +288,7 @@ export default function ProjectHub() {
           </p>
         </div>
         <button
-          onClick={() => { setShowNewModal(true); setAiError(null); setAiFile(null); setAiInstructions(''); setCreationMode('blank'); }}
+          onClick={() => { setShowNewModal(true); setAiError(null); setAiFile(null); setAiInstructions(''); setCreationMode('blank'); setAiStep('upload'); setAiAnalysis(''); setAiChatHistory([]); setAiImageBase64(''); setAiConfirmedInstructions(''); }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -474,47 +489,162 @@ export default function ProjectHub() {
               {/* AI upload zone + instructions */}
               {creationMode === 'ai' && (
                 <div className="space-y-3">
-                  {/* Image upload */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 text-center">
-                    <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm font-medium text-gray-600">Upload SLD Image</p>
-                    <p className="text-xs text-gray-400 mt-0.5">AI will analyze and generate mimic pages automatically</p>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      onChange={(e) => { setAiFile(e.target.files?.[0] || null); setAiError(null); }}
-                      className="mt-3 text-sm text-gray-500 file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    {aiFile && <p className="text-xs text-green-600 mt-1.5">Selected: {aiFile.name}</p>}
-                    {!aiFile && <p className="text-xs text-gray-400 mt-1.5">Tip: If no file selected, describe the SLD below</p>}
-                  </div>
-
-                  {/* AI Instructions chat box */}
-                  <div className="border border-blue-200 rounded-lg bg-blue-50/50 overflow-hidden">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-100 border-b border-blue-200">
-                      <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      <span className="text-xs font-semibold text-blue-700">AI Instructions</span>
-                      <span className="text-xs text-blue-500 ml-auto">Tell AI exactly what to create</span>
-                    </div>
-                    <textarea
-                      value={aiInstructions}
-                      onChange={(e) => setAiInstructions(e.target.value)}
-                      placeholder={`Example:\n• 11kV HT substation with 1 incomer VCB, main busbar, 4 feeder VCBs\n• Include 2 DG sets with bus coupler and sync panel\n• Add CTs on each feeder\n• Use ring main topology on outgoing feeders`}
-                      rows={5}
-                      className="w-full px-3 py-2.5 text-sm text-gray-800 bg-transparent placeholder-gray-400 focus:outline-none resize-none"
-                    />
-                    {aiInstructions.trim() && (
-                      <div className="px-3 pb-2 flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        <span className="text-xs text-green-600">Instructions ready — AI will use these to build your SLD</span>
+                  {/* ── STEP 1: Upload ── */}
+                  {aiStep === 'upload' && (
+                    <div className="space-y-3">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 text-center">
+                        <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                        <p className="text-sm font-medium text-gray-600">Upload SLD Image</p>
+                        <p className="text-xs text-gray-400 mt-0.5">AI will read it and explain what it understands before generating</p>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          onChange={(e) => { setAiFile(e.target.files?.[0] || null); setAiError(null); }}
+                          className="mt-3 text-sm text-gray-500 file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        {aiFile && <p className="text-xs text-green-600 mt-1.5">Selected: {aiFile.name}</p>}
                       </div>
-                    )}
-                  </div>
-
-                  {aiGenerating && (
-                    <p className="text-xs text-blue-600 text-center animate-pulse">Analyzing SLD with AI... this may take 30-60 seconds</p>
+                      {aiFile && (
+                        <button
+                          type="button"
+                          disabled={aiAnalyzing}
+                          onClick={async () => {
+                            setAiAnalyzing(true); setAiError(null);
+                            try {
+                              // Compress image
+                              const b64 = await new Promise<string>((resolve, reject) => {
+                                const url = URL.createObjectURL(aiFile!);
+                                const img = new window.Image();
+                                img.onload = () => {
+                                  const MAX = 1600;
+                                  let { naturalWidth: w, naturalHeight: h } = img;
+                                  if (w > MAX || h > MAX) { const r = MAX / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r); }
+                                  const c = document.createElement('canvas'); c.width = w; c.height = h;
+                                  c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+                                  URL.revokeObjectURL(url);
+                                  resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+                                };
+                                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+                                img.src = url;
+                              });
+                              setAiImageBase64(b64);
+                              // Call analyze endpoint
+                              const res = await axios.post('/api/sld/analyze', { image: b64, mimeType: 'image/jpeg' }, { timeout: 60000 });
+                              setAiAnalysis(res.data.analysis);
+                              setAiChatHistory([{ role: 'assistant', content: res.data.analysis }]);
+                              setAiStep('chat');
+                            } catch (err: any) {
+                              setAiError(err?.response?.data?.error || err?.message || 'Analysis failed');
+                            } finally { setAiAnalyzing(false); }
+                          }}
+                          className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {aiAnalyzing ? <><span className="animate-spin">⟳</span> Analyzing diagram...</> : <><Sparkles className="w-4 h-4" /> Analyze with AI</>}
+                        </button>
+                      )}
+                      {aiError && <p className="text-xs text-red-500">{aiError}</p>}
+                    </div>
                   )}
-                  {aiError && <p className="text-xs text-red-500 text-center">{aiError}</p>}
+
+                  {/* ── STEP 2: Conversation ── */}
+                  {aiStep === 'chat' && (
+                    <div className="space-y-3">
+                      {/* Step indicator */}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">Step 2 of 3</span>
+                        <span>Review AI understanding and give your requirements</span>
+                      </div>
+                      {/* Chat history */}
+                      <div className="border border-gray-200 rounded-lg bg-gray-50 max-h-64 overflow-y-auto p-3 space-y-3 text-sm">
+                        {aiChatHistory.map((msg, i) => (
+                          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[90%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                              msg.role === 'user'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-gray-200 text-gray-800'
+                            }`}>
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                        {aiChatLoading && (
+                          <div className="flex justify-start">
+                            <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-400 animate-pulse">AI is thinking...</div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Input */}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={aiChatInput}
+                          onChange={(e) => setAiChatInput(e.target.value)}
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter' && !e.shiftKey && aiChatInput.trim() && !aiChatLoading) {
+                              e.preventDefault();
+                              const msg = aiChatInput.trim(); setAiChatInput('');
+                              const newHistory = [...aiChatHistory, { role: 'user' as const, content: msg }];
+                              setAiChatHistory(newHistory); setAiChatLoading(true);
+                              try {
+                                const res = await axios.post('/api/sld/pre-chat', {
+                                  message: msg,
+                                  history: newHistory.slice(-10).map(m => ({ role: m.role, content: m.content })),
+                                  imageBase64: aiImageBase64,
+                                  mimeType: 'image/jpeg',
+                                }, { timeout: 30000 });
+                                setAiChatHistory(prev => [...prev, { role: 'assistant', content: res.data.reply }]);
+                                if (res.data.confirmedSpec?.ready) {
+                                  setAiConfirmedInstructions(res.data.confirmedSpec.instructions);
+                                  setAiStep('confirmed');
+                                }
+                              } catch (err: any) {
+                                setAiChatHistory(prev => [...prev, { role: 'assistant', content: 'Sorry, I had trouble responding. Please try again.' }]);
+                              } finally { setAiChatLoading(false); }
+                            }
+                          }}
+                          placeholder="Type your requirements and press Enter... (e.g. 14 feeders per page, 2 pages, ignore 33/11kV section)"
+                          className="flex-1 text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setAiStep('upload')} className="flex-1 py-2 text-xs border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+                          Back
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setAiConfirmedInstructions(aiChatHistory.filter(m => m.role === 'user').map(m => m.content).join('. ')); setAiStep('confirmed'); }}
+                          className="flex-1 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                        >
+                          Skip chat — use my requirements
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── STEP 3: Confirmed ── */}
+                  {aiStep === 'confirmed' && (
+                    <div className="space-y-3">
+                      <div className="border border-green-300 rounded-lg bg-green-50 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">✓</span>
+                          </div>
+                          <span className="text-sm font-semibold text-green-800">Ready to Generate</span>
+                        </div>
+                        <p className="text-xs text-green-700 leading-relaxed"><strong>Instructions confirmed:</strong> {aiConfirmedInstructions}</p>
+                      </div>
+                      <button type="button" onClick={() => setAiStep('chat')} className="w-full py-2 text-xs border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+                        Go back and refine
+                      </button>
+                      {aiGenerating && <p className="text-xs text-blue-600 text-center animate-pulse">Generating SLD... this may take 30-90 seconds</p>}
+                      {aiError && <p className="text-xs text-red-500 text-center">{aiError}</p>}
+                    </div>
+                  )}
+
+                  {aiGenerating && aiStep !== 'confirmed' && (
+                    <p className="text-xs text-blue-600 text-center animate-pulse">Generating SLD... this may take 30-60 seconds</p>
+                  )}
+                  {aiError && aiStep === 'upload' && <p className="text-xs text-red-500 text-center">{aiError}</p>}
                 </div>
               )}
             </div>
@@ -534,7 +664,7 @@ export default function ProjectHub() {
               </button>
               <button
                 onClick={handleCreate}
-                disabled={!newName.trim() || creating || aiGenerating}
+                disabled={!newName.trim() || creating || aiGenerating || (creationMode === 'ai' && aiStep !== 'confirmed')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {aiGenerating ? 'Generating SLD...' : creating ? 'Creating...' : 'Create Project'}

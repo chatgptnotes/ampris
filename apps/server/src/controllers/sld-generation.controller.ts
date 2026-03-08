@@ -729,3 +729,141 @@ Omit or use [] for unchanged sections. Never return full elements/connections ar
     return res.status(500).json({ error: err.message || 'AI chat failed' });
   }
 };
+
+// ── POST /api/sld/analyze — read uploaded image, describe understanding ──────
+const analyzeUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+
+export const analyzeSLDImage = [
+  (req: Request, res: Response, next: any) => {
+    const ct = req.headers['content-type'] || '';
+    if (ct.includes('multipart/form-data')) analyzeUpload.single('file')(req, res, next);
+    else next();
+  },
+  async (req: Request, res: Response) => {
+    try {
+      let imageBase64: string;
+      let mimeType = 'image/jpeg';
+
+      if (req.file) {
+        imageBase64 = req.file.buffer.toString('base64');
+        mimeType = req.file.mimetype;
+      } else if (req.body?.image) {
+        imageBase64 = req.body.image;
+        mimeType = req.body.mimeType || 'image/jpeg';
+      } else {
+        return res.status(400).json({ error: 'No image provided' });
+      }
+
+      const prompt = `You are an expert electrical engineer analyzing a Single Line Diagram (SLD) or substation drawing.
+
+Carefully study this image and provide a friendly, structured summary of what you see. Be specific — read actual labels, names, and numbers from the diagram.
+
+Respond in this format:
+
+**What I can see in your diagram:**
+
+1. **Substation Name:** [exact name from diagram, or "Not labeled"]
+2. **Voltage Level:** [e.g. 11kV, 33/11kV, 132/33/11kV]
+3. **Incomer / Source:** [what feeds the busbar — OHL, cable, transformer, etc. with labels if visible]
+4. **Busbar:** [type and label, e.g. "11kV Main Busbar"]
+5. **Number of Outgoing Feeders:** [count them — be precise]
+6. **Feeder Names:** [list all feeder names/labels visible, e.g. "F1 Sahuli Town, F2 Railway Colony..."]
+7. **Protection Equipment:** [CTs, PTs, relays, meters visible]
+8. **Special Elements:** [any transformers, capacitor banks, DG sets, metering cubicles, etc.]
+9. **Layout Notes:** [multi-page? landscape/portrait? any sections to skip?]
+
+After the summary, ask:
+**"Is this correct? Please tell me:**
+- How many pages do you want the SLD split across?
+- How many feeders per page?
+- Anything to skip (e.g. 33/11kV section, metering cubicle)?
+- Any specific labels or naming you want?
+- Any elements to add or remove?"`;
+
+      const analysis = await claudeChatRequestWithImage(prompt, imageBase64, mimeType);
+      return res.json({ analysis, imageBase64, mimeType });
+    } catch (err: any) {
+      console.error('[SLD Analyze]', err.message);
+      return res.status(500).json({ error: err.message || 'Analysis failed' });
+    }
+  }
+];
+
+// ── POST /api/sld/pre-chat — conversational refinement before generation ─────
+export const preGenerationChat = async (req: Request, res: Response) => {
+  try {
+    const { message, history = [], imageBase64, mimeType = 'image/jpeg' } = req.body;
+    if (!message) return res.status(400).json({ error: 'message required' });
+
+    // Build conversation history for Claude
+    const messages: any[] = [];
+
+    // Always include the image in the first user turn
+    if (imageBase64) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
+          { type: 'text', text: 'This is the SLD diagram we are discussing.' }
+        ]
+      });
+      messages.push({ role: 'assistant', content: 'I can see the SLD diagram. How can I help you refine what you want generated?' });
+    }
+
+    // Add conversation history
+    for (const turn of history) {
+      messages.push({ role: turn.role, content: turn.content });
+    }
+
+    // Add current user message
+    messages.push({ role: 'user', content: message });
+
+    const systemPrompt = `You are an expert electrical engineer helping a user define exactly what SLD they want generated from their uploaded diagram.
+
+Your goal: understand the user's requirements and when you have enough information, output a CONFIRMED SPEC in this exact format at the end of your reply:
+
+---CONFIRMED SPEC---
+{
+  "ready": true,
+  "instructions": "14 feeders per page. Start after metering cubicle, ignore 33/11kV section. 2 pages total.",
+  "summary": "2-page 11kV SLD with 14 feeders per page, starting from the 11kV busbar after the metering cubicle"
+}
+---END SPEC---
+
+Only output the CONFIRMED SPEC when the user has confirmed they are happy with the plan.
+If you still need clarification, ask specific questions. Keep responses concise and friendly.
+Focus on: pages, feeders per page, scope (what to include/exclude), naming, voltage level.`;
+
+    const body = JSON.stringify({
+      model: CLAUDE_CHAT_MODEL,
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages,
+    });
+
+    const reply = await new Promise<string>((resolve, reject) => {
+      const r2 = https.request({
+        hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      }, (r) => {
+        let d = ''; r.on('data', (c) => d += c);
+        r.on('end', () => {
+          try { resolve(JSON.parse(d).content?.[0]?.text || ''); } catch { reject(new Error('Parse error')); }
+        });
+      });
+      r2.on('error', reject); r2.write(body); r2.end();
+    });
+
+    // Check if AI has confirmed the spec
+    const specMatch = reply.match(/---CONFIRMED SPEC---\s*([\s\S]*?)\s*---END SPEC---/);
+    let confirmedSpec = null;
+    if (specMatch) {
+      try { confirmedSpec = JSON.parse(specMatch[1]); } catch {}
+    }
+
+    return res.json({ reply, confirmedSpec });
+  } catch (err: any) {
+    console.error('[SLD Pre-chat]', err.message);
+    return res.status(500).json({ error: err.message || 'Chat failed' });
+  }
+};
