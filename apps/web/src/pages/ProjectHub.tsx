@@ -593,7 +593,7 @@ export default function ProjectHub() {
                             } finally { setAiChatLoading(false); }
                           }}
                           placeholder="Tell AI what you want — pages, feeders per page, what to skip... (Enter to send)"
-                          className="flex-1 text-xs py-1.5 focus:outline-none placeholder-gray-400"
+                          className="flex-1 text-xs py-1.5 focus:outline-none text-gray-900 placeholder-gray-400"
                         />
                         <span className="text-xs text-gray-300">↵</span>
                       </div>
