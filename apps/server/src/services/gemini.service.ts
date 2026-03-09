@@ -475,7 +475,6 @@ export async function startDigitalTwinVideo(
       instances: [{ prompt }],
       parameters: {
         aspectRatio: '16:9',
-        personGeneration: 'dont_allow',
       },
     }),
   });
