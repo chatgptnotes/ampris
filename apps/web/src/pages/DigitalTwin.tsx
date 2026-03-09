@@ -166,16 +166,17 @@ export default function DigitalTwin() {
   };
 
   const handleDownloadVideo = () => {
-    if (!videoUrl) return;
+    if (!videoSrc) return;
     const a = document.createElement('a');
-    a.href = videoUrl;
+    a.href = videoSrc;
     a.download = `digital-twin-${selectedProject}.mp4`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   };
 
-  const apiBaseUrl = api.defaults.baseURL || '';
+  // Build absolute video URL — videoUrl is relative to API base (e.g. /gemini/digital-twin-video/xxx/file)
+  const videoSrc = videoUrl ? `${api.defaults.baseURL}${videoUrl}` : null;
 
   // Fullscreen view
   if (fullscreen) {
@@ -183,7 +184,7 @@ export default function DigitalTwin() {
       return (
         <div className="fixed inset-0 z-50 bg-black flex items-center justify-center" onClick={() => setFullscreen(false)}>
           <video
-            src={`${apiBaseUrl}${videoUrl}`}
+            src={videoSrc!}
             autoPlay
             loop
             muted={muted}
@@ -363,7 +364,8 @@ export default function DigitalTwin() {
           <div className="relative max-w-full max-h-full flex flex-col items-center gap-3">
             <video
               ref={videoRef}
-              src={`${apiBaseUrl}${videoUrl}`}
+              src={videoSrc!}
+              controls
               autoPlay
               loop
               muted={muted}

@@ -453,7 +453,7 @@ export async function startDigitalTwinVideo(
 
   // Check cache
   if (!forceRegenerate && fs.existsSync(cacheFile) && fs.existsSync(metaFile)) {
-    return { cached: true, videoUrl: `/api/gemini/digital-twin-video/${projectId}/file` };
+    return { cached: true, videoUrl: `/gemini/digital-twin-video/${projectId}/file` };
   }
 
   const apiKey = env.GEMINI_API_KEY;
@@ -573,7 +573,7 @@ export async function checkVideoOperationStatus(
   }));
 
   console.log(`[DigitalTwinVideo] Video cached (${videoBuffer.length} bytes)`);
-  return { done: true, videoUrl: `/api/gemini/digital-twin-video/${projectId}/file` };
+  return { done: true, videoUrl: `/gemini/digital-twin-video/${projectId}/file` };
 }
 
 /**
