@@ -1426,20 +1426,27 @@ export default function MimicViewer() {
         onMouseUp={() => setIsPanning(false)}
         onMouseLeave={() => setIsPanning(false)}
       >
-        {/* Zoom controls */}
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white/90 border border-gray-200 rounded-lg shadow px-2 py-1">
+        {/* Zoom controls — fixed position in fullscreen to guarantee visibility */}
+        <div
+          className={`flex items-center gap-1 rounded-lg shadow-lg px-3 py-1.5 ${
+            isFullscreen
+              ? 'fixed top-2 right-4 bg-gray-900/90 border border-gray-600 backdrop-blur-sm'
+              : 'absolute top-3 right-3 bg-white/90 border border-gray-200'
+          }`}
+          style={{ zIndex: 9999 }}
+        >
           {isFullscreen && (
             <>
-              <button onClick={toggleFullscreen} className="px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded">
+              <button onClick={toggleFullscreen} className={`px-2 py-1 text-xs font-medium rounded ${isFullscreen ? 'text-red-400 hover:bg-red-900/30' : 'text-red-600 hover:bg-red-50'}`}>
                 Exit Fullscreen
               </button>
-              <div className="w-px h-4 bg-gray-300" />
+              <div className={`w-px h-5 ${isFullscreen ? 'bg-gray-600' : 'bg-gray-300'}`} />
             </>
           )}
-          <button onClick={() => setViewZoom(z => Math.min(10, z * 1.2))} className="px-2 py-0.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded">+</button>
-          <span className="text-xs text-gray-500 min-w-[40px] text-center">{Math.round(viewZoom * 100)}%</span>
-          <button onClick={() => setViewZoom(z => Math.max(0.1, z / 1.2))} className="px-2 py-0.5 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded">−</button>
-          <button onClick={() => { setViewZoom(1); setViewPan({ x: 0, y: 0 }); }} className="px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 rounded ml-1">Reset</button>
+          <button onClick={() => setViewZoom(z => Math.min(10, z * 1.2))} className={`px-2 py-1 text-sm font-bold rounded ${isFullscreen ? 'text-white hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>+</button>
+          <span className={`text-xs min-w-[44px] text-center font-mono ${isFullscreen ? 'text-gray-300' : 'text-gray-500'}`}>{Math.round(viewZoom * 100)}%</span>
+          <button onClick={() => setViewZoom(z => Math.max(0.1, z / 1.2))} className={`px-2 py-1 text-sm font-bold rounded ${isFullscreen ? 'text-white hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>−</button>
+          <button onClick={() => { setViewZoom(1); setViewPan({ x: 0, y: 0 }); }} className={`px-2 py-1 text-xs rounded ml-1 ${isFullscreen ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}>Reset</button>
         </div>
         {/* Interlock violation alert */}
         {interlockAlert && (
