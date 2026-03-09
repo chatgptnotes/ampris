@@ -1188,7 +1188,9 @@ export default function MimicViewer() {
                     return { state: v };
                   })()),
                   color: conditionalColor || powerColor,
-                  ...(el.properties.label ? { label: el.properties.label } : {}),
+                  // Pass label inside symbol only when external label (showLabel) is not active
+                  ...(el.properties.label && !(el.properties.showLabel && !['BusBar', 'DoubleBusBar'].includes(el.type))
+                    ? { label: el.properties.label } : {}),
                   ...(el.properties.rotation ? { rotation: el.properties.rotation } : {}),
                   ...(el.type === 'Transformer' ? {
                     hvLabel: el.properties.tagBindings?.hvVoltage
@@ -1277,6 +1279,12 @@ export default function MimicViewer() {
               }
               return null;
             })()}
+            {/* Label below symbol (for SYMBOL_MAP elements) */}
+            {el.properties.label && el.properties.showLabel && !['BusBar', 'DoubleBusBar'].includes(el.type) && (
+              <text x={el.width / 2} y={el.height + 14} textAnchor="middle" fontSize={10} fill="#475569" fontFamily="sans-serif" fontWeight="500">
+                {el.properties.label}
+              </text>
+            )}
           </g>
         ) : (
           <g>

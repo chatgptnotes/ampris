@@ -72,6 +72,18 @@ function elSize(type: string): { w: number; h: number } {
   return SIZES[type] || { w: 60, h: 60 };
 }
 
+/** Clean up AI-generated transformer labels — strip "0 MVA", fix truncated "kV" */
+function cleanTransformerLabel(label: string): string {
+  let l = label;
+  // Remove "0 MVA " or "0MVA " prefix (AI sometimes sets MVA to 0)
+  l = l.replace(/^0\s*MVA\s+/i, '');
+  // Fix truncated voltage: "11/11k" → "11/11 kV", "33/11k" → "33/11 kV"
+  l = l.replace(/(\d+)\s*\/\s*(\d+)\s*k\b(?!V)/i, '$1/$2 kV');
+  // Fix missing space before kV: "11kV" → "11 kV"
+  l = l.replace(/(\d)kV/gi, '$1 kV');
+  return l.trim();
+}
+
 // ─── Topology types ────────────────────────────────────────────────────────
 export interface TopoElement {
   id: string;
@@ -239,7 +251,7 @@ export function layoutSubstation(topo: SubstationTopology): { elements: PlacedEl
       id: trUid, type: norm.type,
       x: trX, y: trY, width: size.w, height: size.h,
       rotation: 0, zIndex: 5,
-      properties: { label: tr.label || 'Transformer', showLabel: true, tagBindings: {} },
+      properties: { label: cleanTransformerLabel(tr.label || 'Transformer'), showLabel: true, tagBindings: {} },
     };
     elements.push(trEl);
 

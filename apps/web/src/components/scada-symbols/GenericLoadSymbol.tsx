@@ -10,7 +10,7 @@ export default function GenericLoadSymbol({ width = 60, height = 60, state = 'ON
       <line x1="20" y1="55" x2="40" y2="55" stroke={c} strokeWidth="2" />
       {/* Connection at top */}
       <line x1="30" y1="2" x2="30" y2="10" stroke={c} strokeWidth="2" />
-      {label && <text x="30" y="30" textAnchor="middle" fontSize="9" fontWeight="bold" fill={c}>L</text>}
+      {label && <text x="30" y="33" textAnchor="middle" fontSize="8" fontWeight="bold" fill={c}>{label.length > 6 ? label.slice(0, 5) + '…' : label}</text>}
     </svg>
   );
 }
