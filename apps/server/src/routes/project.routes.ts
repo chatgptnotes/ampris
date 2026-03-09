@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as projectCtrl from '../controllers/project.controller';
 import * as mimicCtrl from '../controllers/mimic.controller';
+import * as transferCtrl from '../controllers/project-transfer.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { auditLog } from '../middleware/audit.middleware';
 
@@ -15,6 +16,10 @@ router.get('/', projectCtrl.getProjects);
 router.get('/:id', projectCtrl.getProject);
 router.put('/:id', auditLog('UPDATE_PROJECT', 'project'), projectCtrl.updateProject);
 router.delete('/:id', auditLog('DELETE_PROJECT', 'project'), projectCtrl.deleteProject);
+
+// Project Export / Import
+router.get('/:id/export', transferCtrl.exportProject);
+router.post('/import', transferCtrl.importProject);
 
 // Mimic Pages
 router.get('/:id/pages', mimicCtrl.getPages);

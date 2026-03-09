@@ -58,9 +58,16 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 
-// Health check
+// Health check + capabilities
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    capabilities: {
+      ai: !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY),
+    },
+  });
 });
 
 // API Routes

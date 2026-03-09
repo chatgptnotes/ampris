@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   X,
   Upload,
+  Download,
   Sparkles,
   Grid3X3,
 } from 'lucide-react';
@@ -88,6 +89,8 @@ export default function ProjectHub() {
     setDeleteConfirm(null);
   }, [location.pathname]);
 
+  const [aiAvailable, setAiAvailable] = useState(true); // assume true until server says otherwise
+
   const fetchProjects = useCallback(async () => {
     try {
       const { data } = await api.get<Project[]>('/projects');
@@ -100,6 +103,47 @@ export default function ProjectHub() {
   }, []);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
+
+  // Check if AI is available (API key configured on server)
+  useEffect(() => {
+    api.get('/health').then(({ data }) => {
+      if (data?.capabilities?.ai === false) setAiAvailable(false);
+    }).catch(() => {});
+  }, []);
+
+  // ── Export / Import ──────────────────────────────────────────────────────
+  const handleExport = async (projectId: string, projectName: string) => {
+    try {
+      const { data } = await api.get(`/projects/${projectId}/export`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projectName.replace(/[^a-zA-Z0-9_-]/g, '_')}.gridvision.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Export failed');
+    }
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const text = await file.text();
+      const bundle = JSON.parse(text);
+      if (bundle._format !== 'gridvision-project-v1') {
+        alert('Invalid file format. Expected a .gridvision.json export file.');
+        return;
+      }
+      const { data } = await api.post('/projects/import', bundle);
+      await fetchProjects();
+      navigate(`/app/projects/${data.id}`);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Import failed');
+    }
+  };
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -287,13 +331,31 @@ export default function ProjectHub() {
             {projects.length} project{projects.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={() => { setShowNewModal(true); setAiError(null); setAiFile(null); setAiInstructions(''); setCreationMode('blank'); setAiStep('upload'); setAiAnalysis(''); setAiChatHistory([]); setAiImageBase64(''); setAiConfirmedInstructions(''); }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New Project
-        </button>
+        <div className="flex items-center gap-2">
+          <label
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+          >
+            <Upload className="w-4 h-4" />
+            Import
+            <input
+              type="file"
+              accept=".json,.gridvision.json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImport(f);
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <button
+            onClick={() => { setShowNewModal(true); setAiError(null); setAiFile(null); setAiInstructions(''); setCreationMode('blank'); setAiStep('upload'); setAiAnalysis(''); setAiChatHistory([]); setAiImageBase64(''); setAiConfirmedInstructions(''); }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Project
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -370,6 +432,13 @@ export default function ProjectHub() {
                     {userRole}
                   </span>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleExport(project.id, project.name)}
+                      className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"
+                      title="Export / Download"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
                     {canEdit && (
                       <button
                         onClick={() => navigate(`/app/projects/${project.id}/edit`)}
@@ -444,11 +513,11 @@ export default function ProjectHub() {
               {/* Creation Mode */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Creation Mode</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className={`grid gap-2 ${aiAvailable ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   {[
                     { mode: 'blank' as CreationMode, icon: LayoutGrid, label: 'Blank' },
                     { mode: 'template' as CreationMode, icon: FileText, label: 'Template' },
-                    { mode: 'ai' as CreationMode, icon: Sparkles, label: 'AI Generate' },
+                    ...(aiAvailable ? [{ mode: 'ai' as CreationMode, icon: Sparkles, label: 'AI Generate' }] : []),
                   ].map(({ mode, icon: Icon, label }) => (
                     <button
                       key={mode}
