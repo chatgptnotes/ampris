@@ -407,7 +407,7 @@ export default function MimicViewer() {
         const availH = sh - 50;
         const zoomX = sw / page.width;
         const zoomY = availH / page.height;
-        const fitZoom = Math.min(zoomX, zoomY, 1); // cap at 100%
+        const fitZoom = Math.min(zoomX, zoomY); // fit to screen
         setViewZoom(fitZoom);
         setViewPan({ x: 0, y: 0 });
       } else if (!fs) {
@@ -628,18 +628,38 @@ export default function MimicViewer() {
     });
   }, [values]);
 
-  // Non-passive wheel listener for zoom-only (prevents page scroll)
+  // Non-passive wheel listener for zoom (prevents page scroll)
   useEffect(() => {
     const el = canvasContainerRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      setViewZoom(z => Math.max(0.1, Math.min(10, z * delta)));
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      setViewZoom(z => Math.max(0.1, Math.min(10, z * factor)));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Keyboard zoom: Ctrl+= / Ctrl+- / Ctrl+0
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        setViewZoom(z => Math.min(10, z * 1.2));
+      } else if (e.key === '-') {
+        e.preventDefault();
+        setViewZoom(z => Math.max(0.1, z / 1.2));
+      } else if (e.key === '0') {
+        e.preventDefault();
+        setViewZoom(1);
+        setViewPan({ x: 0, y: 0 });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   // Handle control element clicks
@@ -1390,7 +1410,7 @@ export default function MimicViewer() {
       {/* Canvas */}
       <div
         ref={canvasContainerRef}
-        className={`flex-1 overflow-auto relative ${isFullscreen ? 'flex items-center justify-center' : ''}`}
+        className={`flex-1 relative ${isFullscreen ? 'overflow-hidden flex items-center justify-center' : 'overflow-auto'}`}
 
         onMouseDown={(e) => {
           if (e.button === 1 || (e.button === 0 && e.altKey)) {
@@ -1431,12 +1451,13 @@ export default function MimicViewer() {
         {page ? (
           <svg
             viewBox={`0 0 ${page.width} ${page.height}`}
-            width={page.width * viewZoom}
-            height={page.height * viewZoom}
+            width={page.width}
+            height={page.height}
             className="shadow-lg rounded-lg"
             style={{
               background: page.backgroundColor || '#FFFFFF',
-              transform: `translate(${viewPan.x}px, ${viewPan.y}px)`,
+              transform: `translate(${viewPan.x}px, ${viewPan.y}px) scale(${viewZoom})`,
+              transformOrigin: 'center center',
               cursor: isPanning ? 'grabbing' : 'default',
             }}
             onClick={() => setSelectedEquipment(null)}
