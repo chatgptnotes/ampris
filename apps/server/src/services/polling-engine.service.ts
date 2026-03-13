@@ -2,6 +2,9 @@ import { prisma } from '../config/database';
 import { tagEngine } from './tag-engine.service';
 import { realtimeService } from './realtime.service';
 import { commDiagnosticsService } from './comm-diagnostics.service';
+import { ModbusAdapter } from '../protocol/ModbusAdapter';
+import { IEC61850Adapter } from '../protocol/IEC61850Adapter';
+import { decodeRegisterValue, registersToHex, type ByteOrder } from '../protocol/modbus-register-parser';
 
 interface DeviceStatus {
   deviceId: string;
@@ -31,6 +34,8 @@ class PollingEngineService {
   private errorLog: ErrorLogEntry[] = [];
   private pollCounts: Map<string, { count: number; startTime: number }> = new Map();
   private latencyAccum: Map<string, { total: number; count: number }> = new Map();
+  private modbusAdapters: Map<string, ModbusAdapter> = new Map();
+  private iec61850Adapters: Map<string, IEC61850Adapter> = new Map();
 
   async startDevice(deviceId: string): Promise<void> {
     if (this.pollers.has(deviceId)) return;
@@ -59,6 +64,70 @@ class PollingEngineService {
     this.pollCounts.set(deviceId, { count: 0, startTime: Date.now() });
     this.latencyAccum.set(deviceId, { total: 0, count: 0 });
 
+    // Create real protocol adapters
+    if (device.protocol === 'MODBUS_TCP' && device.host && device.port) {
+      const adapter = new ModbusAdapter({
+        id: device.id,
+        name: device.name,
+        protocol: 'MODBUS_TCP',
+        ipAddress: device.host,
+        port: device.port,
+        slaveId: device.slaveId || 1,
+        pollingIntervalMs: device.pollIntervalMs,
+        timeoutMs: device.timeoutMs,
+      });
+      try {
+        await adapter.connect();
+        this.modbusAdapters.set(deviceId, adapter);
+        console.log(`[PollingEngine] Real Modbus TCP adapter connected for ${device.name}`);
+      } catch (err: any) {
+        console.warn(`[PollingEngine] Modbus TCP connect failed for ${device.name}, falling back to simulation:`, err.message);
+        this.modbusAdapters.set(deviceId, adapter);
+      }
+    } else if (device.protocol === 'MODBUS_RTU' && device.serialPort) {
+      const adapter = new ModbusAdapter({
+        id: device.id,
+        name: device.name,
+        protocol: 'MODBUS_RTU',
+        ipAddress: '',
+        port: 0,
+        slaveId: device.slaveId || 1,
+        pollingIntervalMs: device.pollIntervalMs,
+        timeoutMs: device.timeoutMs,
+      });
+      try {
+        await adapter.connectRTU(device.serialPort, {
+          baudRate: device.baudRate || 9600,
+          dataBits: device.dataBits || 8,
+          stopBits: device.stopBits || 1,
+          parity: device.parity || 'none',
+        });
+        this.modbusAdapters.set(deviceId, adapter);
+        console.log(`[PollingEngine] Real Modbus RTU adapter connected for ${device.name} on ${device.serialPort}`);
+      } catch (err: any) {
+        console.warn(`[PollingEngine] Modbus RTU connect failed for ${device.name}, falling back to simulation:`, err.message);
+        this.modbusAdapters.set(deviceId, adapter);
+      }
+    } else if (device.protocol === 'IEC61850' && device.host) {
+      const adapter = new IEC61850Adapter({
+        id: device.id,
+        name: device.name,
+        protocol: 'IEC61850',
+        ipAddress: device.host,
+        port: device.port || 102,
+        pollingIntervalMs: device.pollIntervalMs,
+        timeoutMs: device.timeoutMs,
+      });
+      try {
+        await adapter.connect();
+        this.iec61850Adapters.set(deviceId, adapter);
+        console.log(`[PollingEngine] IEC 61850 adapter connected for ${device.name} (real=${adapter.isRealMms()})`);
+      } catch (err: any) {
+        console.warn(`[PollingEngine] IEC 61850 connect failed for ${device.name}:`, err.message);
+        this.iec61850Adapters.set(deviceId, adapter);
+      }
+    }
+
     const interval = setInterval(async () => {
       await this.pollDevice(device.id);
     }, device.pollIntervalMs);
@@ -78,6 +147,19 @@ class PollingEngineService {
       clearInterval(interval);
       this.pollers.delete(deviceId);
     }
+
+    // Disconnect adapters if present
+    const modbusAdapter = this.modbusAdapters.get(deviceId);
+    if (modbusAdapter) {
+      try { await modbusAdapter.disconnect(); } catch { /* ignore */ }
+      this.modbusAdapters.delete(deviceId);
+    }
+    const iecAdapter = this.iec61850Adapters.get(deviceId);
+    if (iecAdapter) {
+      try { await iecAdapter.disconnect(); } catch { /* ignore */ }
+      this.iec61850Adapters.delete(deviceId);
+    }
+
     const status = this.deviceStatus.get(deviceId);
     if (status) {
       status.status = 'stopped';
@@ -180,6 +262,9 @@ class PollingEngineService {
         case 'OPC_UA':
           await this.pollOPCUA(device, device.tags);
           break;
+        case 'IEC61850':
+          await this.pollIEC61850(device, device.tags);
+          break;
         case 'DNP3':
           await this.pollDNP3(device, device.tags);
           break;
@@ -225,9 +310,12 @@ class PollingEngineService {
     }
   }
 
-  // ─── Protocol Handlers (simulated) ───────────────
+  // ─── Protocol Handlers ──────────────────────────
 
   private async pollModbusTCP(device: any, tags: any[]): Promise<void> {
+    const adapter = this.modbusAdapters.get(device.id);
+    const useRealAdapter = adapter && adapter.getStatus() === 'CONNECTED';
+
     // Group tags by address type
     const groups: Record<string, any[]> = {};
     for (const tag of tags) {
@@ -236,37 +324,169 @@ class PollingEngineService {
       groups[addrType].push(tag);
     }
 
-    // Simulate Modbus read per group
-    // FC3: Holding Registers, FC4: Input Registers, FC1: Coils, FC2: Discrete Inputs
     for (const [addrType, groupTags] of Object.entries(groups)) {
-      for (const tag of groupTags) {
-        const rawValue = this.simulateRead(tag);
-        const scaled = this.applyScaling(rawValue, tag);
-        tagEngine.setTagValue(tag.name, scaled, true);
+      // Sort by address for block reads
+      const sorted = [...groupTags].sort((a, b) => parseInt(a.address || '0') - parseInt(b.address || '0'));
 
-        // Log TX/RX for Modbus frame
-        const addr = parseInt(tag.address || '0');
-        const slaveId = device.slaveId || 1;
-        const fc = addrType === 'COIL' ? 1 : addrType === 'DISCRETE_INPUT' ? 2 : addrType === 'HOLDING_REGISTER' ? 3 : 4;
-        commDiagnosticsService.logFrame(device.id, device.name, device.protocol, device.projectId, {
-          direction: 'TX',
-          rawData: this.buildModbusRequestHex(slaveId, fc, addr, tag.wordCount || 1),
-          parsed: { slaveId, functionCode: fc, startAddress: addr, quantity: tag.wordCount || 1 },
-          status: 'SUCCESS',
-        });
-        commDiagnosticsService.logFrame(device.id, device.name, device.protocol, device.projectId, {
-          direction: 'RX',
-          rawData: this.buildModbusResponseHex(slaveId, fc, scaled),
-          parsed: { slaveId, functionCode: fc, value: scaled },
-          status: 'SUCCESS',
-        });
+      if (useRealAdapter) {
+        // ─── Real Modbus reads with block coalescing ────
+        const blocks = this.coalesceRegisters(sorted);
+
+        for (const block of blocks) {
+          try {
+            let rawRegisters: number[];
+            const fc = addrType === 'COIL' ? 1 : addrType === 'DISCRETE_INPUT' ? 2 : addrType === 'HOLDING_REGISTER' ? 3 : 4;
+
+            if (fc === 3) {
+              rawRegisters = await adapter!.readAnalog(block.startAddr, block.count);
+            } else if (fc === 4) {
+              rawRegisters = await adapter!.readInputRegisters(block.startAddr, block.count);
+            } else if (fc === 1) {
+              const bools = await adapter!.readDigital(block.startAddr, block.count);
+              rawRegisters = bools.map(b => b ? 1 : 0);
+            } else {
+              const bools = await adapter!.readDiscreteInputs(block.startAddr, block.count);
+              rawRegisters = bools.map(b => b ? 1 : 0);
+            }
+
+            // Log TX frame
+            commDiagnosticsService.logFrame(device.id, device.name, device.protocol, device.projectId, {
+              direction: 'TX',
+              rawData: this.buildModbusRequestHex(device.slaveId || 1, fc, block.startAddr, block.count),
+              parsed: { slaveId: device.slaveId || 1, functionCode: fc, startAddress: block.startAddr, quantity: block.count },
+              status: 'SUCCESS',
+            });
+
+            // Decode each tag from the block
+            for (const tag of block.tags) {
+              const addr = parseInt(tag.address || '0');
+              const offset = addr - block.startAddr;
+              const wordCount = tag.wordCount || 1;
+              const bo = (tag.byteOrder || 'BIG_ENDIAN') as ByteOrder;
+              const dataType = tag.dataType === 'FLOAT' ? 'FLOAT32' : tag.dataType === 'BOOLEAN' ? 'BIT' : tag.dataType === 'INTEGER' ? 'UINT16' : tag.dataType || 'UINT16';
+
+              const rawValue = decodeRegisterValue(rawRegisters, offset, dataType, bo, tag.bitIndex);
+              const scaled = this.applyScaling(rawValue, tag);
+              tagEngine.setTagValue(tag.name, scaled, true);
+
+              // Log RX for individual tag
+              commDiagnosticsService.logFrame(device.id, device.name, device.protocol, device.projectId, {
+                direction: 'RX',
+                rawData: registersToHex(rawRegisters.slice(offset, offset + wordCount)),
+                parsed: { slaveId: device.slaveId || 1, functionCode: fc, address: addr, value: scaled },
+                status: 'SUCCESS',
+              });
+            }
+          } catch (err: any) {
+            // Block read failed — fall back to simulated for this block's tags
+            console.warn(`[PollingEngine] Real read failed for block ${block.startAddr}+${block.count}: ${err.message}`);
+            for (const tag of block.tags) {
+              const rawValue = this.simulateRead(tag);
+              const scaled = this.applyScaling(rawValue, tag);
+              tagEngine.setTagValue(tag.name, scaled, true);
+            }
+          }
+        }
+      } else {
+        // ─── Simulated reads (fallback when adapter not connected) ────
+        for (const tag of sorted) {
+          const rawValue = this.simulateRead(tag);
+          const scaled = this.applyScaling(rawValue, tag);
+          tagEngine.setTagValue(tag.name, scaled, true);
+
+          const addr = parseInt(tag.address || '0');
+          const slaveId = device.slaveId || 1;
+          const fc = addrType === 'COIL' ? 1 : addrType === 'DISCRETE_INPUT' ? 2 : addrType === 'HOLDING_REGISTER' ? 3 : 4;
+          commDiagnosticsService.logFrame(device.id, device.name, device.protocol, device.projectId, {
+            direction: 'TX',
+            rawData: this.buildModbusRequestHex(slaveId, fc, addr, tag.wordCount || 1),
+            parsed: { slaveId, functionCode: fc, startAddress: addr, quantity: tag.wordCount || 1 },
+            status: 'SUCCESS',
+          });
+          commDiagnosticsService.logFrame(device.id, device.name, device.protocol, device.projectId, {
+            direction: 'RX',
+            rawData: this.buildModbusResponseHex(slaveId, fc, scaled),
+            parsed: { slaveId, functionCode: fc, value: scaled },
+            status: 'SUCCESS',
+          });
+        }
       }
     }
   }
 
+  /**
+   * Coalesce contiguous tags into block reads (max 125 registers per block).
+   */
+  private coalesceRegisters(sortedTags: any[]): Array<{ startAddr: number; count: number; tags: any[] }> {
+    const MAX_BLOCK_SIZE = 125;
+    const MAX_GAP = 10; // allow gaps up to 10 registers
+    const blocks: Array<{ startAddr: number; count: number; tags: any[] }> = [];
+
+    for (const tag of sortedTags) {
+      const addr = parseInt(tag.address || '0');
+      const wordCount = tag.wordCount || 1;
+      const endAddr = addr + wordCount;
+
+      const lastBlock = blocks[blocks.length - 1];
+      if (lastBlock) {
+        const gap = addr - (lastBlock.startAddr + lastBlock.count);
+        const newCount = endAddr - lastBlock.startAddr;
+        if (gap <= MAX_GAP && newCount <= MAX_BLOCK_SIZE) {
+          lastBlock.count = newCount;
+          lastBlock.tags.push(tag);
+          continue;
+        }
+      }
+
+      blocks.push({ startAddr: addr, count: wordCount, tags: [tag] });
+    }
+
+    return blocks;
+  }
+
   private async pollModbusRTU(device: any, tags: any[]): Promise<void> {
-    // Same as TCP but over serial — simulation identical
+    // Same as TCP but over serial — adapter pool is shared
     await this.pollModbusTCP(device, tags);
+  }
+
+  private async pollIEC61850(device: any, tags: any[]): Promise<void> {
+    const adapter = this.iec61850Adapters.get(device.id);
+    const useReal = adapter && adapter.getStatus() === 'CONNECTED' && adapter.isRealMms();
+
+    for (const tag of tags) {
+      try {
+        let value: number | boolean | string;
+
+        if (useReal && tag.address) {
+          // Real MMS read using the data attribute reference (e.g. "LD0/MMXU1$MX$PhV$phsA$cVal$mag$f")
+          const dataType = tag.dataType || 'FLOAT';
+          if (dataType === 'BOOLEAN') {
+            value = await adapter!.readBooleanAttribute(tag.address);
+          } else if (dataType === 'INTEGER') {
+            value = await adapter!.readInt32Attribute(tag.address);
+          } else {
+            value = await adapter!.readDataAttribute(tag.address);
+          }
+        } else {
+          value = this.simulateRead(tag);
+        }
+
+        const scaled = this.applyScaling(value, tag);
+        tagEngine.setTagValue(tag.name, scaled, true);
+
+        commDiagnosticsService.logFrame(device.id, device.name, device.protocol, device.projectId, {
+          direction: 'RX',
+          rawData: `MMS Read(${tag.address || tag.name}) = ${scaled}`,
+          parsed: { reference: tag.address || tag.name, value: scaled, real: !!useReal },
+          status: 'SUCCESS',
+        });
+      } catch (err: any) {
+        // Fallback to simulation on read error
+        const simValue = this.simulateRead(tag);
+        const scaled = this.applyScaling(simValue, tag);
+        tagEngine.setTagValue(tag.name, scaled, true);
+      }
+    }
   }
 
   private async pollOPCUA(device: any, tags: any[]): Promise<void> {

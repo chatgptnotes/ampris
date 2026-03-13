@@ -54,6 +54,8 @@ const RedundancyManager = lazyRetry(() => import('@/pages/RedundancyManager'));
 const CommDiagnostics = lazyRetry(() => import('@/pages/CommDiagnostics'));
 const ReportDesigner = lazyRetry(() => import('@/pages/ReportDesigner'));
 const DigitalTwin = lazyRetry(() => import('@/pages/DigitalTwin'));
+const RelayExplorer = lazyRetry(() => import('@/pages/RelayExplorer'));
+const SiteSurveyWizard = lazyRetry(() => import('@/pages/SiteSurveyWizard'));
 
 const LazyFallback = () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
 import HomePage from '@/pages/public/HomePage';
@@ -133,6 +135,8 @@ export const router = createBrowserRouter([
           { path: 'projects/:projectId/historian', element: <Suspense fallback={<LazyFallback />}><HistorianManager /></Suspense> },
           { path: 'projects/:projectId/redundancy', element: <Suspense fallback={<LazyFallback />}><RedundancyManager /></Suspense> },
           { path: 'projects/:projectId/diagnostics', element: <Suspense fallback={<LazyFallback />}><CommDiagnostics /></Suspense> },
+          { path: 'relay-explorer', element: <Suspense fallback={<LazyFallback />}><RelayExplorer /></Suspense> },
+          { path: 'site-survey', element: <Suspense fallback={<LazyFallback />}><SiteSurveyWizard /></Suspense> },
           { path: 'report-designer', element: <Suspense fallback={<LazyFallback />}><ReportDesigner /></Suspense> },
         ],
       },

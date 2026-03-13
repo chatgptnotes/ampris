@@ -46,6 +46,46 @@ export class ModbusAdapter extends EventEmitter implements ProtocolAdapter {
     }
   }
 
+  /**
+   * Connect via Modbus RTU over serial port.
+   */
+  async connectRTU(
+    serialPort: string,
+    options?: { baudRate?: number; dataBits?: number; stopBits?: number; parity?: string },
+  ): Promise<void> {
+    this.status = 'CONNECTING';
+    this.notifyStatusChange(false);
+
+    try {
+      const ModbusRTU = require('modbus-serial');
+      this.client = new ModbusRTU();
+      this.client.setTimeout(this.config.timeoutMs || DEFAULT_TIMEOUT_MS);
+
+      await this.client.connectRTUBuffered(serialPort, {
+        baudRate: options?.baudRate || 9600,
+        dataBits: options?.dataBits || 8,
+        stopBits: options?.stopBits || 1,
+        parity: options?.parity?.toLowerCase() || 'none',
+      });
+
+      if (this.config.slaveId) {
+        this.client.setID(this.config.slaveId);
+      }
+
+      this.status = 'CONNECTED';
+      this.retryCount = 0;
+      this.notifyStatusChange(true);
+      this.emit('connected', { name: this.config.name, mode: 'rtu' });
+      console.log(`[ModbusAdapter] RTU Connected: ${this.config.name} on ${serialPort}`);
+    } catch (error: any) {
+      console.error(`[ModbusAdapter] RTU connection failed for ${this.config.name}:`, error.message);
+      this.status = 'ERROR';
+      this.notifyStatusChange(false);
+      this.emit('error', { name: this.config.name, error: error.message });
+      this.scheduleReconnect();
+    }
+  }
+
   async disconnect(): Promise<void> {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -94,6 +134,22 @@ export class ModbusAdapter extends EventEmitter implements ProtocolAdapter {
       await this.client.writeCoil(address, value);
       return true;
     }, 'writeCoil');
+  }
+
+  async readRawRegisters(address: number, count: number): Promise<number[]> {
+    if (this.status !== 'CONNECTED' || !this.client) throw new Error('Not connected');
+    return this.withRetry(async () => {
+      const result = await this.client.readHoldingRegisters(address, count);
+      return result.data as number[];
+    }, 'readRawRegisters');
+  }
+
+  async readDiscreteInputs(address: number, count: number): Promise<boolean[]> {
+    if (this.status !== 'CONNECTED' || !this.client) throw new Error('Not connected');
+    return this.withRetry(async () => {
+      const result = await this.client.readDiscreteInputs(address, count);
+      return result.data as boolean[];
+    }, 'readDiscreteInputs');
   }
 
   async writeSingleRegister(address: number, value: number): Promise<boolean> {

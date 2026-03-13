@@ -921,6 +921,38 @@ model CustomReport {
   @@map("custom_reports")
 }
 
+// ─── Relay Templates ─────────────────────────────
+
+model RelayTemplate {
+  id             String   @id @default(uuid()) @db.Uuid
+  model          String   @db.VarChar(100)
+  manufacturer   String   @db.VarChar(100)
+  series         String   @db.VarChar(20)
+  description    String?  @db.Text
+  defaultPort    Int      @default(502) @map("default_port")
+  defaultSlaveId Int      @default(1) @map("default_slave_id")
+  registers      Json     @db.JsonB
+  isCustom       Boolean  @default(false) @map("is_custom")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@unique([manufacturer, model])
+  @@map("relay_templates")
+}
+
+model SiteSurvey {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @map("project_id") @db.Uuid
+  substationName  String   @map("substation_name") @db.VarChar(200)
+  substationType  String   @map("substation_type") @db.VarChar(30)
+  bays            Json     @db.JsonB
+  status          String   @default("DRAFT") @db.VarChar(20)
+  completedSteps  Int      @default(0) @map("completed_steps")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("site_surveys")
+}
+
 model CustomReportOutput {
   id          String       @id @default(uuid()) @db.Uuid
   reportId    String       @map("report_id") @db.Uuid

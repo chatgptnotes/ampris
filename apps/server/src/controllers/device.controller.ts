@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../config/database';
+import { ABB_RELAY_TEMPLATES } from '../protocol/abb-relay-templates';
+import { relayScannerService } from '../services/relay-scanner.service';
 
 const protocolEnum = z.enum(['MODBUS_RTU', 'MODBUS_TCP', 'OPC_UA', 'DNP3', 'IEC61850']);
 
@@ -218,6 +220,152 @@ export async function getDeviceTags(req: Request, res: Response): Promise<void> 
     res.json(tags);
   } catch (err) {
     console.error('Get device tags error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// GET /api/devices/relay-templates
+export async function getRelayTemplates(_req: Request, res: Response): Promise<void> {
+  const templates = ABB_RELAY_TEMPLATES.map(t => ({
+    model: t.model,
+    manufacturer: t.manufacturer,
+    series: t.series,
+    description: t.description,
+    defaultPort: t.defaultPort,
+    defaultSlaveId: t.defaultSlaveId,
+    registerCount: t.registers.length,
+  }));
+  res.json(templates);
+}
+
+// POST /api/devices/scan
+export async function scanDevices(req: Request, res: Response): Promise<void> {
+  try {
+    const schema = z.object({
+      startIP: z.string().min(1),
+      endIP: z.string().min(1),
+      port: z.number().int().min(1).max(65535).optional().default(502),
+      timeout: z.number().int().min(100).max(30000).optional().default(2000),
+    });
+    const { startIP, endIP, port, timeout } = schema.parse(req.body);
+    const results = await relayScannerService.scanIPRange(startIP, endIP, port, timeout);
+    res.json({ results, count: results.length });
+  } catch (err: any) {
+    if (err.name === 'ZodError') {
+      res.status(400).json({ error: 'Validation error', details: err.errors });
+      return;
+    }
+    console.error('Scan devices error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// POST /api/devices/:id/generate-tags
+export async function generateTags(req: Request, res: Response): Promise<void> {
+  try {
+    const schema = z.object({
+      templateModel: z.string().min(1),
+      bayName: z.string().optional().default(''),
+      prefix: z.string().optional().default(''),
+    });
+    const { templateModel, bayName, prefix } = schema.parse(req.body);
+
+    const device = await prisma.externalDevice.findUnique({ where: { id: req.params.id } });
+    if (!device) {
+      res.status(404).json({ error: 'Device not found' });
+      return;
+    }
+
+    const template = ABB_RELAY_TEMPLATES.find(t => t.model === templateModel);
+    if (!template) {
+      res.status(404).json({ error: `Template not found: ${templateModel}` });
+      return;
+    }
+
+    // Generate tags from template registers
+    const tags = [];
+    for (const reg of template.registers) {
+      const tagName = [prefix, bayName, reg.name].filter(Boolean).join('_');
+      const tag = await prisma.tag.create({
+        data: {
+          name: tagName,
+          description: reg.description,
+          type: 'EXTERNAL',
+          dataType: reg.dataType === 'FLOAT32' ? 'FLOAT' : reg.dataType === 'BIT' ? 'BOOLEAN' : 'INTEGER',
+          unit: reg.unit || null,
+          address: String(reg.address),
+          addressType: 'HOLDING_REGISTER',
+          byteOrder: 'BIG_ENDIAN',
+          wordCount: reg.dataType === 'FLOAT32' ? 2 : 1,
+          bitIndex: reg.bitIndex,
+          scaleFactor: reg.scaleFactor || 1,
+          scaleOffset: 0,
+          deviceId: device.id,
+          projectId: device.projectId,
+        },
+      });
+      tags.push(tag);
+    }
+
+    res.status(201).json({ tags, count: tags.length });
+  } catch (err: any) {
+    if (err.name === 'ZodError') {
+      res.status(400).json({ error: 'Validation error', details: err.errors });
+      return;
+    }
+    console.error('Generate tags error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// GET /api/devices/serial-ports
+export async function getSerialPorts(_req: Request, res: Response): Promise<void> {
+  try {
+    let ports: Array<{ path: string; manufacturer?: string; serialNumber?: string; pnpId?: string }> = [];
+    try {
+      const { SerialPort } = require('serialport');
+      const list = await SerialPort.list();
+      ports = list.map((p: any) => ({
+        path: p.path,
+        manufacturer: p.manufacturer || undefined,
+        serialNumber: p.serialNumber || undefined,
+        pnpId: p.pnpId || undefined,
+      }));
+    } catch {
+      // serialport not installed — try platform-native fallback
+      const { execSync } = require('child_process');
+      if (process.platform === 'win32') {
+        try {
+          const output = execSync('wmic path Win32_SerialPort get DeviceID,Description /format:csv', { encoding: 'utf-8', timeout: 5000 });
+          for (const line of output.split('\n')) {
+            const parts = line.trim().split(',');
+            if (parts.length >= 3 && parts[1]) {
+              ports.push({ path: parts[2], manufacturer: parts[1] });
+            }
+          }
+        } catch { /* no serial ports */ }
+        // Also check for USB-serial adapters via registry
+        if (ports.length === 0) {
+          try {
+            const output = execSync('reg query HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM', { encoding: 'utf-8', timeout: 5000 });
+            for (const line of output.split('\n')) {
+              const match = line.match(/\s+(COM\d+)\s*$/);
+              if (match) ports.push({ path: match[1] });
+            }
+          } catch { /* no serial ports */ }
+        }
+      } else {
+        // Linux/macOS
+        try {
+          const { readdirSync } = require('fs');
+          const devFiles = readdirSync('/dev').filter((f: string) => f.startsWith('ttyS') || f.startsWith('ttyUSB') || f.startsWith('ttyACM') || f.startsWith('tty.'));
+          ports = devFiles.map((f: string) => ({ path: `/dev/${f}` }));
+        } catch { /* no serial ports */ }
+      }
+    }
+    res.json({ ports, count: ports.length });
+  } catch (err) {
+    console.error('Get serial ports error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 }

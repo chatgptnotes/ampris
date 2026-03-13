@@ -83,6 +83,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: '/app/tags', icon: Tag, label: 'Tags' },
       { path: '/app/devices', icon: Server, label: 'Devices' },
+      { path: '/app/relay-explorer', icon: Radio, label: 'Relay Explorer' },
+      { path: '/app/site-survey', icon: ClipboardList, label: 'Site Survey' },
       { path: '/app/connections', icon: Cable, label: 'Connections' },
       { path: '/app/components', icon: BookOpen, label: 'Components' },
       { path: '/app/tag-test', icon: TestTube2, label: 'Testing' },

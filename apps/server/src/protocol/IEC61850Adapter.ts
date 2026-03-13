@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import * as net from 'net';
 import type { ProtocolAdapter, ConnectionStatus, AdapterConfig } from './ProtocolAdapter';
+import { IEC61850MmsClient, type MmsServerDirectory } from './iec61850/iec61850-client';
 
 const RETRY_DELAY_MS = 2000;
 
@@ -30,6 +31,8 @@ export class IEC61850Adapter extends EventEmitter implements ProtocolAdapter {
   private statusCallbacks: Array<(connected: boolean) => void> = [];
   private config: AdapterConfig;
   private socket: net.Socket | null = null;
+  private mmsClient: IEC61850MmsClient | null = null;
+  private useRealMms = false;
   private reconnectTimer?: NodeJS.Timeout;
   private retryCount = 0;
   private simValues: Map<string, SimulatedPoint> = new Map();
@@ -49,41 +52,58 @@ export class IEC61850Adapter extends EventEmitter implements ProtocolAdapter {
     this.status = 'CONNECTING';
     this.notifyStatusChange(false);
 
+    // Try real MMS client first
     try {
-      // Attempt real MMS/TCP connection
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('MMS connection timeout')), this.config.timeoutMs || 5000);
-        this.socket = new net.Socket();
-        this.socket.connect(this.config.port || 102, this.config.ipAddress, () => {
-          clearTimeout(timeout);
-          // Send MMS Associate request (simplified)
-          console.log(`[IEC61850] TCP connected to ${this.config.ipAddress}:${this.config.port || 102}`);
-          resolve();
-        });
-        this.socket.on('error', (err) => { clearTimeout(timeout); reject(err); });
-        this.socket.on('close', () => {
-          if (this.status === 'CONNECTED') {
-            console.warn(`[IEC61850] ${this.config.name} connection lost`);
-            this.status = 'ERROR';
-            this.notifyStatusChange(false);
-            this.scheduleReconnect();
-          }
-        });
-      });
+      this.mmsClient = new IEC61850MmsClient(
+        this.config.ipAddress,
+        this.config.port || 102,
+        this.config.timeoutMs || 10000,
+      );
+      await this.mmsClient.connect();
+      this.useRealMms = true;
+      this.status = 'CONNECTED';
+      this.retryCount = 0;
+      this.notifyStatusChange(true);
+      this.emit('connected', { name: this.config.name, mode: 'real' });
+      console.log(`[IEC61850] Connected (real MMS): ${this.config.name}`);
+    } catch (mmsError: any) {
+      console.warn(`[IEC61850] Real MMS connection failed for ${this.config.name}: ${mmsError.message}`);
+      this.mmsClient = null;
+      this.useRealMms = false;
 
-      this.status = 'CONNECTED';
-      this.retryCount = 0;
-      this.notifyStatusChange(true);
-      this.emit('connected', { name: this.config.name });
-      console.log(`[IEC61850] Connected: ${this.config.name}`);
-    } catch (error: any) {
-      console.error(`[IEC61850] Connection failed for ${this.config.name}:`, error.message);
-      // Fall back to simulation mode
-      console.log(`[IEC61850] ${this.config.name} entering simulation mode (realistic random walk)`);
-      this.socket = null;
-      this.status = 'CONNECTED';
-      this.retryCount = 0;
-      this.notifyStatusChange(true);
+      // Fallback: try plain TCP to verify network reachability, then simulate
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('TCP timeout')), this.config.timeoutMs || 5000);
+          this.socket = new net.Socket();
+          this.socket.connect(this.config.port || 102, this.config.ipAddress, () => {
+            clearTimeout(timeout);
+            console.log(`[IEC61850] TCP connected to ${this.config.ipAddress}:${this.config.port || 102}`);
+            resolve();
+          });
+          this.socket.on('error', (err) => { clearTimeout(timeout); reject(err); });
+          this.socket.on('close', () => {
+            if (this.status === 'CONNECTED') {
+              this.status = 'ERROR';
+              this.notifyStatusChange(false);
+              this.scheduleReconnect();
+            }
+          });
+        });
+
+        this.status = 'CONNECTED';
+        this.retryCount = 0;
+        this.notifyStatusChange(true);
+        this.emit('connected', { name: this.config.name, mode: 'tcp-sim' });
+        console.log(`[IEC61850] ${this.config.name} TCP connected, using simulation for data`);
+      } catch (tcpError: any) {
+        console.warn(`[IEC61850] ${this.config.name} entering full simulation mode: ${tcpError.message}`);
+        this.socket = null;
+        this.status = 'CONNECTED';
+        this.retryCount = 0;
+        this.notifyStatusChange(true);
+        this.emit('connected', { name: this.config.name, mode: 'simulation' });
+      }
     }
 
     // Start subscription delivery loop
@@ -93,7 +113,12 @@ export class IEC61850Adapter extends EventEmitter implements ProtocolAdapter {
   async disconnect(): Promise<void> {
     if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = undefined; }
     if (this.subscriptionInterval) { clearInterval(this.subscriptionInterval); this.subscriptionInterval = undefined; }
+    if (this.mmsClient) {
+      try { await this.mmsClient.disconnect(); } catch { /* ignore */ }
+      this.mmsClient = null;
+    }
     if (this.socket) { this.socket.destroy(); this.socket = null; }
+    this.useRealMms = false;
     this.status = 'DISCONNECTED';
     this.notifyStatusChange(false);
     this.emit('disconnected', { name: this.config.name });
@@ -113,7 +138,44 @@ export class IEC61850Adapter extends EventEmitter implements ProtocolAdapter {
 
   async readDataAttribute(reference: string): Promise<number> {
     if (this.status !== 'CONNECTED') throw new Error('Not connected');
+
+    if (this.useRealMms && this.mmsClient) {
+      try {
+        return await this.mmsClient.readFloatValue(reference);
+      } catch (err: any) {
+        console.warn(`[IEC61850] Real MMS read failed for ${reference}: ${err.message}, falling back to simulation`);
+      }
+    }
+
     return this.getSimulatedValue(reference);
+  }
+
+  async readBooleanAttribute(reference: string): Promise<boolean> {
+    if (this.status !== 'CONNECTED') throw new Error('Not connected');
+
+    if (this.useRealMms && this.mmsClient) {
+      try {
+        return await this.mmsClient.readBooleanValue(reference);
+      } catch {
+        // Fall through to simulation
+      }
+    }
+
+    return Math.random() > 0.2;
+  }
+
+  async readInt32Attribute(reference: string): Promise<number> {
+    if (this.status !== 'CONNECTED') throw new Error('Not connected');
+
+    if (this.useRealMms && this.mmsClient) {
+      try {
+        return await this.mmsClient.readInt32Value(reference);
+      } catch {
+        // Fall through
+      }
+    }
+
+    return Math.round(this.getSimulatedValue(reference));
   }
 
   async writeDataAttribute(reference: string, value: number): Promise<void> {
@@ -134,6 +196,23 @@ export class IEC61850Adapter extends EventEmitter implements ProtocolAdapter {
     if (this.status !== 'CONNECTED') throw new Error('Not connected');
     console.log(`[IEC61850] ${this.config.name} digital write addr=${address} value=${value}`);
     return true;
+  }
+
+  /**
+   * Browse the full MMS data model. Requires real MMS connection.
+   */
+  async browseServer(): Promise<MmsServerDirectory | null> {
+    if (!this.useRealMms || !this.mmsClient) {
+      return null;
+    }
+    return this.mmsClient.browseFullModel();
+  }
+
+  /**
+   * Check if using real MMS or simulation.
+   */
+  isRealMms(): boolean {
+    return this.useRealMms;
   }
 
   subscribe(reference: string, callback: (value: number) => void): void {
@@ -168,7 +247,14 @@ export class IEC61850Adapter extends EventEmitter implements ProtocolAdapter {
   private deliverSubscriptions(): void {
     for (const [ref, cb] of this.subscriptions) {
       try {
-        cb(this.getSimulatedValue(ref));
+        if (this.useRealMms && this.mmsClient) {
+          // Try real read
+          this.mmsClient.readFloatValue(ref)
+            .then(val => cb(val))
+            .catch(() => cb(this.getSimulatedValue(ref)));
+        } else {
+          cb(this.getSimulatedValue(ref));
+        }
       } catch (err: any) {
         console.warn(`[IEC61850] Subscription callback error for ${ref}:`, err.message);
       }
